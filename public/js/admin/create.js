@@ -1,39 +1,373 @@
-// Ganti isi create.js dengan ini
-function initMap() {
-    const mapElement = document.getElementById("map-tambah");
+// VARIABEL GLOBAL
+var currentTab = 0;
+var map;
+var marker;
+let nimExists = false;
+let debounceTimer;
+let kotaTimer;
 
-    if (mapElement) {
-        // Jika sudah ada peta, hapus dulu
-        if (window.mapAlumni) {
-            window.mapAlumni.remove();
-        }
+// FUNGSI NAVIGASI (Diletakkan di luar agar GLOBAL)
+function showTab(n) {
+    var x = document.getElementsByClassName("form-step");
+    if (!x[n]) return;
 
-        window.mapAlumni = L.map("map-tambah").setView([-3.3194, 114.5908], 12);
+    for (var i = 0; i < x.length; i++) {
+        x[i].style.display = "none";
+        x[i].classList.remove("active");
+    }
 
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
-        }).addTo(window.mapAlumni);
+    // Tampilkan tab yang dipilih
+    x[n].style.display = "block";
+    x[n].classList.add("active");
 
-        // Paksa invalidateSize segera setelah peta siap
-        window.mapAlumni.whenReady(function() {
-            setTimeout(() => {
-                window.mapAlumni.invalidateSize();
-            }, 100);
-        });
+    // Atur tombol navigasi
+    document.getElementById("prevBtn").style.display = (n == 0) ? "none" : "block";
 
-        var marker;
-        window.mapAlumni.on("click", function (e) {
-            if (marker) {
-                marker.setLatLng(e.latlng);
-            } else {
-                marker = L.marker(e.latlng).addTo(window.mapAlumni);
+    var nextBtn = document.getElementById("nextBtn");
+    if (n == x.length - 1) {
+        setTimeout(function () {
+            updateReview();
+        }, 300);
+
+        nextBtn.innerHTML = "Simpan Data Alumni";
+        // Refresh peta khusus di tab terakhir
+        setTimeout(function () {
+            if (map) {
+                map.invalidateSize();
             }
-            document.getElementById("lat").value = e.latlng.lat.toFixed(6);
-            document.getElementById("lng").value = e.latlng.lng.toFixed(6);
-        });
+        }, 300);
+    } else {
+        nextBtn.innerHTML = "Lanjut";
+    }
+
+    updateStepIndicator(n);
+    updateProgressBar(n);
+}
+
+function nextPrev(n) {
+    var x = document.getElementsByClassName("form-step");
+
+    if (n == 1) {
+        if (!validateStep(currentTab)) {
+            return;
+        }
+    }
+
+    if (n == 1 && currentTab >= x.length - 1) {
+        submitForm();
+        return false;
+    }
+
+    x[currentTab].classList.remove("active");
+
+    currentTab = currentTab + n;
+
+    showTab(currentTab);
+}
+
+function submitForm() {
+    Swal.fire({
+        title: "Menyimpan data...",
+        text: "Mohon tunggu sebentar",
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        },
+    });
+
+    setTimeout(function () {
+        document.getElementById("wizardForm").submit();
+    }, 800);
+}
+
+function updateStepIndicator(n) {
+    var i,
+        x = document.getElementsByClassName("step");
+    for (i = 0; i < x.length; i++) {
+        x[i].classList.remove("active");
+        x[i].classList.remove("completed");
+
+        if (i < n) {
+            x[i].classList.add("completed");
+        }
+        if (i == n) {
+            x[i].classList.add("active");
+        }
     }
 }
 
-// Jalankan saat window load
-window.addEventListener('load', initMap);
+// INISIALISASI PETA
+function initMap() {
+    if (map !== undefined) { map.remove(); }
+    map = L.map("map-tambah").setView([-3.3194, 114.5908], 12);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap",
+    }).addTo(map);
+
+    marker = L.marker([-3.3194, 114.5908], {
+        draggable: true,
+    }).addTo(map);
+    document.getElementById("lat").value = -3.3194;
+    document.getElementById("lng").value = 114.5908;
+
+    marker.on("dragend", function (e) {
+        var latlng = marker.getLatLng();
+
+        document.getElementById("lat").value = latlng.lat;
+        document.getElementById("lng").value = latlng.lng;
+
+        getCity(latlng.lat, latlng.lng);
+    });
+
+    map.on("click", function (e) {
+        marker.setLatLng(e.latlng);
+
+        document.getElementById("lat").value = e.latlng.lat;
+        document.getElementById("lng").value = e.latlng.lng;
+
+        getCity(e.latlng.lat, e.latlng.lng);
+
+        updateReview();
+    });
+}
+
+function getCity(lat, lng) {
+    fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+    )
+        .then((res) => res.json())
+
+        .then((data) => {
+            let address = data.address;
+            let city = address.city || address.town || address.village || address.county || "";
+
+            document.getElementById("kota").value = city; // Gunakan ID
+            if (data.display_name) {
+                document.getElementById("alamat_lengkap").value = data.display_name;
+            }
+            
+            // PANGGIL INI supaya review langsung update saat peta diklik
+            updateReview(); 
+        })
+        .catch((err) => console.log(err));
+}
+
+function updateReview() {
+    // Ambil semua value
+    let nama = document.querySelector("input[name='nama_lengkap']").value;
+    let nim = document.querySelector("input[name='nim']").value;
+    let angkatan = document.querySelector("input[name='angkatan']").value;
+    let tahun = document.querySelector("input[name='tahun_lulus']").value;
+    let perusahaan = document.querySelector("input[name='nama_perusahaan']").value;
+    let jabatan = document.querySelector("input[name='jabatan']").value;
+    let bidang = document.querySelector("select[name='bidang']").value;
+    let kota = document.getElementById("kota").value; // Pastikan ID benar
+    let lat = document.getElementById("lat").value;
+    let lng = document.getElementById("lng").value;
+
+    // HANYA munculkan review jika sedang di Step 3 (currentTab == 2)
+    // DAN data krusial sudah terisi
+    if (currentTab == 2 && nama && nim && perusahaan) {
+        document.getElementById("review-box").style.display = "block";
+        
+        document.getElementById("review_nama").innerText = nama;
+        document.getElementById("review_nim").innerText = nim;
+        document.getElementById("review_angkatan_lulus").innerText = `${angkatan} / ${tahun}`;
+        document.getElementById("review_perusahaan").innerText = perusahaan || "-";
+        document.getElementById("review_jabatan").innerText = jabatan || "-";
+        document.getElementById("review_kota").innerText = kota || "Lokasi belum dipilih pada peta";
+        document.getElementById("review_coords").innerText = `${lat}, ${lng}`;
+    } else {
+        document.getElementById("review-box").style.display = "none";
+    }
+}
+
+function validateStep(step) {
+    if (step == 0) {
+        let nim = document.querySelector("input[name='nim']").value;
+        let nama = document.querySelector("input[name='nama_lengkap']").value;
+        let tahun = document.querySelector("input[name='tahun_lulus']").value;
+
+        if (!nim || !nama || !tahun) {
+            showAlert(
+                "Lengkapi data terlebih dahulu (NIM, Nama, Tahun Lulus).",
+            );
+            scrollToError();
+            return false;
+        }
+
+        if (nimExists) {
+            showAlert("NIM sudah terdaftar");
+            return false;
+        }
+    }
+
+    if (step == 1) {
+        let perusahaan = document.querySelector(
+            "input[name='nama_perusahaan']",
+        ).value;
+        let jabatan = document.querySelector("input[name='jabatan']").value;
+
+        if (!perusahaan || !jabatan) {
+            showAlert("Lengkapi data pekerjaan");
+            scrollToError();
+            return false;
+        }
+    }
+
+    if (step == 2) {
+        let lat = document.getElementById("lat").value;
+        let lng = document.getElementById("lng").value;
+
+        if (!lat || !lng) {
+            showAlert("Pilih lokasi pada peta");
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function updateProgressBar(step) {
+    let percent = ((step + 1) / 3) * 100;
+
+    document.getElementById("progress-bar").style.width = percent + "%";
+}
+
+document.getElementById("foto").addEventListener("change", function (e) {
+    let reader = new FileReader();
+
+    reader.onload = function () {
+        let preview = document.getElementById("preview-foto");
+
+        preview.src = reader.result;
+        preview.style.display = "block";
+    };
+
+    reader.readAsDataURL(e.target.files[0]);
+});
+
+function showAlert(message) {
+    Swal.fire({
+        icon: "warning",
+        title: "Data belum lengkap",
+        text: message,
+        confirmButtonText: "Oke",
+        confirmButtonColor: "#004a87",
+    });
+}
+
+function scrollToError() {
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+    });
+}
+
+const kotaInput = document.getElementById("kota");
+const kotaStatus = document.getElementById("kota-status");
+
+kotaInput.addEventListener("keyup", function () {
+    let city = kotaInput.value;
+
+    if (city.length < 3) {
+        kotaStatus.style.color = "#64748b";
+        kotaStatus.innerText = "Ketik minimal 3 huruf nama kota";
+        return;
+    }
+
+    kotaStatus.style.color = "#f59e0b";
+    kotaStatus.innerText = "Sedang mencari lokasi...";
+
+    clearTimeout(kotaTimer);
+
+    kotaTimer = setTimeout(function () {
+        fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${city}`,
+        )
+            .then((res) => res.json())
+
+            .then((data) => {
+                if (data.length > 0) {
+                    let lat = data[0].lat;
+                    let lon = data[0].lon;
+
+                    map.setView([lat, lon], 13);
+
+                    marker.setLatLng([lat, lon]);
+
+                    document.getElementById("lat").value = lat;
+                    document.getElementById("lng").value = lon;
+
+                    getCity(lat, lon);
+
+                    kotaStatus.style.color = "#10b981";
+                    kotaStatus.innerText = "✓ Tempat ditemukan";
+                } else {
+                    kotaStatus.style.color = "#ef4444";
+                    kotaStatus.innerText = "Kota tidak ditemukan";
+                }
+            })
+            .catch(() => {
+                kotaStatus.style.color = "#ef4444";
+                kotaStatus.innerText = "Gagal mencari lokasi";
+            });
+    }, 700);
+});
+
+
+
+// JALANKAN SAAT HALAMAN SELESAI DIMUAT
+document.addEventListener("DOMContentLoaded", function () {
+    const nimInput = document.getElementById("nim");
+    const nimStatus = document.getElementById("nim-status");
+    const nextBtn = document.getElementById("nextBtn");
+
+    nimInput.addEventListener("keyup", function () {
+        let nim = nimInput.value;
+
+        nimStatus.innerHTML = "";
+        nimExists = false;
+
+        if (nim.length < 10) {
+            nextBtn.disabled = false;
+            return;
+        }
+
+        clearTimeout(debounceTimer);
+
+        debounceTimer = setTimeout(function () {
+            fetch("/admin/check-nim", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": document
+                        .querySelector('meta[name="csrf-token"]')
+                        .getAttribute("content"),
+                },
+                body: JSON.stringify({ nim: nim }),
+            })
+                .then((res) => res.json())
+                .then((data) => {
+                    if (data.exists) {
+                        nimExists = true;
+
+                        nimStatus.style.color = "red";
+                        nimStatus.innerHTML = "⚠ NIM sudah terdaftar";
+
+                        nextBtn.disabled = true;
+                    } else {
+                        nimExists = false;
+
+                        nimStatus.style.color = "green";
+                        nimStatus.innerHTML = "✓ NIM tersedia";
+
+                        nextBtn.disabled = false;
+                    }
+                });
+        }, 500); // delay 500ms
+    });
+    initMap();
+    showTab(currentTab);
+});

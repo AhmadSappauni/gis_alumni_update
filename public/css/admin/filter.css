@@ -1,0 +1,198 @@
+/* Perbaikan Layout Header */
+.top-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px !important; /* Kurangi tinggi padding agar lebih slim */
+    gap: 20px;
+}
+
+.header-left h1 {
+    font-size: 22px !important; /* Sedikit kecilkan font agar seimbang */
+    margin: 0;
+    white-space: nowrap;
+}
+
+.header-center {
+    flex: 1;
+    display: flex;
+    justify-content: center; /* Kunci agar wrapper ada di tengah */
+}
+
+/* Search Box Modern & Minimalis */
+.search-box-mini {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.6);
+    padding: 8px 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 74, 135, 0.1);
+    transition: 0.3s;
+}
+
+.search-box-mini:focus-within {
+    background: #fff;
+    border-color: var(--pilkom-blue-dark);
+    box-shadow: 0 4px 15px rgba(0, 74, 135, 0.08);
+}
+
+.search-box-mini input {
+    border: none;
+    background: transparent;
+    width: 100%;
+    outline: none;
+    font-size: 13px;
+    color: #1e293b;
+}
+
+.search-box-mini svg {
+    color: #94a3b8;
+}
+
+/* Switcher Button Layout */
+.view-switcher {
+    display: flex;
+    background: rgba(255, 255, 255, 0.5);
+    padding: 4px;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 74, 135, 0.05);
+}
+
+.view-btn {
+    padding: 6px 10px;
+    border-radius: 8px;
+    color: #94a3b8;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.view-btn.active {
+    background: var(--pilkom-blue-dark);
+    color: white;
+    box-shadow: 0 3px 8px rgba(0, 74, 135, 0.2);
+}
+
+.search-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Jarak rapat antara search dan filter */
+    width: 100%;
+    max-width: 480px; /* Batasi lebar agar tidak terlalu panjang */
+}
+
+.filter-btn {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(0, 74, 135, 0.1);
+    border-radius: 10px;
+    color: #64748b;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.filter-btn:hover,
+.filter-btn.active {
+    background: var(--pilkom-blue-dark);
+    color: white;
+}
+
+.filter-dropdown {
+    position: relative;
+}
+
+.filter-menu {
+    position: absolute;
+    top: 50px;
+    right: 0;
+    width: 220px;
+    padding: 15px;
+    display: none; /* Default sembunyi */
+    z-index: 1001;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.filter-group {
+    margin-bottom: 12px;
+}
+
+.filter-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: var(--pilkom-blue-dark);
+    text-transform: uppercase;
+}
+
+.filter-group select {
+    width: 100%;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    font-size: 13px;
+    outline: none;
+}
+
+#reset-filter {
+    width: 100%;
+    margin-top: 10px;
+    background: none;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 11px;
+    padding: 5px;
+    cursor: pointer;
+    color: #64748b;
+}
+
+#reset-filter:hover{
+    color: darkred;
+}
+
+/* Styling Pesan Tidak Ditemukan */
+.no-results {
+    padding: 60px 20px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 20px;
+    border: 2px dashed rgba(0, 74, 135, 0.1);
+    margin: 20px 0;
+}
+
+.no-results-icon {
+    font-size: 50px;
+    margin-bottom: 15px;
+    display: block;
+    filter: grayscale(1) opacity(0.5);
+}
+
+.no-results p {
+    color: #64748b;
+    font-size: 15px;
+    font-weight: 500;
+    margin: 0;
+}
+
+/* Khusus untuk Row di Tabel agar tidak miring */
+.list-empty-row td {
+    padding: 80px 0 !important;
+    background: transparent !important;
+}
+
+.list-empty-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}

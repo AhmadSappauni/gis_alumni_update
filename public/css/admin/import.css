@@ -1,0 +1,141 @@
+.input-excel {
+    font-size: 13px;
+}
+
+.btn-import {
+    /* Tombol Baru: Kita gunakan Biru Pilkom Tua */
+    background: linear-gradient(
+        135deg,
+        var(--pilkom-blue-dark) 0%,
+        #004a87 100%
+    );
+    color: white;
+    padding: 12px 24px;
+    text-decoration: none;
+    border-radius: 14px;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(0, 54, 102, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-import:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 54, 102, 0.3);
+}
+
+/* Area Konten dengan Padding yang Pas */
+.import-container {
+    padding: 0 30px 30px 30px;
+}
+
+/* Area Drop File Custom */
+#drop-area {
+    background: rgba(255, 255, 255, 0.4);
+    border: 2px dashed rgba(0, 74, 135, 0.2);
+    padding: 60px 40px;
+    text-align: center;
+    border-radius: 24px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    color: #64748b;
+}
+
+#drop-area.highlight {
+    border-color: var(--pilkom-yellow);
+    background: rgba(253, 184, 19, 0.05);
+    transform: scale(1.01);
+}
+
+#drop-area i {
+    font-size: 48px;
+    color: var(--pilkom-blue-dark);
+    margin-bottom: 15px;
+    display: block;
+}
+
+/* Styling Tabel Preview */
+.table-container {
+    margin-top: 30px;
+    overflow-x: auto;
+    border-radius: 20px;
+}
+
+#preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    font-size: 13px;
+}
+
+#preview-table th {
+    background: var(--pilkom-blue-dark);
+    color: white;
+    padding: 15px;
+    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#preview-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    color: #1e293b;
+}
+
+#preview-table tr:hover {
+    background: rgba(0, 74, 135, 0.02);
+}
+
+/* Styling Hasil Import */
+#import-result {
+    margin-top: 20px;
+    padding: 20px;
+    border-radius: 16px;
+    display: none;
+    animation: fadeIn 0.5s ease;
+}
+
+.result-success {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Sembunyikan Input File Asli */
+#file-input {
+    display: none;
+}
+.custom-file-label {
+    display: inline-block;
+    padding: 10px 20px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    margin-top: 15px;
+    font-weight: 600;
+    color: var(--pilkom-blue-dark);
+    transition: 0.3s;
+}
+.custom-file-label:hover {
+    background: #f8fafc;
+}
+
+/* Pastikan container utama tidak memiliki overflow yang aneh */
+.import-container {
+    padding: 0 30px 50px 30px;
+    animation: fadeIn 0.5s ease;
+}

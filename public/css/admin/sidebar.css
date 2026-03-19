@@ -89,3 +89,90 @@
 .btn-kembali:hover {
     background: rgba(255, 255, 255, 0.2);
 }
+
+/* --- NAV DROPDOWN LOGIC --- */
+.nav-dropdown {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.dropdown-btn {
+    width: 100%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    outline: none;
+}
+
+.arrow-icon {
+    margin-left: auto;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.7;
+}
+
+.nav-dropdown.active .arrow-icon {
+    transform: rotate(180deg);
+}
+
+.dropdown-container {
+    max-height: 0; /* Untuk animasi smooth */
+    overflow: hidden;
+    transition: max-height 0.4s ease-in-out, opacity 0.3s ease;
+    opacity: 0;
+    display: flex;
+    flex-direction: column;
+    padding-left: 15px; /* Jarak indentasi */
+}
+
+.nav-dropdown.active .dropdown-container {
+    max-height: 200px;
+    opacity: 1;
+    padding-bottom: 10px;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    margin: 2px 15px;
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fdb813;
+    padding-left: 25px; /* Efek geser saat hover */
+}
+
+.dropdown-item.current {
+    color: #fdb813;
+    background: rgba(253, 184, 19, 0.1);
+    font-weight: 700;
+}
+
+/* Dot Indikator */
+.dropdown-item .dot {
+    width: 5px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    margin-right: 12px;
+    transition: all 0.3s ease;
+}
+
+.dropdown-item:hover .dot,
+.dropdown-item.current .dot {
+    background: #fdb813;
+    box-shadow: 0 0 8px #fdb813;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

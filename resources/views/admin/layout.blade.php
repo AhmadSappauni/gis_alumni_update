@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/admin-style.css') }}">
     
     <!-- Leaflet CSS -->
@@ -14,7 +17,9 @@
     }
     .main-content {
         overflow-y: auto;
-        height: 100vh; /* Pastikan setinggi layar penuh */
+        height: 100vh;
+        display: flex; /* Tambahkan ini */
+        flex-direction: column; /* Tambahkan ini */
     }
 </style>
 </head>
@@ -29,5 +34,48 @@
 
     <!-- Script dari halaman -->
     @stack('scripts')
+    @if(session('success'))
+    <script>
+    Swal.fire({
+        icon: 'success',
+        title: 'Data berhasil disimpan',
+        text: '{{ session("success") }}',
+        confirmButtonColor:'#004a87',
+        timer:2000,
+        showConfirmButton:false
+    });
+    </script>
+    @endif
+
+    @if(session('error'))
+    <script>
+    Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: '{{ session("error") }}'
+    });
+    </script>
+    @endif
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dropdownBtns = document.querySelectorAll('.dropdown-btn');
+
+        dropdownBtns.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const parent = this.closest('.nav-dropdown');
+                parent.classList.toggle('active');
+            });
+        });
+
+        // Auto open jika di halaman tertentu
+        if (window.location.href.includes('create') || window.location.href.includes('import')) {
+            const activeDropdown = document.querySelector('.nav-dropdown');
+            if (activeDropdown) activeDropdown.classList.add('active');
+        }
+    });
+    </script>
+    
 </body>
 </html>

@@ -7,50 +7,63 @@
 }
 
 .top-header {
-    position: -webkit-sticky; /* Support Safari */
     position: sticky;
     top: 0;
-    z-index: 1000; /* Pastikan di atas elemen peta */
+    width: 100%; /* Pastikan memenuhi lebar */
+    z-index: 1000;
     
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 20px 30px;
     
-    /* Tambahkan margin bawah sebagai pengganti gap yang kita hapus tadi */
     margin-bottom: 25px;
+    margin-top: 0; /* Pastikan tidak ada margin atas */
     
-    /* Gunakan warna background yang sama dengan body agar saat scroll konten tidak tembus */
-    background: rgba(241, 245, 249, 0.8); 
+    background: rgba(241, 245, 249, 0.9); /* Sedikit lebih pekat agar mewah */
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
+    border-bottom: 1px solid rgba(0, 74, 135, 0.05); /* Garis halus di bawah */
 }
 .top-header h1 {
     font-size: 26px;
     font-weight: 800;
     color: var(--pilkom-blue-dark);
 }
+
+/* Memperbaiki tampilan tombol agar konsisten */
 .btn-tambah {
-    /* Tombol Baru: Kita gunakan Biru Pilkom Tua */
-    background: linear-gradient(
-        135deg,
-        var(--pilkom-blue-dark) 0%,
-        #004a87 100%
-    );
-    color: white;
-    padding: 12px 24px;
-    text-decoration: none;
-    border-radius: 14px;
+    padding: 12px 25px;
+    border-radius: 12px;
     font-weight: 600;
-    font-size: 14px;
-    transition: all 0.3s;
+    border: none;
+    cursor: pointer;
+    transition: 0.3s;
+    color: white;
+    background: #004a87;
     display: flex;
     align-items: center;
     gap: 8px;
-    box-shadow: 0 4px 15px rgba(0, 54, 102, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    text-decoration: none;
 }
+
 .btn-tambah:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0, 54, 102, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 74, 135, 0.2);
+}
+
+/* Kontainer pembungkus pagination Card */
+.pagination-card-container {
+    margin-top: 25px;
+    padding: 15px 25px;
+    display: flex;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.4) !important;
+    border-radius: 15px !important;
+}
+
+/* Pastikan transisi saat switch view lancar */
+#card-view-wrapper {
+    display: flex;
+    flex-direction: column;
 }

@@ -38,7 +38,7 @@
 
 body {
     /* Latar belakang kita ganti menjadi sangat netral (soft gray), agar kartunya melayang mewah */
-    background: #f1f5f9;
+    background: #dfdfe0;
     min-height: 100vh;
     display: flex;
     color: var(--text-on-light);
