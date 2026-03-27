@@ -7,17 +7,23 @@ use Illuminate\Database\Eloquent\Model;
 class Pekerjaan extends Model
 {
     protected $fillable = [
-        'nim',
-        'jabatan',
+        'nim', 
+        'nama_perusahaan', 
+        'jabatan', 
+        'linearitas', 
+        'alamat_lengkap', 
+        'latitude', 
+        'longitude',
         'bidang_pekerjaan',
-        'nama_perusahaan',
         'gaji',
         'kota',
-        'alamat_lengkap',
         'link_linkedin',
-        'linearitas',
-        'latitude',
-        'longitude'
+        'status_karir', // Tambahkan ini
+        'is_current'
+    ];
+
+    protected $casts = [
+        'is_current' => 'boolean',
     ];
 
     public function alumni()

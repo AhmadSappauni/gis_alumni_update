@@ -2,6 +2,9 @@
     <div id="card-view-wrapper">
         <div id="card-view" class="cards-grid">
             <?php $__currentLoopData = $dataAlumni; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $alumni): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <?php
+                $pekerjaanAktif = $alumni->pekerjaans->where('is_current', true)->first();
+            ?>
                 <div class="data-card glass-panel">
                     <div class="card-profile-img">
                         <?php if($alumni->foto_profil): ?>
@@ -14,6 +17,18 @@
                             </div>
                         <?php endif; ?>
                     </div>
+
+                    <?php
+                        $jumlahPekerjaanAktif = $alumni->pekerjaans->whereIn('status_karir', ['Utama', 'Sampingan'])->count();
+                    ?>
+
+                    <?php if($jumlahPekerjaanAktif > 1): ?>
+                        <div title="Memiliki <?php echo e($jumlahPekerjaanAktif); ?> Pekerjaan Aktif" 
+                            style="position: absolute; top: 15px; right: 15px; background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800; border: 1px solid #f59e0b; display: flex; align-items: center; gap: 4px; z-index: 10;">
+                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                            MULTI-JOB
+                        </div>
+                    <?php endif; ?>
 
                     <div class="card-header">
                         <div>
@@ -39,18 +54,18 @@
                             </div>
                         </div>
 
-                        <?php if($alumni->pekerjaan): ?>
+                        <?php if($pekerjaanAktif): ?>
                             <div class="info-row">
                                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                                <b><?php echo e($alumni->pekerjaan->nama_perusahaan); ?></b>
+                                <b><?php echo e($pekerjaanAktif->nama_perusahaan); ?></b>
                             </div>
                             <div class="info-row">
                                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                                <span><?php echo e($alumni->pekerjaan->jabatan); ?></span>
+                                <span><?php echo e($pekerjaanAktif->jabatan); ?></span>
                             </div>
                         <?php else: ?>
                             <div style="padding: 10px; text-align:center; background:rgba(255,255,255,0.4); border-radius:10px; border:1px dashed #cbd5e1;">
-                                <span style="color:#64748b; font-style:italic; font-size:12px;">Belum mengisi data pekerjaan</span>
+                                <span style="color:#64748b; font-style:italic; font-size:12px;">Belum bekerja/Mencari kerja</span>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -65,7 +80,7 @@
                         <?php endif; ?>
 
                         <div class="action-buttons">
-                            <button class="btn-icon view" onclick="showAlumniDetail(<?php echo e(json_encode($alumni)); ?>)" title="Lihat Profil Lengkap">
+                            <button class="btn-icon view" onclick="document.getElementById('modal-profil-<?php echo e($alumni->nim); ?>').style.display='flex'" title="Lihat Profil Lengkap">
                                 <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                             </button>
                             <a href="<?php echo e(route('admin.alumni.edit', $alumni->nim)); ?>" class="btn-icon edit" title="Edit Data">
@@ -116,6 +131,9 @@
                 </thead>
                 <tbody id="main-alumni-data">
                     <?php $__currentLoopData = $dataAlumni; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $alumni): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <?php
+                        $pekerjaanAktif = $alumni->pekerjaans->where('is_current', true)->first();
+                    ?>
                         <tr>
                             <td>
                                 <div style="display: flex; align-items: center; gap: 10px;">
@@ -138,14 +156,14 @@
                             </td>
                             <td>
                                 <div style="font-size: 12px; line-height: 1.4; color: #475569;">
-                                    <div> <?php echo e($alumni->pekerjaan->nama_perusahaan ?? '-'); ?></div>
-                                    <div> <?php echo e($alumni->pekerjaan->alamat_lengkap ?? '-'); ?></div>
+                                    <div> <?php echo e($alumni->pekerjaans->where('is_current', true)->first()->nama_perusahaan ?? '-'); ?></div>
+                                    <div> <?php echo e($alumni->pekerjaans->where('is_current', true)->first()->kota ?? '-'); ?></div>
                                 </div>
                             </td>
-                            <td><?php echo e($alumni->pekerjaan->jabatan ?? '-'); ?></td>
+                            <td><?php echo e($alumni->pekerjaans->where('is_current', true)->first()->jabatan ?? '-'); ?></td>
                             <td>
                                 <div style="display: flex; justify-content: center; gap: 8px;">
-                                    <button class="action-btn-small view" onclick="showAlumniDetail(<?php echo e(json_encode($alumni)); ?>)">
+                                    <button class="action-btn-small view" onclick="document.getElementById('modal-profil-<?php echo e($alumni->nim); ?>').style.display='flex'" title="Lihat Profil Lengkap">
                                         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                     </button>
                                     <a href="<?php echo e(route('admin.alumni.edit', $alumni->nim)); ?>" class="action-btn-small edit"><svg width="14" height="14"
@@ -184,5 +202,8 @@
             </div>
         </div>
     </div>
+    <?php $__currentLoopData = $dataAlumni; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $alumni): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+        <?php echo $__env->make('admin.komponen.modal-profil', ['alumni' => $alumni], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
 </main>
 <?php /**PATH D:\Aplikasi_Skripsi\gis-alumni\resources\views/admin/komponen/content.blade.php ENDPATH**/ ?>

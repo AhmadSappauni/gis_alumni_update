@@ -116,7 +116,14 @@
 
         <div class="form-step" id="step2">
             <h3 style="color: var(--pilkom-blue-dark); margin-bottom: 25px;">Informasi Karir</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div style="margin-bottom: 25px; background: #fff4e5; padding: 15px; border-radius: 12px; border: 1px dashed #f59e0b;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" name="is_unemployed" id="is_unemployed" style="width: 20px; height: 20px;">
+                    <span style="font-weight: 700; color: #92400e;">Alumni ini belum bekerja / Sedang mencari kerja</span>
+                </label>
+            </div>
+
+            <div id="section-pekerjaan" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 <div>
                     <label class="label-admin">Pekerjaan / Jabatan</label>
                     <input type="text" name="jabatan" class="custom-input-admin" value="{{ old('jabatan') }}" placeholder="Software Engineer">
@@ -174,6 +181,7 @@
                     <div>
                         <label class="label-admin">Kota / Kabupaten</label>
                         <input type="text" name="kota" id="kota" class="custom-input-admin" value="{{ old('kota') }}" placeholder="Ketik nama kota...">
+                        <small id="kota-status"></small>
                     </div>
                     <div>
                         <label class="label-admin">Alamat Lengkap</label>

@@ -66,6 +66,7 @@ function nextPrev(n) {
 }
 
 function submitForm() {
+    const form = document.getElementById("wizardForm");
     Swal.fire({
         title: "Menyimpan data...",
         text: "Mohon tunggu sebentar",
@@ -74,6 +75,9 @@ function submitForm() {
             Swal.showLoading();
         },
     });
+
+    const disabledInputs = form.querySelectorAll(':disabled');
+    disabledInputs.forEach(input => input.disabled = false);
 
     setTimeout(function () {
         document.getElementById("wizardForm").submit();
@@ -189,45 +193,25 @@ function validateStep(step) {
     if (step == 0) {
         let nim = document.querySelector("input[name='nim']").value;
         let nama = document.querySelector("input[name='nama_lengkap']").value;
-        let tahun = document.querySelector("input[name='tahun_lulus']").value;
-
-        if (!nim || !nama || !tahun) {
-            showAlert(
-                "Lengkapi data terlebih dahulu (NIM, Nama, Tahun Lulus).",
-            );
-            scrollToError();
+        if (!nim || !nama) {
+            showAlert("Lengkapi data identitas (NIM & Nama).");
             return false;
         }
-
-        if (nimExists) {
-            showAlert("NIM sudah terdaftar");
-            return false;
-        }
+        if (nimExists) { showAlert("NIM sudah terdaftar"); return false; }
     }
 
     if (step == 1) {
-        let perusahaan = document.querySelector(
-            "input[name='nama_perusahaan']",
-        ).value;
-        let jabatan = document.querySelector("input[name='jabatan']").value;
-
-        if (!perusahaan || !jabatan) {
-            showAlert("Lengkapi data pekerjaan");
-            scrollToError();
-            return false;
+        // CEK APAKAH CHECKBOX DICENTANG
+        const isUnemployed = document.getElementById('is_unemployed').checked;
+        if (!isUnemployed) {
+            let perusahaan = document.querySelector("input[name='nama_perusahaan']").value;
+            let jabatan = document.querySelector("input[name='jabatan']").value;
+            if (!perusahaan || !jabatan) {
+                showAlert("Lengkapi data pekerjaan atau centang 'Belum Bekerja'");
+                return false;
+            }
         }
     }
-
-    if (step == 2) {
-        let lat = document.getElementById("lat").value;
-        let lng = document.getElementById("lng").value;
-
-        if (!lat || !lng) {
-            showAlert("Pilih lokasi pada peta");
-            return false;
-        }
-    }
-
     return true;
 }
 
@@ -319,13 +303,49 @@ kotaInput.addEventListener("keyup", function () {
 });
 
 
-
 // JALANKAN SAAT HALAMAN SELESAI DIMUAT
 document.addEventListener("DOMContentLoaded", function () {
-    const nimInput = document.getElementById("nim");
     const nimStatus = document.getElementById("nim-status");
     const nextBtn = document.getElementById("nextBtn");
-
+    
+    // Variabel Checkbox
+    const checkUnemployed = document.getElementById('is_unemployed');
+    const sectionPekerjaan = document.getElementById('section-pekerjaan');
+    
+    // Pagar keamanan: Hanya jalankan logika checkbox jika elemennya ADA
+    if (checkUnemployed && sectionPekerjaan) {
+    const inputsPekerjaan = sectionPekerjaan.querySelectorAll('input, select');
+    
+    checkUnemployed.addEventListener('change', function() {
+        if (this.checked) {
+            inputsPekerjaan.forEach(input => {
+                // Gunakan readOnly agar data tetap terkirim ke server
+                input.readOnly = true; 
+                // Khusus Select (karena tidak ada readOnly), kita bisa pakai cara ini
+                if(input.tagName === 'SELECT') input.style.pointerEvents = "none";
+                
+                input.style.backgroundColor = "#f1f5f9";
+                if(input.name !== 'linearitas') input.value = "-";
+            });
+            // Set Linearitas otomatis
+            let linSelect = document.querySelector("select[name='linearitas']");
+            if(linSelect) {
+                linSelect.value = "Tidak Linier";
+                linSelect.style.pointerEvents = "none";
+            }
+        } else {
+            inputsPekerjaan.forEach(input => {
+                input.readOnly = false;
+                if(input.tagName === 'SELECT') input.style.pointerEvents = "auto";
+                input.style.backgroundColor = "#ffffff";
+                input.value = "";
+            });
+        }
+        updateReview();
+    });
+}
+    const nimInput = document.getElementById("nim");
+    if (nimInput) {
     nimInput.addEventListener("keyup", function () {
         let nim = nimInput.value;
 
@@ -370,6 +390,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 });
         }, 500); // delay 500ms
     });
+}
     initMap();
     showTab(currentTab);
 });
+

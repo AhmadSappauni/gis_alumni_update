@@ -1,74 +1,74 @@
-<div id="profil-modal-overlay" class="profil-modal-overlay">
-    <div class="profil-modal-card">
-        <button class="close-modal-btn" id="close-profil-modal" title="Tutup">&times;</button>
+<div id="modal-profil-<?php echo e($alumni->nim); ?>" class="profil-modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center;">
+    
+    <div class="profil-modal-card" style="background: white; width: 100%; max-width: 700px; border-radius: 20px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; position: relative;">
+        
+        <button onclick="document.getElementById('modal-profil-<?php echo e($alumni->nim); ?>').style.display='none'" style="position: absolute; right: 20px; top: 20px; background: rgba(255,255,255,0.2); border: none; font-size: 20px; color: white; cursor: pointer; z-index: 10;">&times;</button>
 
-        <div class="profil-modal-header text-center">
-            <div class="profil-avatar-outer">
-                <img id="modal-avatar" src="" alt="Avatar Alumni">
-            </div>
-            <h2 id="modal-nama" style="color: var(--pilkom-blue-dark); font-weight: 800; margin-top: 15px;">Nama Alumni</h2>
-            <div style="display: flex; justify-content: center; gap: 10px; margin-top: 8px;">
-                <span id="modal-nim" class="badge-nim">NIM: -</span>
-                <span id="modal-tahun" class="badge-tahun">Lulusan -</span>
-            </div>
-        </div>
-
-        <div class="profil-modal-body">
-    <div class="info-group-full">
-        <svg class="info-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-        <div class="info-text">
-            <label>Judul Skripsi</label>
-            <p id="modal-skripsi" style="font-style: italic; font-size: 13px; font-weight: 500;">-</p>
-        </div>
-    </div>
-
-    <div class="row-grid">
-        <div class="info-group">
-            <svg class="info-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-            <div class="info-text"><label>Instansi</label><p id="modal-perusahaan">-</p></div>
-        </div>
-        <div class="info-group">
-            <svg class="info-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
-            <div class="info-text"><label>Bidang</label><p id="modal-bidang">-</p></div>
-        </div>
-        <div class="info-group">
-            <svg class="info-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-            <div class="info-text"><label>Jabatan</label><p id="modal-jabatan">-</p></div>
-        </div>
-        <div class="info-group">
-            <svg class="info-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-            <div class="info-text"><label>Gaji</label><p id="modal-gaji">-</p></div>
-        </div>
-        <div class="info-group-full" id="linkedin-container" style="margin-top: 15px; background: #f0f7ff; border: 1px solid #e0eefe;">
-            <svg class="info-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.826a4 4 0 015.656 0l4 4a4 4 0 01-5.656 5.656l-1.103-1.103" />
-            </svg>
-            <div class="info-text">
-                <label>Kontak Profesional</label>
-                <a id="modal-linkedin" href="#" target="_blank" style="color: #0077b5; font-weight: 700; text-decoration: none; font-size: 13px;">Buka Profil LinkedIn ↗</a>
-            </div>
-        </div>
-        <div class="info-group">
-            <svg class="info-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-            <div class="info-text">
-                <label>Email</label>
-                <p id="modal-email">-</p>
+        <div style="background: linear-gradient(135deg, #004a87, #006bbf); padding: 30px; display: flex; gap: 20px; align-items: center;">
+            <img src="<?php echo e($alumni->foto_profil ? asset('storage/' . $alumni->foto_profil) : '/default.png'); ?>" 
+                 style="width: 90px; height: 90px; border-radius: 50%; border: 4px solid white; object-fit: cover;">
+            <div style="color: white;">
+                <h2 style="margin: 0 0 5px 0; font-size: 24px; font-weight: 800;"><?php echo e($alumni->nama_lengkap); ?></h2>
+                <div style="display: flex; gap: 10px; font-size: 13px; opacity: 0.9;">
+                    <span style="background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 20px;">NIM: <?php echo e($alumni->nim); ?></span>
+                    <span style="background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 20px;">Lulusan: <?php echo e($alumni->tahun_lulus); ?></span>
+                </div>
             </div>
         </div>
 
-        <div class="info-group">
-            <svg class="info-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-            <div class="info-text">
-                <label>WhatsApp / No. HP</label>
-                <p id="modal-nohp">-</p>
+        <div style="padding: 25px; overflow-y: auto; background: #f8fafc;">
+            
+            <div style="background: white; padding: 20px; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 25px;">
+                <h4 style="color: #004a87; margin: 0 0 15px 0; font-size: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">Informasi Pribadi</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <small style="color: #64748b; font-weight: bold; display: block;">Email</small>
+                        <span style="color: #1e293b; font-size: 14px;"><?php echo e($alumni->email ?? '-'); ?></span>
+                    </div>
+                    <div>
+                        <small style="color: #64748b; font-weight: bold; display: block;">No. WhatsApp</small>
+                        <span style="color: #1e293b; font-size: 14px;"><?php echo e($alumni->no_hp ?? '-'); ?></span>
+                    </div>
+                    <div style="grid-column: span 2;">
+                        <small style="color: #64748b; font-weight: bold; display: block;">Judul Skripsi</small>
+                        <p style="margin: 5px 0 0; color: #1e293b; font-size: 14px; font-style: italic; line-height: 1.5;">"<?php echo e($alumni->judul_skripsi ?? 'Belum ada data'); ?>"</p>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
-</div>
 
-        <div class="profil-modal-footer">
-            <div id="modal-linearitas" class="status-badge">Linearitas</div>
-            <button class="btn-tutup-modal" id="btn-tutup-bawah">Tutup Jendela</button>
+            <h4 style="color: #004a87; margin: 0 0 15px 0; font-size: 16px; display: flex; align-items: center; justify-content: space-between;">
+                Riwayat Pekerjaan
+                <span style="font-size: 12px; background: #e2e8f0; color: #475569; padding: 3px 8px; border-radius: 6px;"><?php echo e($alumni->pekerjaans->count()); ?> Data</span>
+            </h4>
+
+            <?php if($alumni->pekerjaans->isEmpty()): ?>
+                <div style="text-align: center; padding: 20px; background: white; border-radius: 12px; border: 1px dashed #cbd5e1; color: #94a3b8;">
+                    Belum ada riwayat pekerjaan.
+                </div>
+            <?php else: ?>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <?php $__currentLoopData = $alumni->pekerjaans->sortByDesc('status_karir'); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $job): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); border-left: 5px solid <?php echo e($job->status_karir == 'Utama' ? '#10b981' : ($job->status_karir == 'Sampingan' ? '#3b82f6' : '#94a3b8')); ?>;">
+                            
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                <h5 style="margin: 0; color: #1e293b; font-size: 16px; font-weight: 800;"><?php echo e($job->nama_perusahaan); ?></h5>
+                                <span style="font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: bold; background: <?php echo e($job->status_karir == 'Utama' ? '#ecfdf5' : ($job->status_karir == 'Sampingan' ? '#eff6ff' : '#f8fafc')); ?>; color: <?php echo e($job->status_karir == 'Utama' ? '#10b981' : ($job->status_karir == 'Sampingan' ? '#3b82f6' : '#94a3b8')); ?>;">
+                                    <?php echo e(strtoupper($job->status_karir)); ?>
+
+                                </span>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px;">
+                                <div><strong style="color: #64748b;">Jabatan:</strong> <?php echo e($job->jabatan); ?></div>
+                                <div><strong style="color: #64748b;">Bidang:</strong> <?php echo e($job->bidang_pekerjaan); ?></div>
+                                <div><strong style="color: #64748b;">Gaji:</strong> <?php echo e($job->gaji ?? 'Dirahasiakan'); ?></div>
+                                <div><strong style="color: #64748b;">Kesesuaian:</strong> <span class="badge-<?php echo e($job->linearitas == 'Linier' ? 'linier' : 'tidak'); ?>" style="font-size:10px;"><?php echo e($job->linearitas); ?></span></div>
+                                <div style="grid-column: span 2;"><strong style="color: #64748b;">Lokasi:</strong> <?php echo e($job->alamat_lengkap); ?> (<?php echo e($job->kota); ?>)</div>
+                            </div>
+                        </div>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </div><?php /**PATH D:\Aplikasi_Skripsi\gis-alumni\resources\views/admin/komponen/modal-profil.blade.php ENDPATH**/ ?>

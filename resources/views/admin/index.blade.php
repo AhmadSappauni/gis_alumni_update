@@ -41,7 +41,7 @@
 @section('content')
     <header class="top-header glass-panel">
         <div class="header-left">
-            <h1>Data Pekerjaan Alumni</h1>
+            <h1>Data Alumni</h1>
         </div>
         
         <div class="header-center">

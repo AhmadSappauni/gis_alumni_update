@@ -15,17 +15,83 @@ class AdminAlumniController extends Controller
 {
     public function index()
     {
-        $dataAlumni = Alumni::with('pekerjaan')
+        $dataAlumni = Alumni::with('pekerjaans')
             ->orderBy('tahun_lulus', 'desc')
             ->paginate(10);
 
         return view('admin.index', compact('dataAlumni'));
     }
 
+
+    public function storePekerjaan(Request $request, $nim)
+    {
+        // 1. Validasi Input
+        $request->validate([
+            'nama_perusahaan' => 'required',
+            'jabatan' => 'required',
+            'kota' => 'required',
+            'bidang' => 'required',
+            'linearitas' => 'required',
+            'alamat_lengkap' => 'required',
+            'latitude' => 'required',
+            'longitude' => 'required',
+        ]);
+
+        // 2. LOGIKA PINTAR: Cek apakah alumni ini sudah punya pekerjaan "Utama"?
+        $sudahAdaUtama = Pekerjaan::where('nim', $nim)
+                                    ->where('status_karir', 'Utama')
+                                    ->exists();
+
+        // 3. Tentukan Status Karir secara otomatis
+        // Jika BELUM ada utama -> jadikan Utama
+        // Jika SUDAH ada utama -> jadikan Sampingan (agar tidak double di peta)
+        $statusKarir = $sudahAdaUtama ? 'Sampingan' : 'Utama';
+
+        // 4. Eksekusi Simpan
+        Pekerjaan::create([
+            'nim' => $nim,
+            'nama_perusahaan' => $request->nama_perusahaan,
+            'jabatan' => $request->jabatan,
+            'bidang_pekerjaan' => $request->bidang,
+            'linearitas' => $request->linearitas,
+            'kota' => $request->kota,
+            'alamat_lengkap' => $request->alamat_lengkap,
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude,
+            'status_kerja' => 'Bekerja',
+            'status_karir' => $statusKarir, // <-- Ini kuncinya
+            'is_current' => true,           // Keduanya (Utama/Sampingan) dianggap aktif
+            'gaji' => $request->gaji,
+            'link_linkedin' => $request->link_linkedin
+        ]);
+
+        return back()->with('success', 'Riwayat pekerjaan berhasil ditambahkan sebagai ' . $statusKarir . '!');
+    }
+
+
+
+    public function setMainPekerjaan($id)
+    {
+        DB::transaction(function () use ($id) {
+            $pekerjaan = Pekerjaan::findOrFail($id);
+
+            Pekerjaan::where('nim', $pekerjaan->nim)
+                ->update(['is_current' => 0]);
+
+            $pekerjaan->update(['is_current' => 1]);
+        });
+
+        return back()->with('success', 'Pekerjaan utama berhasil diubah!');
+    }
+
+
+
     public function create()
     {
         return view('admin.create');
     }
+
+
 
     public function store(Request $request)
     {
@@ -63,6 +129,7 @@ class AdminAlumniController extends Controller
                     'judul_skripsi' => $request->judul_skripsi,
                     'foto_profil' => $fotoPath
                 ]);
+                $isUnemployed = $request->has('is_unemployed');
 
                 Pekerjaan::create([
                     'nim' => $request->nim,
@@ -75,7 +142,9 @@ class AdminAlumniController extends Controller
                     'link_linkedin' => $request->linkedin,
                     'linearitas' => $request->linearitas,
                     'latitude' => $request->latitude,
-                    'longitude' => $request->longitude
+                    'longitude' => $request->longitude,
+                    'is_current' => true, 
+                    'status_kerja' => 'Bekerja' 
                 ]);
             });
 
@@ -92,6 +161,9 @@ class AdminAlumniController extends Controller
                 ->withInput();
         }
     }
+
+
+
     public function checkNim(Request $request)
     {
         $nim = $request->nim;
@@ -103,10 +175,14 @@ class AdminAlumniController extends Controller
         ]);
     }
 
+
+
     public function importPage()
     {
         return view('admin.import.import-excel');
     }
+
+
 
     public function importPreview(Request $request)
     {
@@ -120,6 +196,8 @@ class AdminAlumniController extends Controller
 
         return response()->json($rows);
     }
+
+
 
     public function importStore(Request $request)
     {
@@ -192,6 +270,8 @@ class AdminAlumniController extends Controller
                 'linearitas' => $fixLinearitas,
                 'latitude' => $lat,
                 'longitude' => $lng,
+                'is_current' => true,
+                'status_kerja' => ($row[3] == '-' || !$row[3]) ? 'Mencari Kerja' : 'Bekerja'
             ]);
 
             $success++;
@@ -202,87 +282,175 @@ class AdminAlumniController extends Controller
             'skip' => $skip
         ]);
     }
+
+
+
     public function destroy($nim)
     {
         try {
             $alumni = Alumni::where('nim', $nim)->firstOrFail();
 
-            // 1. Hapus Foto Profil jika ada di storage
             if ($alumni->foto_profil && Storage::disk('public')->exists($alumni->foto_profil)) {
                 Storage::disk('public')->delete($alumni->foto_profil);
             }
 
-            // 2. Hapus data (Relasi Pekerjaan akan ikut terhapus jika di DB diset Cascade, 
-            // jika tidak, kita hapus manual di sini)
             DB::transaction(function () use ($alumni) {
-                $alumni->pekerjaan()->delete(); // Hapus data di tabel pekerjaans
-                $alumni->delete(); // Hapus data di tabel alumnis
+                // UBAH pekerjaan() menjadi pekerjaans()
+                $alumni->pekerjaans()->delete(); 
+                $alumni->delete(); 
             });
 
             return redirect()->route('admin.alumni.index')->with('success', 'Data alumni berhasil dihapus!');
-            
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal menghapus data: ' . $e->getMessage());
         }
     }
+
+
+
+    public function destroyPekerjaan($id)
+    {
+        $pekerjaan = Pekerjaan::findOrFail($id);
+        $nim = $pekerjaan->nim;
+
+        // 1. Hapus pekerjaan tanpa syarat proteksi (Gembok dilepas)
+        $pekerjaan->delete();
+
+        // 2. Cek apakah MASIH ADA sisa riwayat pekerjaan lain di database untuk alumni ini
+        $sisaPekerjaan = Pekerjaan::where('nim', $nim)->count();
+
+        // 3. Jika masih ada sisa, dan yang dihapus tadi adalah pekerjaan "Utama", 
+        // otomatis jadikan riwayat yang paling baru sebagai "Utama"
+        if ($sisaPekerjaan > 0 && $pekerjaan->status_karir == 'Utama') {
+            Pekerjaan::where('nim', $nim)
+                ->latest()
+                ->first()
+                ->update(['status_karir' => 'Utama', 'is_current' => true]);
+        }
+
+        return back()->with('success', 'Riwayat pekerjaan berhasil dihapus!');
+    }
+
+
     public function edit($nim)
     {
-        $alumni = Alumni::with('pekerjaan')->where('nim', $nim)->firstOrFail();
+        $alumni = Alumni::with('pekerjaans')->where('nim', $nim)->firstOrFail();
         return view('admin.edit', compact('alumni'));
     }
+
+
+
+
+    public function updateStatusKerja(Request $request, $id)
+    {
+        $pekerjaan = Pekerjaan::findOrFail($id);
+        $statusBaru = $request->status; // Utama, Sampingan, atau Riwayat
+
+        DB::transaction(function () use ($pekerjaan, $statusBaru, $id) {
+            if ($statusBaru == 'Utama') {
+                // 1. Set pekerjaan lain milik NIM ini jadi Riwayat & is_current false
+                Pekerjaan::where('nim', $pekerjaan->nim)
+                    ->where('id', '!=', $id)
+                    ->where('status_karir', 'Utama')
+                    ->update(['status_karir' => 'Riwayat', 'is_current' => false]);
+                
+                // 2. Set pekerjaan ini jadi Utama & is_current true
+                $pekerjaan->update(['status_karir' => 'Utama', 'is_current' => true]);
+            } else {
+                // Jika diset Sampingan atau Riwayat
+                $pekerjaan->update([
+                    'status_karir' => $statusBaru,
+                    // Sampingan tetap dianggap aktif di peta, Riwayat tidak.
+                    'is_current' => ($statusBaru == 'Sampingan') 
+                ]);
+            }
+        });
+
+        return back()->with('success', 'Status karir berhasil diubah!');
+    }
+
+
+
 
     public function update(Request $request, $nim)
     {
         $alumni = Alumni::where('nim', $nim)->firstOrFail();
 
+        // 1. Validasi MURNI HANYA UNTUK PROFIL & TEMPAT TINGGAL
+        // (Perhatikan: tidak ada lagi validasi nama_perusahaan, jabatan, dll)
         $request->validate([
             'nim' => 'required|unique:alumnis,nim,' . $alumni->nim . ',nim',
             'nama_lengkap' => 'required',
             'tahun_lulus' => 'required|numeric',
+            'kota_tinggal' => 'required',
+            'alamat_tinggal' => 'required',
+            'latitude_tinggal' => 'required',
+            'longitude_tinggal' => 'required',
             'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
         ]);
 
+        // 2. Proses Foto Profil
         $fotoPath = $alumni->foto_profil;
-
-        // Jika ada upload foto baru
         if ($request->hasFile('foto')) {
-            // Hapus foto lama jika ada
-            if ($alumni->foto_profil) {
+            if ($alumni->foto_profil && Storage::disk('public')->exists($alumni->foto_profil)) {
                 Storage::disk('public')->delete($alumni->foto_profil);
             }
             $fotoPath = $request->file('foto')->store('alumni_foto', 'public');
         }
 
         try {
-            DB::transaction(function () use ($request, $alumni, $fotoPath) {
-                // Update data Alumni
-                $alumni->update([
-                    'nim' => $request->nim,
-                    'nama_lengkap' => $request->nama_lengkap,
-                    'email' => $request->email,
-                    'no_hp' => $request->no_hp,
-                    'angkatan' => $request->angkatan,
-                    'tahun_lulus' => $request->tahun_lulus,
-                    'judul_skripsi' => $request->judul_skripsi,
-                    'foto_profil' => $fotoPath
-                ]);
+            // 3. Langsung Update ke Tabel Alumnis saja
+            $alumni->update([
+                'nim' => $request->nim,
+                'nama_lengkap' => $request->nama_lengkap,
+                'email' => $request->email,
+                'no_hp' => $request->no_hp,
+                'angkatan' => $request->angkatan,
+                'tahun_lulus' => $request->tahun_lulus,
+                'judul_skripsi' => $request->judul_skripsi,
+                'foto_profil' => $fotoPath,
+                'kota_tinggal' => $request->kota_tinggal,
+                'alamat_tinggal' => $request->alamat_tinggal,
+                'latitude_tinggal' => $request->latitude_tinggal,
+                'longitude_tinggal' => $request->longitude_tinggal,
+            ]);
 
-                // Update data Pekerjaan (Gunakan update NIM jika NIM berubah)
-                $alumni->pekerjaan()->update([
-                    'nim' => $request->nim,
-                    'nama_perusahaan' => $request->nama_perusahaan,
-                    'jabatan' => $request->jabatan,
-                    'bidang_pekerjaan' => $request->bidang,
-                    'linearitas' => $request->linearitas,
-                    'kota' => $request->kota,
-                    'latitude' => $request->latitude,
-                    'longitude' => $request->longitude,
-                ]);
-            });
-
-            return redirect()->route('admin.alumni.index')->with('success', 'Data berhasil diperbarui!');
+            return redirect()->route('admin.alumni.index')->with('success', 'Profil & Lokasi Tinggal berhasil diperbarui!');
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal update: ' . $e->getMessage())->withInput();
         }
+    }
+    public function updatePekerjaan(Request $request, $id)
+    {
+        // 1. Validasi inputan modal edit
+        $request->validate([
+            'nama_perusahaan' => 'required',
+            'jabatan' => 'required',
+            'bidang' => 'required',
+            'linearitas' => 'required',
+            'kota' => 'required',
+            'alamat_lengkap' => 'required',
+        ]);
+
+        // 2. Cari data pekerjaannya
+        $pekerjaan = Pekerjaan::findOrFail($id);
+
+        // 3. Update datanya
+        $pekerjaan->update([
+            'nama_perusahaan' => $request->nama_perusahaan,
+            'jabatan' => $request->jabatan,
+            'bidang_pekerjaan' => $request->bidang,
+            'linearitas' => $request->linearitas,
+            'kota' => $request->kota,
+            'alamat_lengkap' => $request->alamat_lengkap,
+            // Koordinat peta tetap kita update jika nanti kamu menambahkan fitur geser pin di modal edit
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude,
+            'gaji' => $request->gaji,
+            'link_linkedin' => $request->link_linkedin
+        ]);
+
+        // 4. Kembalikan ke halaman sebelumnya dengan pesan sukses
+        return back()->with('success', 'Riwayat pekerjaan berhasil diperbarui!');
     }
 }
