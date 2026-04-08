@@ -14,7 +14,18 @@
       "src": "/assets/(.*)",
       "dest": "/public/assets/$1"
     },
-    { "src": "/favicon.ico", "dest": "/public/favicon.ico" },
+    {
+      "src": "/css/(.*)",
+      "dest": "/public/css/$1"
+    },
+    {
+      "src": "/js/(.*)",
+      "dest": "/public/js/$1"
+    },
+    {
+      "src": "/favicon.ico",
+      "dest": "/public/favicon.ico"
+    },
     {
       "src": "/(.*)",
       "dest": "/api/index.php"
