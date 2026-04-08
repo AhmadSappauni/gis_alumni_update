@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+
 
 
 class AdminAlumniController extends Controller
@@ -111,8 +114,30 @@ class AdminAlumniController extends Controller
 
         $fotoPath = null;
 
+        // if ($request->hasFile('foto')) {
+        //     $fotoPath = $request->file('foto')->store('alumni_foto', 'public');
+        // }
+
         if ($request->hasFile('foto')) {
-            $fotoPath = $request->file('foto')->store('alumni_foto', 'public');
+            $file = $request->file('foto');
+
+            $filename = Str::random(20) . '.' . $file->getClientOriginalExtension();
+
+            $response = Http::withHeaders([
+                'apikey' => env('SUPABASE_KEY'),
+                'Authorization' => 'Bearer ' . env('SUPABASE_KEY'),
+            ])->attach(
+                'file',
+                file_get_contents($file),
+                $filename
+            )->post(env('SUPABASE_URL') . '/storage/v1/object/' . env('SUPABASE_BUCKET') . '/' . $filename);
+
+            if ($response->failed()) {
+                dd($response->body()); // debug kalau error
+            }
+
+            // simpan URL public
+            $fotoPath = env('SUPABASE_URL') . '/storage/v1/object/public/' . env('SUPABASE_BUCKET') . '/' . $filename;
         }
 
         try {
@@ -390,12 +415,36 @@ class AdminAlumniController extends Controller
         ]);
 
         // 2. Proses Foto Profil
-        $fotoPath = $alumni->foto_profil;
+        // $fotoPath = $alumni->foto_profil;
+        // if ($request->hasFile('foto')) {
+        //     if ($alumni->foto_profil && Storage::disk('public')->exists($alumni->foto_profil)) {
+        //         Storage::disk('public')->delete($alumni->foto_profil);
+        //     }
+        //     $fotoPath = $request->file('foto')->store('alumni_foto', 'public');
+        // }
+
+        $fotoPath = null;
+
         if ($request->hasFile('foto')) {
-            if ($alumni->foto_profil && Storage::disk('public')->exists($alumni->foto_profil)) {
-                Storage::disk('public')->delete($alumni->foto_profil);
+            $file = $request->file('foto');
+
+            $filename = Str::random(20) . '.' . $file->getClientOriginalExtension();
+
+            $response = Http::withHeaders([
+                'apikey' => env('SUPABASE_KEY'),
+                'Authorization' => 'Bearer ' . env('SUPABASE_KEY'),
+            ])->attach(
+                'file',
+                file_get_contents($file),
+                $filename
+            )->post(env('SUPABASE_URL') . '/storage/v1/object/' . env('SUPABASE_BUCKET') . '/' . $filename);
+
+            if ($response->failed()) {
+                dd($response->body()); // debug kalau error
             }
-            $fotoPath = $request->file('foto')->store('alumni_foto', 'public');
+
+            // simpan URL public
+            $fotoPath = env('SUPABASE_URL') . '/storage/v1/object/public/' . env('SUPABASE_BUCKET') . '/' . $filename;
         }
 
         try {
