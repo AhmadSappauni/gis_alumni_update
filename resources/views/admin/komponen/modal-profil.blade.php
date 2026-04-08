@@ -31,7 +31,18 @@
                     </div>
                     <div style="grid-column: span 2;">
                         <small style="color: #64748b; font-weight: bold; display: block;">Judul Skripsi</small>
-                        <p style="margin: 5px 0 0; color: #1e293b; font-size: 14px; font-style: italic; line-height: 1.5;">"{{ $alumni->judul_skripsi ?? 'Belum ada data' }}"</p>
+                        <p style="margin: 5px 0 10px 0; color: #1e293b; font-size: 14px; font-style: italic; line-height: 1.5;">"{{ $alumni->judul_skripsi ?? 'Belum ada data' }}"</p>
+                    </div>
+                    
+                    <div style="grid-column: span 2; padding-top: 10px; border-top: 1px dashed #e2e8f0; display: flex; align-items: flex-start; gap: 10px;">
+                        <div style="background: #eff6ff; padding: 8px; border-radius: 10px; color: #3b82f6;">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                        </div>
+                        <div>
+                            <small style="color: #64748b; font-weight: bold; display: block;">Domisili / Lokasi Tinggal Saat Ini</small>
+                            <span style="color: #1e293b; font-size: 14px; font-weight: 600;">{{ $alumni->kota_tinggal ?? 'Banjarmasin' }}</span>
+                            <p style="margin: 2px 0 0 0; color: #64748b; font-size: 12px;">{{ $alumni->alamat_tinggal ?? 'Alamat lengkap belum diatur' }}</p>
+                        </div>
                     </div>
                 </div>
             </div>

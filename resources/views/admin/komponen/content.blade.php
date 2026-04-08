@@ -62,8 +62,12 @@
                                 <span>{{ $pekerjaanAktif->jabatan }}</span>
                             </div>
                         @else
-                            <div style="padding: 10px; text-align:center; background:rgba(255,255,255,0.4); border-radius:10px; border:1px dashed #cbd5e1;">
-                                <span style="color:#64748b; font-style:italic; font-size:12px;">Belum bekerja/Mencari kerja</span>
+                            <div style="padding: 10px; background:rgba(255,255,255,0.4); border-radius:10px; border:1px dashed #004a87;">
+                                <div class="info-row" style="margin-bottom: 0; justify-content: center;">
+                                    <svg fill="none" viewBox="0 0 24 24" stroke="#004a87" stroke-width="2" style="width:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                                    <span style="color:#004a87; font-weight:700; font-size:11px;">Domisili: {{ $alumni->kota_tinggal ?? 'Pusat Banjarmasin' }}</span>
+                                </div>
+                                <small style="color:#64748b; font-style:italic; font-size:10px; display:block; text-align:center;">(Belum bekerja / Mencari kerja)</small>
                             </div>
                         @endif
                     </div>
@@ -153,11 +157,23 @@
                             </td>
                             <td>
                                 <div style="font-size: 12px; line-height: 1.4; color: #475569;">
-                                    <div> {{ $alumni->pekerjaans->where('is_current', true)->first()->nama_perusahaan ?? '-' }}</div>
-                                    <div> {{ $alumni->pekerjaans->where('is_current', true)->first()->kota ?? '-' }}</div>
+                                    @if($pekerjaanAktif)
+                                        <div style="font-weight: 700;">{{ $pekerjaanAktif->nama_perusahaan }}</div>
+                                        <div style="font-size: 11px;">{{ $pekerjaanAktif->kota }}</div>
+                                    @else
+                                        <div style="color: #004a87; font-weight: 600;"> {{ $alumni->kota_tinggal ?? 'Banjarmasin' }}</div>
+                                        <div style="font-size: 10px; color: #94a3b8;">(Lokasi Rumah)</div>
+                                    @endif
                                 </div>
                             </td>
-                            <td>{{ $alumni->pekerjaans->where('is_current', true)->first()->jabatan ?? '-' }}</td>
+
+                            <td>
+                                @if($pekerjaanAktif)
+                                    {{ $pekerjaanAktif->jabatan }}
+                                @else
+                                    <span style="color: #94a3b8; font-style: italic; font-size: 11px;">Mencari Kerja</span>
+                                @endif
+                            </td>
                             <td>
                                 <div style="display: flex; justify-content: center; gap: 8px;">
                                     <button class="action-btn-small view" onclick="document.getElementById('modal-profil-{{ $alumni->nim }}').style.display='flex'" title="Lihat Profil Lengkap">
