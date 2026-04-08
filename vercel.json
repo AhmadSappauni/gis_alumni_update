@@ -23,16 +23,16 @@
       "dest": "/public/js/$1"
     },
     {
+      "src": "/data/(.*)",
+      "dest": "/public/data/$1"
+    },
+    {
       "src": "/favicon.ico",
       "dest": "/public/favicon.ico"
     },
     {
       "src": "/(.*)",
       "dest": "/api/index.php"
-    },
-    {
-      "src": "/data/(.*)",
-      "dest": "/public/data/$1"
     }
   ]
 }
