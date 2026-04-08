@@ -29,6 +29,10 @@
     {
       "src": "/(.*)",
       "dest": "/api/index.php"
+    },
+    {
+      "src": "/data/(.*)",
+      "dest": "/public/data/$1"
     }
   ]
 }
