@@ -22,7 +22,9 @@ class Alumni extends Model
         'kota_tinggal',    
         'alamat_tinggal',  
         'latitude_tinggal',
-        'longitude_tinggal'
+        'longitude_tinggal',
+        'tahun_yudisium', 
+        'nilai_toefl', 
     ];
 
     // Relasi ke tabel pekerjaan
@@ -32,6 +34,7 @@ class Alumni extends Model
     }
     public function pekerjaanAktif()
     {
-        return $this->hasMany(Pekerjaan::class, 'nim', 'nim')->where('is_current', true)->first();
+        return $this->hasOne(Pekerjaan::class, 'nim', 'nim')
+                    ->where('is_current', true);
     }
 }

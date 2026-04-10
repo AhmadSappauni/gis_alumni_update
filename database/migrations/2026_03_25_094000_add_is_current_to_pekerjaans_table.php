@@ -12,9 +12,15 @@ return new class extends Migration
     public function up()
     {
         Schema::table('pekerjaans', function (Blueprint $table) {
-            // Tambahkan kolom is_current dengan default true agar data lama langsung muncul
-            $table->boolean('is_current')->default(true)->after('nim'); 
-            $table->string('status_kerja')->nullable()->after('is_current'); // Optional: buat status 'Bekerja'/'Nganggur'
+
+            if (!Schema::hasColumn('pekerjaans', 'is_current')) {
+                $table->boolean('is_current')->default(true)->after('nim');
+            }
+
+            if (!Schema::hasColumn('pekerjaans', 'status_kerja')) {
+                $table->string('status_kerja')->nullable()->after('is_current');
+            }
+
         });
     }
 

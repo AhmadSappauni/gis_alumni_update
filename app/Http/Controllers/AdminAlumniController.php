@@ -109,7 +109,11 @@ class AdminAlumniController extends Controller
             'jabatan' => 'required',
             'latitude' => 'required',
             'longitude' => 'required',
-            'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
+            'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'tahun_yudisium' => 'nullable|numeric',
+            'nilai_toefl' => 'nullable|numeric',   
+            'masa_tunggu' => 'nullable|numeric',   
+            'gaji_nominal' => 'nullable|numeric'
         ]);
 
         $fotoPath = null;
@@ -152,7 +156,9 @@ class AdminAlumniController extends Controller
                     'angkatan' => $request->angkatan,
                     'tahun_lulus' => $request->tahun_lulus,
                     'judul_skripsi' => $request->judul_skripsi,
-                    'foto_profil' => $fotoPath
+                    'foto_profil' => $fotoPath,
+                    'tahun_yudisium' => $request->tahun_yudisium,
+                    'nilai_toefl' => $request->nilai_toefl
                 ]);
                 $isUnemployed = $request->has('is_unemployed');
 
@@ -169,7 +175,10 @@ class AdminAlumniController extends Controller
                     'latitude' => $request->latitude,
                     'longitude' => $request->longitude,
                     'is_current' => true, 
-                    'status_kerja' => 'Bekerja' 
+                    'status_kerja' => 'Bekerja',
+                    'masa_tunggu' => $request->masa_tunggu,
+                    'gaji_nominal' => $request->gaji,
+                    'status_karir' => 'Utama'
                 ]);
             });
 
@@ -222,84 +231,179 @@ class AdminAlumniController extends Controller
         return response()->json($rows);
     }
 
+    private function simplifyAlamat($alamat)
+    {
+        if (!$alamat) return null;
 
+        // buang nomor rumah
+        $alamat = preg_replace('/No\.?\s*\d+/i', '', $alamat);
+
+        // buang kode pos
+        $alamat = preg_replace('/\d{5}/', '', $alamat);
+
+        // ambil bagian penting
+        if (str_contains($alamat, ',')) {
+            $parts = explode(',', $alamat);
+
+            // ambil 2 bagian terakhir
+            return trim(implode(',', array_slice($parts, -2)));
+        }
+
+        return $alamat;
+    }
 
     public function importStore(Request $request)
     {
         $rows = json_decode($request->rows, true);
+
         $success = 0;
         $skip = 0;
 
         foreach ($rows as $row) {
-            $nim = $row[0];
 
+            // 🛑 Skip kalau kosong
+            if (!isset($row[0]) || empty($row[0])) {
+                continue;
+            }
+
+            $nim = trim($row[0]);
+
+            // 🛑 Skip kalau sudah ada
             if (Alumni::where('nim', $nim)->exists()) {
                 $skip++;
                 continue;
             }
 
-            $lokasiPencarian = $row[5] ?? $row[3] ?? null; 
+            // =========================
+            // 📍 GEOCODING
+            // =========================
+            $lokasi = $row[4] ?? null;
+
+            if ($lokasi) {
+                $lokasi = $this->simplifyAlamat($lokasi);
+            }
+
+
             $lat = null;
             $lng = null;
-            
-            if ($lokasiPencarian && $lokasiPencarian !== '-') {
+
+            if ($lokasi && $lokasi !== '-') {
                 try {
-                    // Proses Geocoding via Nominatim API
-                    $response = \Illuminate\Support\Facades\Http::withHeaders([
-                        'User-Agent' => 'WebGIS-Alumni-ULM' // Wajib ada User-Agent
+                    $response = Http::withHeaders([
+                        'User-Agent' => 'WebGIS-Alumni-ULM'
                     ])->get("https://nominatim.openstreetmap.org/search", [
-                        'q'      => $lokasiPencarian,
+                        'q' => $lokasi,
                         'format' => 'json',
-                        'limit'  => 1
+                        'limit' => 1,
+                        'addressdetails' => 1
                     ]);
 
                     if ($response->successful() && isset($response->json()[0])) {
                         $lat = $response->json()[0]['lat'];
                         $lng = $response->json()[0]['lon'];
                     }
-                    
-                    // Jeda 0.5 detik agar tidak melanggar aturan Nominatim (Max 1 req/sec)
-                    usleep(500000); 
-                } catch (\Exception $e) {
-                    // Jika gagal, biarkan lat & lng tetap null
-                }
+
+                    usleep(300000);
+                } catch (\Exception $e) {}
+            }
+            
+            // =========================
+            // 🧠 NORMALISASI DATA
+            // =========================
+
+            // Linearitas
+            // $rawLinearitas = strtolower($row[15] ?? '');
+            // $fixLinearitas = ($rawLinearitas === 'erat') ? 'Linier' : 'Tidak Linier';
+
+            $linearitas = $row[15] ?? null;
+            if ($linearitas) {
+                $linearitas = ucwords(strtolower(trim($linearitas)));
             }
 
-            $rawLinearitas = $row[6] ?? 'Tidak Linier';
-            if (str_contains(strtolower($rawLinearitas), 'line')) {
-                $fixLinearitas = 'Linier'; 
+            // Gaji
+            $cleanGaji = (int) filter_var($row[11] ?? 0, FILTER_SANITIZE_NUMBER_INT);
+
+            // Masa tunggu
+            $cleanMasaTunggu = (int) filter_var($row[14] ?? 0, FILTER_SANITIZE_NUMBER_INT);
+
+            // Status kerja
+            $statusKerja = strtolower($row[3] ?? '');
+            if (str_contains($statusKerja, 'kerja')) {
+                $statusKerja = 'Bekerja';
             } else {
-                $fixLinearitas = 'Tidak Linier';
+                $statusKerja = 'Tidak Bekerja';
             }
 
-            Alumni::create([
-                'nim' => $row[0],
-                'nama_lengkap' => $row[1],
-                'email' => $row[7] ?? null,
-                'no_hp' => $row[8] ?? null,
-                'tahun_lulus' => $row[2],
-                'angkatan' => null,
-                'judul_skripsi' => null,
-                'foto_profil' => null
-            ]);
+            $noHp = $row[5] ?? null;
+            if (is_numeric($noHp)) {
+                $noHp = (string) $noHp;
+            } else {
+                $noHp = null;
+            }
 
-            Pekerjaan::create([
-                'nim' => $row[0],
-                'nama_perusahaan' => $row[3] ?? '-',
-                'jabatan' => $row[4] ?? '-',
-                'bidang_pekerjaan' => '-',
-                'gaji' => null,
-                'kota' => $row[5] ?? '-',
-                'alamat_lengkap' => $row[5] ?? '-',
-                'link_linkedin' => null,
-                'linearitas' => $fixLinearitas,
-                'latitude' => $lat,
-                'longitude' => $lng,
-                'is_current' => true,
-                'status_kerja' => ($row[3] == '-' || !$row[3]) ? 'Mencari Kerja' : 'Bekerja'
-            ]);
+            $kota = null;
 
-            $success++;
+            if ($response->successful() && isset($response->json()[0])) {
+                $data = $response->json()[0];
+
+                $lat = $data['lat'];
+                $lng = $data['lon'];
+
+                // 🔥 ambil kota dari address
+                $address = $data['address'] ?? [];
+                $kota = $address['city']
+                    ?? $address['town']
+                    ?? $address['municipality']
+                    ?? $address['county']
+                    ?? $address['state']
+                    ?? null;
+            }
+            // =========================
+            // 💾 SIMPAN
+            // =========================
+            DB::transaction(function () use (
+                $kota, $noHp, $row,
+                $nim,
+                $lat,
+                $lng,
+                $linearitas,
+                $cleanGaji,
+                $cleanMasaTunggu,
+                $statusKerja,
+                &$success
+            ) {
+
+                Alumni::create([
+                    'nim' => $nim,
+                    'nama_lengkap' => $row[1] ?? '-',
+                    'email' => $row[2] ?? null,
+                    'no_hp' => $noHp,
+                    'tahun_yudisium' => $this->ambilTahun($row[6]) ?? null,
+                    'tahun_lulus' => $this->ambilTahun($row[7]) ?? null,
+                    'nilai_toefl' => $row[13] ?? null,
+                    'angkatan' => substr($nim, 0, 2),
+                ]);
+
+                Pekerjaan::create([
+                    'nim' => $nim,
+                    'nama_perusahaan' => $row[10] ?? '-',
+                    'jabatan' => $row[12] ?? '-',
+                    'bidang_pekerjaan' => '-',
+                    'gaji' => $row[11] ?? null,
+                    'gaji_nominal' => $cleanGaji,
+                    'kota' => $kota,
+                    'alamat_lengkap' => $row[4] ?? '-',
+                    'linearitas' => $linearitas,
+                    'latitude' => $lat,
+                    'longitude' => $lng,
+                    'is_current' => true,
+                    'status_kerja' => $statusKerja,
+                    'status_karir' => 'Utama',
+                    'masa_tunggu' => $cleanMasaTunggu,
+                ]);
+
+                $success++;
+            });
         }
 
         return response()->json([
@@ -308,7 +412,28 @@ class AdminAlumniController extends Controller
         ]);
     }
 
+    private function ambilTahun($val)
+    {
+        if (!$val) return null;
 
+        // kalau format ISO (2024-02-20T...)
+        if (is_string($val) && str_contains($val, 'T')) {
+            return (int) substr($val, 0, 4);
+        }
+
+        // kalau format DD/MM/YYYY
+        if (is_string($val) && str_contains($val, '/')) {
+            $parts = explode('/', $val);
+            return (int) end($parts);
+        }
+
+        // kalau sudah angka
+        if (is_numeric($val)) {
+            return (int) $val;
+        }
+
+        return null;
+    }
 
     public function destroy($nim)
     {

@@ -1,10 +1,8 @@
-@extends('admin.layout')
+<?php $__env->startPush('styles'); ?>
+        <link rel="stylesheet" href="<?php echo e(asset('css/admin/import.css')); ?>">
+<?php $__env->stopPush(); ?>
 
-@push('styles')
-        <link rel="stylesheet" href="{{ asset('css/admin/import.css') }}">
-@endpush
-
-@section('content')
+<?php $__env->startSection('content'); ?>
     <header class="top-header glass-panel">
         <h1>Import Data Alumni</h1>
         <p style="font-size: 13px; color: #64748b;">Gunakan file format .xlsx untuk unggah masal</p>
@@ -59,8 +57,10 @@
             </div>
         </div>
     </div>
-@endsection
-@push('scripts')
-    <script src="{{ asset('js/admin/import.js') }}">
+<?php $__env->stopSection(); ?>
+<?php $__env->startPush('scripts'); ?>
+    <script src="<?php echo e(asset('js/admin/import.js')); ?>">
     </script>
-@endpush
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('admin.layout', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_2\resources\views/admin/import/import-excel.blade.php ENDPATH**/ ?>
