@@ -188,23 +188,24 @@
                                 </td>
                                 <td style="padding: 15px; border-radius: 0 12px 12px 0; border: 1px solid #f1f5f9; border-left: none; text-align: center;">
                                     <div style="display: flex; gap: 5px; justify-content: center;">
-                                        @php
-                                        $dataEdit = [
-                                            "id" => $p->id,
-                                            "nama_perusahaan" => $p->perusahaan?->nama_perusahaan,
-                                            "linearitas" => $p->perusahaan?->linearitas,
-                                            "link_linkedin" => $p->perusahaan?->link_linkedin,
-                                            "jabatan" => $p->jabatan,
-                                            "bidang_pekerjaan" => $p->bidang_pekerjaan,
-                                            "kota" => $p->perusahaan?->lokasi->first()?->kota,
-                                            "alamat_lengkap" => $p->perusahaan?->lokasi->first()?->alamat_lengkap,
-                                            "latitude" => $p->perusahaan?->lokasi->first()?->latitude,
-                                            "longitude" => $p->perusahaan?->lokasi->first()?->longitude,
-                                            "gaji" => $p->gaji_nominal,
-                                        ];
-                                        @endphp
         
-                                        <button type="button"onclick='editPekerjaan(@json($dataEdit))' title="Edit data pekerjaan ini" style="background: #e0f2fe; color: #0284c7; border: none; padding: 8px; border-radius: 8px; cursor: pointer; transition: 0.2s;">
+                                        <button type="button" onclick='editPekerjaan(@json([
+                                                    "id" => $p->id,
+                                                    "nama_perusahaan" => $p->perusahaan?->nama_perusahaan,
+                                                    "linearitas" => $p->perusahaan?->linearitas,
+                                                    "link_linkedin" => $p->perusahaan?->link_linkedin,
+
+                                                    "jabatan" => $p->jabatan,
+                                                    "bidang_pekerjaan" => $p->bidang_pekerjaan,
+
+                                                    "kota" => $p->perusahaan?->lokasi->first()?->kota,
+                                                    "alamat_lengkap" => $p->perusahaan?->lokasi->first()?->alamat_lengkap,
+                                                    "latitude" => $p->perusahaan?->lokasi->first()?->latitude,
+                                                    "longitude" => $p->perusahaan?->lokasi->first()?->longitude,
+
+                                                    "gaji" => $p->gaji_nominal
+                                                ]))' 
+                                                title="Edit data pekerjaan ini" style="background: #e0f2fe; color: #0284c7; border: none; padding: 8px; border-radius: 8px; cursor: pointer; transition: 0.2s;">
                                             <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                         </button>
 
@@ -232,12 +233,312 @@
 
 @push('scripts')
     <script>
-    window.editConfig = {
-        oldLat: @json($alumni->alamat?->latitude ?? -3.316694),
-        oldLng: @json($alumni->alamat?->longitude ?? 114.590111),
-        pekerjaanUrl: @json(url('/admin/pekerjaan'))
-    };
+        function switchTab(tabId, btn) {
+            // Sembunyikan semua tab
+            document.querySelectorAll('.tab-pane').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            // Hapus warna aktif di semua tombol
+            document.querySelectorAll('.tab-btn').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Tampilkan tab yang dipilih
+            document.getElementById(tabId).classList.add('active');
+            btn.classList.add('active');
+
+            // Fix Peta Leaflet agar merender ulang jika tab Peta dibuka
+            if(tabId === 'tab-profil' && typeof map !== 'undefined') {
+                setTimeout(() => { map.invalidateSize(); }, 300);
+            }
+        }
     </script>
 
-    <script src="{{ asset('js/admin/edit.js') }}"></script>
+    <script>
+        var oldLat = {{ $alumni->alamat?->latitude ?? -3.316694 }};
+        var oldLng = {{ $alumni->alamat?->longitude ?? 114.590111 }};
+        var map, marker;
+        var typingTimer; 
+        var doneTypingInterval = 800; // Tunggu 0.8 detik setelah berhenti mengetik
+
+        document.addEventListener("DOMContentLoaded", function() {
+            // 1. Inisialisasi Peta Leaflet
+            map = L.map('map-tambah').setView([oldLat, oldLng], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            // 2. Buat Marker
+            marker = L.marker([oldLat, oldLng], {draggable: true}).addTo(map);
+
+            // Fungsi Reverse Geocoding (Ubah Koordinat jadi Teks Alamat)
+            function getAddressFromCoords(lat, lng) {
+                const alamatInput = document.getElementById('alamat_lengkap');
+                alamatInput.value = " Mengambil detail alamat dari satelit..."; // <--- STATUS LOADING
+                
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data && data.display_name) {
+                            alamatInput.value = data.display_name; // <--- HASIL SUKSES
+                        } else {
+                            alamatInput.value = " Detail alamat tidak ditemukan untuk titik ini. Silakan geser pin merah sedikit.";
+                        }
+                    })
+                    .catch(error => {
+                        alamatInput.value = " Gagal mengambil alamat. Periksa koneksi internet.";
+                    });
+            }
+
+            // 3. Update saat marker digeser
+            marker.on('dragend', function (e) {
+                var lat = marker.getLatLng().lat;
+                var lng = marker.getLatLng().lng;
+                document.getElementById('lat').value = lat;
+                document.getElementById('lng').value = lng;
+                getAddressFromCoords(lat, lng);
+            });
+
+            // 4. Update saat peta diklik
+            map.on('click', function(e) {
+                var lat = e.latlng.lat;
+                var lng = e.latlng.lng;
+                marker.setLatLng([lat, lng]);
+                document.getElementById('lat').value = lat;
+                document.getElementById('lng').value = lng;
+                getAddressFromCoords(lat, lng);
+            });
+
+            // 5. FITUR PENCARIAN DENGAN STATUS LOADING
+            const kotaInput = document.getElementById('kota');
+            const alamatInput = document.getElementById('alamat_lengkap');
+
+            kotaInput.addEventListener('keyup', function() {
+                clearTimeout(typingTimer);
+                if (kotaInput.value) {
+                    // Beri tahu user bahwa sistem sedang menunggu dia selesai mengetik
+                    alamatInput.value = " Menunggu selesai mengetik...";
+                    typingTimer = setTimeout(cariLokasi, doneTypingInterval);
+                } else {
+                    alamatInput.value = ""; // Kosongkan jika input dihapus
+                }
+            });
+
+            function cariLokasi() {
+                let query = kotaInput.value;
+                if (query.length < 3) {
+                    alamatInput.value = " Ketik minimal 3 huruf untuk mencari lokasi.";
+                    return; 
+                }
+
+                // Berikan status pencarian ke server
+                alamatInput.value = ` Sedang mencari titik lokasi untuk "${query}"...`;
+
+                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}, Indonesia`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.length > 0) {
+                            var lat = data[0].lat;
+                            var lng = data[0].lon;
+                            
+                            map.setView([lat, lng], 14); // Pindah kamera peta
+                            marker.setLatLng([lat, lng]); // Pindah pin merah
+                            
+                            document.getElementById('lat').value = lat;
+                            document.getElementById('lng').value = lng;
+                            
+                            // Ambil nama jalan detailnya
+                            getAddressFromCoords(lat, lng);
+                        } else {
+                            alamatInput.value = ` Kota "${query}" tidak ditemukan. Coba nama yang lebih umum.`;
+                        }
+                    })
+                    .catch(error => {
+                        alamatInput.value = " Terjadi kesalahan saat mencari lokasi.";
+                    });
+            }
+        });
+    </script>
+
+    <script>
+        document.querySelectorAll('.btn-delete-swal').forEach(button => {
+            button.addEventListener('click', function(e) {
+                const form = this.closest('.form-hapus-pekerjaan');
+                Swal.fire({
+                    title: 'Hapus Pekerjaan?', text: "Data ini akan dihapus permanen!",
+                    icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#94a3b8', confirmButtonText: 'Ya, Hapus!', reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        Swal.fire({ title: 'Memproses...', didOpen: () => { Swal.showLoading() }, allowOutsideClick: false });
+                        form.submit();
+                    }
+                });
+            });
+        });
+    </script>
+
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <script>
+        tippy('[title]', { content: (reference) => reference.getAttribute('title'), theme: 'material', placement: 'top', animation: 'shift-away' });
+    </script>   
+
+    <script>
+        let currentTabStep = 0;
+        showStep(currentTabStep);
+
+        function showStep(n) {
+            let steps = document.getElementsByClassName("form-step");
+            let indicators = document.getElementsByClassName("step");
+            
+            for (let i = 0; i < steps.length; i++) {
+                steps[i].style.display = "none";
+                steps[i].classList.remove("active");
+                if(indicators[i]) indicators[i].classList.remove("active");
+            }
+            
+            if(steps[n]) {
+                steps[n].style.display = "block";
+                steps[n].classList.add("active");
+                if(indicators[n]) indicators[n].classList.add("active");
+            }
+            
+            // ==========================================
+            // KODE BARU: Bangunkan peta saat masuk Step 3 (index 2)
+            // ==========================================
+            if (n === 2 && typeof map !== 'undefined') {
+                setTimeout(function() {
+                    map.invalidateSize();
+                }, 300); // Jeda 300ms menunggu animasi CSS selesai
+            }
+            // ==========================================
+            
+            // Progress bar
+            document.getElementById("progress-bar").style.width = (n / (steps.length - 1)) * 100 + "%";
+
+            // Tombol Sebelumnya
+            document.getElementById("prevBtn").style.display = (n == 0) ? "none" : "inline";
+
+            // Tombol Lanjut / Simpan
+            if (n == (steps.length - 1)) {
+                document.getElementById("nextBtn").innerHTML = " Simpan Profil";
+                document.getElementById("nextBtn").setAttribute('onclick', "document.getElementById('wizardForm').submit()");
+            } else {
+                document.getElementById("nextBtn").innerHTML = "Lanjut";
+                document.getElementById("nextBtn").setAttribute('onclick', "nextPrev(1)");
+            }
+        }
+
+        function nextPrev(n) {
+            let steps = document.getElementsByClassName("form-step");
+            
+            // Validasi HTML5 bawaan sebelum lanjut
+            if (n == 1) {
+                let inputs = steps[currentTabStep].querySelectorAll('input[required], textarea[required], select[required]');
+                for (let i = 0; i < inputs.length; i++) {
+                    if (!inputs[i].checkValidity()) {
+                        inputs[i].reportValidity();
+                        return false;
+                    }
+                }
+            }
+
+            steps[currentTabStep].style.display = "none";
+            currentTabStep = currentTabStep + n;
+            showStep(currentTabStep);
+        }
+    </script>
+    <script>
+        var mapKerjaTambah = null, markerKerjaTambah = null;
+        var mapKerjaEdit = null, markerKerjaEdit = null;
+
+        // Fungsi Reverse Geocoding Khusus Modal
+        function getAlamatModal(lat, lng, inputId) {
+            let input = document.getElementById(inputId);
+            input.value = "⏳ Mengambil alamat dari peta...";
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+                .then(res => res.json())
+                .then(data => { input.value = data.display_name || "Alamat tidak ditemukan."; })
+                .catch(() => { input.value = "Gagal mengambil alamat."; });
+        }
+
+        // ==========================================
+        // FUNGSI MODAL TAMBAH PEKERJAAN
+        // ==========================================
+        function openModalKerja() { 
+            document.getElementById('modal-pekerjaan').classList.add('active');
+            
+            // Ciptakan peta hanya jika belum pernah diciptakan
+            if (!mapKerjaTambah) {
+                mapKerjaTambah = L.map('map-kerja-tambah').setView([-3.316694, 114.590111], 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapKerjaTambah);
+                markerKerjaTambah = L.marker([-3.316694, 114.590111], {draggable: true}).addTo(mapKerjaTambah);
+
+                markerKerjaTambah.on('dragend', function(e) {
+                    let lat = e.target.getLatLng().lat;
+                    let lng = e.target.getLatLng().lng;
+                    document.getElementById('tambah_lat').value = lat;
+                    document.getElementById('tambah_lng').value = lng;
+                    getAlamatModal(lat, lng, 'tambah_alamat');
+                });
+            }
+            
+            // Refresh ukuran peta agar tidak abu-abu
+            setTimeout(() => { mapKerjaTambah.invalidateSize(); }, 300); 
+        }
+
+        function closeModalKerja() { 
+            document.getElementById('modal-pekerjaan').classList.remove('active'); 
+        }
+
+        // ==========================================
+        // FUNGSI MODAL EDIT PEKERJAAN
+        // ==========================================
+        function editPekerjaan(pekerjaan) {
+            // 1. Isi form dengan data lama
+            document.getElementById('edit_perusahaan').value = pekerjaan.nama_perusahaan;
+            document.getElementById('edit_jabatan').value = pekerjaan.jabatan;
+            document.getElementById('edit_bidang').value = pekerjaan.bidang_pekerjaan;
+            document.getElementById('edit_linearitas').value = pekerjaan.linearitas;
+            document.getElementById('edit_kota').value = pekerjaan.kota;
+            document.getElementById('edit_alamat').value = pekerjaan.alamat_lengkap;
+            document.getElementById('edit_gaji').value = pekerjaan.gaji || '';
+            document.getElementById('edit_linkedin').value = pekerjaan.link_linkedin || '';
+
+            let lat = pekerjaan.latitude || -3.316694;
+            let lng = pekerjaan.longitude || 114.590111;
+            document.getElementById('edit_lat').value = lat;
+            document.getElementById('edit_lng').value = lng;
+
+            // 2. Tampilkan Modalnya
+            document.getElementById('form-edit-pekerjaan').action = "{{ url('/admin/pekerjaan') }}/" + pekerjaan.id;
+            document.getElementById('modal-edit-pekerjaan').classList.add('active');
+            
+            // 3. Ciptakan atau Update Petanya
+            if (!mapKerjaEdit) {
+                mapKerjaEdit = L.map('map-kerja-edit').setView([lat, lng], 15);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapKerjaEdit);
+                markerKerjaEdit = L.marker([lat, lng], {draggable: true}).addTo(mapKerjaEdit);
+
+                markerKerjaEdit.on('dragend', function(e) {
+                    let newLat = e.target.getLatLng().lat;
+                    let newLng = e.target.getLatLng().lng;
+                    document.getElementById('edit_lat').value = newLat;
+                    document.getElementById('edit_lng').value = newLng;
+                    getAlamatModal(newLat, newLng, 'edit_alamat');
+                });
+            } else {
+                mapKerjaEdit.setView([lat, lng], 15);
+                markerKerjaEdit.setLatLng([lat, lng]);
+            }
+
+            // Refresh ukuran peta
+            setTimeout(() => { mapKerjaEdit.invalidateSize(); }, 300);
+        }
+
+        function closeEditModalKerja() { 
+            document.getElementById('modal-edit-pekerjaan').classList.remove('active'); 
+        }
+    </script>
 @endpush

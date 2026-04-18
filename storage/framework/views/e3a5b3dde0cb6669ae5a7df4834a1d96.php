@@ -1,35 +1,34 @@
-@extends('admin.layout')
-
-@push('styles')
-    <link rel="stylesheet" href="{{ asset('css/admin-create.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/admin/edit.css') }}">
+<?php $__env->startPush('styles'); ?>
+    <link rel="stylesheet" href="<?php echo e(asset('css/admin-create.css')); ?>">
+    <link rel="stylesheet" href="<?php echo e(asset('css/admin/edit.css')); ?>">
     
-@endpush
+<?php $__env->stopPush(); ?>
 
-@section('content')
+<?php $__env->startSection('content'); ?>
     <header class="top-header glass-panel">
         <h1>Edit Data Alumni</h1>
         <div style="display: flex; align-items: center; gap: 15px;">
-            <a href="{{ route('admin.alumni.index') }}" class="btn-batal">← Kembali</a>
+            <a href="<?php echo e(route('admin.alumni.index')); ?>" class="btn-batal">← Kembali</a>
         </div>
     </header>
 
     <div style="max-width: 1000px; margin: 0 auto;">
         
-        @if (session('error'))
+        <?php if(session('error')): ?>
             <div style="background:#fee2e2;color:#991b1b;padding:15px;margin-bottom:20px;border-radius:12px; font-weight: 700;">
-                {{ session('error') }}
+                <?php echo e(session('error')); ?>
+
             </div>
-        @endif
-        @if ($errors->any())
+        <?php endif; ?>
+        <?php if($errors->any()): ?>
             <div style="background:#fee2e2;color:#991b1b;padding:15px;border-radius:12px;margin-bottom:20px;">
                 <ul style="margin:0; padding-left:20px;">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
+                    <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $error): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <li><?php echo e($error); ?></li>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </ul>
             </div>
-        @endif
+        <?php endif; ?>
 
         <div class="tab-navigation">
             <button type="button" class="tab-btn active" onclick="switchTab('tab-profil', this)">
@@ -50,26 +49,26 @@
                 <div class="step" id="s3">3</div>
             </div>
 
-            <form action="{{ route('admin.alumni.update', $alumni->id) }}" method="POST" enctype="multipart/form-data" id="wizardForm">
-                @csrf
-                @method('PUT')
+            <form action="<?php echo e(route('admin.alumni.update', $alumni->id)); ?>" method="POST" enctype="multipart/form-data" id="wizardForm">
+                <?php echo csrf_field(); ?>
+                <?php echo method_field('PUT'); ?>
 
                 <div class="form-step active" id="step1">
                     <h3 style="color: var(--pilkom-blue-dark); margin-bottom: 25px;">Data Pribadi & Akademik</h3>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                        <div><label class="label-admin">NIM</label><input type="text" name="nim" class="custom-input-admin" value="{{ old('nim', $alumni->nim) }}" required></div>
-                        <div><label class="label-admin">Nama Lengkap</label><input type="text" name="nama_lengkap" class="custom-input-admin" value="{{ old('nama_lengkap', $alumni->nama_lengkap) }}" required></div>
-                        <div><label class="label-admin">Angkatan</label><input type="number" name="angkatan" class="custom-input-admin" value="{{ old('angkatan', $alumni->akademik?->angkatan) }}"></div>
-                        <div><label class="label-admin">Tahun Lulus</label><input type="number" name="tahun_lulus" class="custom-input-admin" value="{{ old('tahun_lulus', $alumni->akademik?->tahun_lulus) }}" required></div>
+                        <div><label class="label-admin">NIM</label><input type="text" name="nim" class="custom-input-admin" value="<?php echo e(old('nim', $alumni->nim)); ?>" required></div>
+                        <div><label class="label-admin">Nama Lengkap</label><input type="text" name="nama_lengkap" class="custom-input-admin" value="<?php echo e(old('nama_lengkap', $alumni->nama_lengkap)); ?>" required></div>
+                        <div><label class="label-admin">Angkatan</label><input type="number" name="angkatan" class="custom-input-admin" value="<?php echo e(old('angkatan', $alumni->akademik?->angkatan)); ?>"></div>
+                        <div><label class="label-admin">Tahun Lulus</label><input type="number" name="tahun_lulus" class="custom-input-admin" value="<?php echo e(old('tahun_lulus', $alumni->akademik?->tahun_lulus)); ?>" required></div>
                     </div>
                     <div style="margin-top: 20px;">
                         <label class="label-admin">Judul Skripsi</label>
-                        <textarea name="judul_skripsi" class="custom-input-admin" rows="2">{{ old('judul_skripsi', $alumni->akademik?->judul_skripsi) }}</textarea>
+                        <textarea name="judul_skripsi" class="custom-input-admin" rows="2"><?php echo e(old('judul_skripsi', $alumni->akademik?->judul_skripsi)); ?></textarea>
                     </div>
                     <div style="margin-top: 20px; background: rgba(0,74,135,0.03); padding: 20px; border-radius: 15px;">
                         <label class="label-admin">Foto Profil</label>
                         <div style="display: flex; align-items: center; gap: 20px;">
-                            <img src="{{ $alumni->foto_profil ? asset('storage/' . $alumni->foto_profil) : '/default.png' }}" style="width:90px; height:90px; object-fit:cover; border-radius:20px; border:3px solid white; box-shadow:0 10px 20px rgba(0,0,0,0.1);">
+                            <img src="<?php echo e($alumni->foto_profil ? asset('storage/' . $alumni->foto_profil) : '/default.png'); ?>" style="width:90px; height:90px; object-fit:cover; border-radius:20px; border:3px solid white; box-shadow:0 10px 20px rgba(0,0,0,0.1);">
                             <div style="flex-grow: 1;">
                                 <input type="file" name="foto" class="custom-input-admin">
                                 <small style="color: #64748b; display: block; margin-top: 8px;">Pilih file baru jika ingin mengganti foto</small>
@@ -81,8 +80,8 @@
                 <div class="form-step" id="step2">
                     <h3 style="color: var(--pilkom-blue-dark); margin-bottom: 25px;">Informasi Kontak</h3>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                        <div><label class="label-admin">Email</label><input type="email" name="email" class="custom-input-admin" value="{{ old('email', $alumni->email) }}" placeholder="alumni@example.com"></div>
-                        <div><label class="label-admin">No. WhatsApp</label><input type="text" name="no_hp" class="custom-input-admin" value="{{ old('no_hp', $alumni->no_hp) }}" placeholder="0812..."></div>
+                        <div><label class="label-admin">Email</label><input type="email" name="email" class="custom-input-admin" value="<?php echo e(old('email', $alumni->email)); ?>" placeholder="alumni@example.com"></div>
+                        <div><label class="label-admin">No. WhatsApp</label><input type="text" name="no_hp" class="custom-input-admin" value="<?php echo e(old('no_hp', $alumni->no_hp)); ?>" placeholder="0812..."></div>
                     </div>
                 </div>
 
@@ -95,15 +94,15 @@
                         <div style="display: flex; flex-direction: column; gap: 15px;">
                             <div>
                                 <label class="label-admin">Kota / Kabupaten</label>
-                                <input type="text" name="kota_tinggal" id="kota" class="custom-input-admin" value="{{ old('kota_tinggal', $alumni->alamat?->kota) }}" placeholder="Ketik nama kota..." required>
+                                <input type="text" name="kota_tinggal" id="kota" class="custom-input-admin" value="<?php echo e(old('kota_tinggal', $alumni->alamat?->kota)); ?>" placeholder="Ketik nama kota..." required>
                             </div>
                             <div>
                                 <label class="label-admin">Alamat Lengkap</label>
-                                <textarea name="alamat_tinggal" id="alamat_lengkap" class="custom-input-admin" rows="3" readonly placeholder="Pinpoint di peta" required>{{ old('alamat_tinggal', $alumni->alamat?->alamat_lengkap) }}</textarea>
+                                <textarea name="alamat_tinggal" id="alamat_lengkap" class="custom-input-admin" rows="3" readonly placeholder="Pinpoint di peta" required><?php echo e(old('alamat_tinggal', $alumni->alamat?->alamat_lengkap)); ?></textarea>
                             </div>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                                <input type="text" name="latitude_tinggal" id="lat" class="custom-input-admin" value="{{ old('latitude_tinggal', $alumni->alamat?->latitude) }}" readonly required>
-                                <input type="text" name="longitude_tinggal" id="lng" class="custom-input-admin" value="{{ old('longitude_tinggal', $alumni->alamat?->longitude) }}" readonly required>
+                                <input type="text" name="latitude_tinggal" id="lat" class="custom-input-admin" value="<?php echo e(old('latitude_tinggal', $alumni->alamat?->latitude)); ?>" readonly required>
+                                <input type="text" name="longitude_tinggal" id="lng" class="custom-input-admin" value="<?php echo e(old('longitude_tinggal', $alumni->alamat?->longitude)); ?>" readonly required>
                             </div>
                         </div>
                     </div>
@@ -127,13 +126,13 @@
                 </button>
             </div>
 
-            @if($alumni->pekerjaan->isEmpty())
+            <?php if($alumni->pekerjaan->isEmpty()): ?>
                 <div style="text-align: center; padding: 40px; background: rgba(0,74,135,0.03); border-radius: 16px; border: 2px dashed rgba(0,74,135,0.2);">
                     <svg width="40" height="40" fill="none" stroke="#94a3b8" viewBox="0 0 24 24" style="margin-bottom: 10px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                     <h4 style="color: #475569; margin:0;">Belum Ada Riwayat Pekerjaan</h4>
                     <p style="color: #94a3b8; font-size: 13px; margin-top:5px;">Klik tombol + Tambah Pekerjaan di atas untuk menambahkan data.</p>
                 </div>
-            @else
+            <?php else: ?>
                 <div style="overflow-x: auto;">
                     <table style="width: 100%; border-collapse: separate; border-spacing: 0 10px;">
                         <thead>
@@ -146,49 +145,50 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($alumni->pekerjaan->sortBy(function($item){
+                            <?php $__currentLoopData = $alumni->pekerjaan->sortBy(function($item){
                                 return match($item->status_karir){
                                     'Utama' => 1,
                                     'Sampingan' => 2,
                                     default => 3
                                 };
-                            }) as $p)
+                            }); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $p): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <tr style="background: #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: 0.3s;">
                                 <td style="padding: 15px; border-radius: 12px 0 0 12px; border: 1px solid #f1f5f9; border-right: none;">
-                                    <span style="font-weight: 800; color: #1e293b; display: block; font-size: 15px;">{{ $p->perusahaan?->nama_perusahaan }}</span>
+                                    <span style="font-weight: 800; color: #1e293b; display: block; font-size: 15px;"><?php echo e($p->perusahaan?->nama_perusahaan); ?></span>
                                     <small style="color: #94a3b8; display: flex; align-items: center; gap: 4px; margin-top:4px;">
                                         <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                                        {{ $p->perusahaan?->lokasi->first()?->kota ?? '-' }}
+                                        <?php echo e($p->perusahaan?->lokasi->first()?->kota ?? '-'); ?>
+
                                     </small>
                                 </td>
                                 <td style="padding: 15px; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;">
-                                    <span style="color: #475569; font-weight: 600;">{{ $p->jabatan }}</span>
+                                    <span style="color: #475569; font-weight: 600;"><?php echo e($p->jabatan); ?></span>
                                 </td>
                                 <td style="padding: 15px; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;">
-                                    @if($p->status_karir == 'Utama')
+                                    <?php if($p->status_karir == 'Utama'): ?>
                                         <span title="Pekerjaan utama yang ditampilkan di peta" style="background: #ecfdf5; color: #10b981; padding: 5px 12px; border-radius: 8px; font-size: 11px; font-weight: 800; border: 1px solid #10b981; cursor: help;">UTAMA</span>
-                                    @elseif($p->status_karir == 'Sampingan')
+                                    <?php elseif($p->status_karir == 'Sampingan'): ?>
                                         <span title="Pekerjaan aktif lainnya (Double Job)" style="background: #eff6ff; color: #3b82f6; padding: 5px 12px; border-radius: 8px; font-size: 11px; font-weight: 800; border: 1px solid #3b82f6; cursor: help;">SAMPINGAN</span>
-                                    @else
+                                    <?php else: ?>
                                         <span title="Riwayat pekerjaan masa lalu" style="background: #f8fafc; color: #94a3b8; padding: 5px 12px; border-radius: 8px; font-size: 11px; font-weight: 800; border: 1px solid #e2e8f0; cursor: help;">RIWAYAT</span>
-                                    @endif
+                                    <?php endif; ?>
                                 </td>
                                 <td style="padding: 15px; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; text-align: center;">
                                     <div style="display: flex; gap: 5px; justify-content: center;">
-                                        @foreach(['Utama' => ['U', '#10b981', 'Jadikan Pekerjaan Utama'], 'Sampingan' => ['S', '#3b82f6', 'Jadikan Pekerjaan Sampingan'], 'Riwayat' => ['R', '#94a3b8', 'Pindahkan ke Riwayat Lama']] as $status => $style)
-                                            @if($p->status_karir != $status)
-                                                <form action="{{ route('admin.pekerjaan.updateStatus', $p->id) }}" method="POST" style="display:inline;">
-                                                    @csrf
-                                                    <input type="hidden" name="status" value="{{ $status }}">
-                                                    <button type="submit" title="{{ $style[2] }}" style="background: {{ $style[1] }}; color: white; border: none; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-weight: 800; font-size: 11px; transition: 0.2s;">{{ $style[0] }}</button>
+                                        <?php $__currentLoopData = ['Utama' => ['U', '#10b981', 'Jadikan Pekerjaan Utama'], 'Sampingan' => ['S', '#3b82f6', 'Jadikan Pekerjaan Sampingan'], 'Riwayat' => ['R', '#94a3b8', 'Pindahkan ke Riwayat Lama']]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $status => $style): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                            <?php if($p->status_karir != $status): ?>
+                                                <form action="<?php echo e(route('admin.pekerjaan.updateStatus', $p->id)); ?>" method="POST" style="display:inline;">
+                                                    <?php echo csrf_field(); ?>
+                                                    <input type="hidden" name="status" value="<?php echo e($status); ?>">
+                                                    <button type="submit" title="<?php echo e($style[2]); ?>" style="background: <?php echo e($style[1]); ?>; color: white; border: none; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-weight: 800; font-size: 11px; transition: 0.2s;"><?php echo e($style[0]); ?></button>
                                                 </form>
-                                            @endif
-                                        @endforeach
+                                            <?php endif; ?>
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                     </div>
                                 </td>
                                 <td style="padding: 15px; border-radius: 0 12px 12px 0; border: 1px solid #f1f5f9; border-left: none; text-align: center;">
                                     <div style="display: flex; gap: 5px; justify-content: center;">
-                                        @php
+                                        <?php
                                         $dataEdit = [
                                             "id" => $p->id,
                                             "nama_perusahaan" => $p->perusahaan?->nama_perusahaan,
@@ -202,15 +202,15 @@
                                             "longitude" => $p->perusahaan?->lokasi->first()?->longitude,
                                             "gaji" => $p->gaji_nominal,
                                         ];
-                                        @endphp
+                                        ?>
         
-                                        <button type="button"onclick='editPekerjaan(@json($dataEdit))' title="Edit data pekerjaan ini" style="background: #e0f2fe; color: #0284c7; border: none; padding: 8px; border-radius: 8px; cursor: pointer; transition: 0.2s;">
+                                        <button type="button"onclick='editPekerjaan(<?php echo json_encode($dataEdit, 15, 512) ?>)' title="Edit data pekerjaan ini" style="background: #e0f2fe; color: #0284c7; border: none; padding: 8px; border-radius: 8px; cursor: pointer; transition: 0.2s;">
                                             <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                         </button>
 
-                                        <form action="{{ route('admin.pekerjaan.destroy', $p->id) }}" method="POST" class="form-hapus-pekerjaan">
-                                            @csrf
-                                            @method('DELETE')
+                                        <form action="<?php echo e(route('admin.pekerjaan.destroy', $p->id)); ?>" method="POST" class="form-hapus-pekerjaan">
+                                            <?php echo csrf_field(); ?>
+                                            <?php echo method_field('DELETE'); ?>
                                             <button type="button" class="btn-delete-swal" title="Hapus permanen" style="background: #fee2e2; color: #ef4444; border: none; padding: 8px; border-radius: 8px; cursor: pointer; transition: 0.2s;">
                                                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                             </button>
@@ -218,26 +218,27 @@
                                     </div>
                                 </td>
                             </tr>
-                            @endforeach
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </tbody>
                     </table>
                 </div>
-            @endif
+            <?php endif; ?>
         </div>
 
     </div>
 
-    @include('admin.komponen.riwayat-pekerjaan')
-@endsection
+    <?php echo $__env->make('admin.komponen.riwayat-pekerjaan', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
     <script>
     window.editConfig = {
-        oldLat: @json($alumni->alamat?->latitude ?? -3.316694),
-        oldLng: @json($alumni->alamat?->longitude ?? 114.590111),
-        pekerjaanUrl: @json(url('/admin/pekerjaan'))
+        oldLat: <?php echo json_encode($alumni->alamat?->latitude ?? -3.316694, 15, 512) ?>,
+        oldLng: <?php echo json_encode($alumni->alamat?->longitude ?? 114.590111, 15, 512) ?>,
+        pekerjaanUrl: <?php echo json_encode(url('/admin/pekerjaan'), 15, 512) ?>
     };
     </script>
 
-    <script src="{{ asset('js/admin/edit.js') }}"></script>
-@endpush
+    <script src="<?php echo e(asset('js/admin/edit.js')); ?>"></script>
+<?php $__env->stopPush(); ?>
+<?php echo $__env->make('admin.layout', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_3\resources\views/admin/edit.blade.php ENDPATH**/ ?>

@@ -158,34 +158,56 @@ function getCity(lat, lng) {
 }
 
 function updateReview() {
-    // Ambil semua value
-    let nama = document.querySelector("input[name='nama_lengkap']").value;
-    let nim = document.querySelector("input[name='nim']").value;
-    let email = document.querySelector("input[name='email']").value; // Tambahan
-    let no_hp = document.querySelector("input[name='no_hp']").value;
-    let angkatan = document.querySelector("input[name='angkatan']").value;
-    let tahun = document.querySelector("input[name='tahun_lulus']").value;
-    let perusahaan = document.querySelector("input[name='nama_perusahaan']").value;
-    let jabatan = document.querySelector("input[name='jabatan']").value;
-    let bidang = document.querySelector("select[name='bidang']").value;
-    let kota = document.getElementById("kota").value; // Pastikan ID benar
-    let lat = document.getElementById("lat").value;
-    let lng = document.getElementById("lng").value;
 
-    // HANYA munculkan review jika sedang di Step 3 (currentTab == 2)
-    // DAN data krusial sudah terisi
-    if (currentTab == 2 && nama && nim && perusahaan) {
-        document.getElementById("review-box").style.display = "block";
-        
-        document.getElementById("review_nama").innerText = nama;
-        document.getElementById("review_nim").innerText = `${nim} | ${email}`;
-        document.getElementById("review_angkatan_lulus").innerText = `${angkatan} / ${tahun}`;
-        document.getElementById("review_perusahaan").innerText = perusahaan || "-";
-        document.getElementById("review_jabatan").innerText = `${jabatan} (${no_hp})`;;
-        document.getElementById("review_kota").innerText = kota || "Lokasi belum dipilih pada peta";
-        document.getElementById("review_coords").innerText = `${lat}, ${lng}`;
+    const reviewBox = document.getElementById("review-box");
+
+    if (!reviewBox) return;
+
+    let nama = document.querySelector("input[name='nama_lengkap']")?.value || '';
+    let nim = document.querySelector("input[name='nim']")?.value || '';
+    let email = document.querySelector("input[name='email']")?.value || '';
+    let no_hp = document.querySelector("input[name='no_hp']")?.value || '';
+
+    let angkatan = document.querySelector("input[name='angkatan']")?.value || '';
+    let tahun = document.querySelector("input[name='tahun_lulus']")?.value || '';
+
+    let perusahaan = document.querySelector("input[name='nama_perusahaan']")?.value || '';
+    let jabatan = document.querySelector("input[name='jabatan']")?.value || '';
+
+    let bidang =
+        document.querySelector("select[name='bidang_pekerjaan']")?.value || '';
+
+    let kota = document.getElementById("kota")?.value || '';
+    let lat = document.getElementById("lat")?.value || '';
+    let lng = document.getElementById("lng")?.value || '';
+
+    if (currentTab == 2 && nama && nim) {
+
+        reviewBox.style.display = "block";
+
+        const rn = document.getElementById("review_nama");
+        if (rn) rn.innerText = nama;
+
+        const rnim = document.getElementById("review_nim");
+        if (rnim) rnim.innerText = `${nim} | ${email}`;
+
+        const ral = document.getElementById("review_angkatan_lulus");
+        if (ral) ral.innerText = `${angkatan} / ${tahun}`;
+
+        const rp = document.getElementById("review_perusahaan");
+        if (rp) rp.innerText = perusahaan || "-";
+
+        const rj = document.getElementById("review_jabatan");
+        if (rj) rj.innerText = `${jabatan} (${no_hp})`;
+
+        const rk = document.getElementById("review_kota");
+        if (rk) rk.innerText = kota || "-";
+
+        const rc = document.getElementById("review_coords");
+        if (rc) rc.innerText = `${lat}, ${lng}`;
+
     } else {
-        document.getElementById("review-box").style.display = "none";
+        reviewBox.style.display = "none";
     }
 }
 
@@ -254,54 +276,57 @@ function scrollToError() {
 const kotaInput = document.getElementById("kota");
 const kotaStatus = document.getElementById("kota-status");
 
-kotaInput.addEventListener("keyup", function () {
-    let city = kotaInput.value;
+if(kotaInput){
+    kotaInput.addEventListener("keyup", function () {
+        let city = kotaInput.value;
 
-    if (city.length < 3) {
-        kotaStatus.style.color = "#64748b";
-        kotaStatus.innerText = "Ketik minimal 3 huruf nama kota";
-        return;
-    }
+        if (city.length < 3) {
+            if(kotaStatus){
+                kotaStatus.style.color = "#64748b";
+                kotaStatus.innerText = "Ketik minimal 3 huruf nama kota";
+            }
+            return;
+        }
 
-    kotaStatus.style.color = "#f59e0b";
-    kotaStatus.innerText = "Sedang mencari lokasi...";
+        if(kotaStatus) kotaStatus.style.color = "#f59e0b";
+        if(kotaStatus) kotaStatus.innerText = "Sedang mencari lokasi...";
 
-    clearTimeout(kotaTimer);
+        clearTimeout(kotaTimer);
 
-    kotaTimer = setTimeout(function () {
-        fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${city}`,
-        )
-            .then((res) => res.json())
+        kotaTimer = setTimeout(function () {
+            fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${city}`,
+            )
+                .then((res) => res.json())
 
-            .then((data) => {
-                if (data.length > 0) {
-                    let lat = data[0].lat;
-                    let lon = data[0].lon;
+                .then((data) => {
+                    if (data.length > 0) {
+                        let lat = data[0].lat;
+                        let lon = data[0].lon;
 
-                    map.setView([lat, lon], 13);
+                        map.setView([lat, lon], 13);
 
-                    marker.setLatLng([lat, lon]);
+                        marker.setLatLng([lat, lon]);
 
-                    document.getElementById("lat").value = lat;
-                    document.getElementById("lng").value = lon;
+                        document.getElementById("lat").value = lat;
+                        document.getElementById("lng").value = lon;
 
-                    getCity(lat, lon);
+                        getCity(lat, lon);
 
-                    kotaStatus.style.color = "#10b981";
-                    kotaStatus.innerText = "✓ Tempat ditemukan";
-                } else {
-                    kotaStatus.style.color = "#ef4444";
-                    kotaStatus.innerText = "Kota tidak ditemukan";
-                }
-            })
-            .catch(() => {
-                kotaStatus.style.color = "#ef4444";
-                kotaStatus.innerText = "Gagal mencari lokasi";
-            });
-    }, 700);
-});
-
+                        if(kotaStatus) kotaStatus.style.color = "#10b981";
+                        if(kotaStatus) kotaStatus.innerText = "✓ Tempat ditemukan";
+                    } else {
+                        if(kotaStatus) kotaStatus.style.color = "#ef4444";
+                        if(kotaStatus) kotaStatus.innerText = "Kota tidak ditemukan";
+                    }
+                })
+                .catch(() => {
+                    if(kotaStatus) kotaStatus.style.color = "#ef4444";
+                    if(kotaStatus) kotaStatus.innerText = "Gagal mencari lokasi";
+                });
+        }, 700);
+    });
+}
 
 // JALANKAN SAAT HALAMAN SELESAI DIMUAT
 document.addEventListener("DOMContentLoaded", function () {
@@ -330,7 +355,7 @@ document.addEventListener("DOMContentLoaded", function () {
             // Set Linearitas otomatis
             let linSelect = document.querySelector("select[name='linearitas']");
             if(linSelect) {
-                linSelect.value = "Tidak Linier";
+                linSelect.value = "Tidak Erat";
                 linSelect.style.pointerEvents = "none";
             }
         } else {
@@ -349,7 +374,7 @@ document.addEventListener("DOMContentLoaded", function () {
     nimInput.addEventListener("keyup", function () {
         let nim = nimInput.value;
 
-        nimStatus.innerHTML = "";
+        if(nimStatus) nimStatus.innerHTML = "";
         nimExists = false;
 
         if (nim.length < 10) {
@@ -375,15 +400,15 @@ document.addEventListener("DOMContentLoaded", function () {
                     if (data.exists) {
                         nimExists = true;
 
-                        nimStatus.style.color = "red";
-                        nimStatus.innerHTML = "⚠ NIM sudah terdaftar";
+                        if(nimStatus) nimStatus.style.color = "red";
+                        if(nimStatus) nimStatus.innerHTML = "⚠ NIM sudah terdaftar";
 
                         nextBtn.disabled = true;
                     } else {
                         nimExists = false;
 
-                        nimStatus.style.color = "green";
-                        nimStatus.innerHTML = "✓ NIM tersedia";
+                        if(nimStatus) nimStatus.style.color = "green";
+                        if(nimStatus) nimStatus.innerHTML = "✓ NIM tersedia";
 
                         nextBtn.disabled = false;
                     }

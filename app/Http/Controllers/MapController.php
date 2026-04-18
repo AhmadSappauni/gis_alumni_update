@@ -1,38 +1,20 @@
 <?php
 
-
-
 namespace App\Http\Controllers;
 
-
-
-use App\Http\Controllers\Controller;
-
-use App\Models\Pekerjaan;
-
-use Illuminate\Http\Request;
-
-
+use App\Models\RiwayatPekerjaan;
 
 class MapController extends Controller
-
 {
-
     public function index()
-
     {
-
-        // Ambil data pekerjaan dan join dengan tabel alumni
-
-        $dataPekerjaan = Pekerjaan::join('alumnis', 'pekerjaans.nim', '=', 'alumnis.nim')
-
-            ->select('pekerjaans.*', 'alumnis.nama_lengkap', 'alumnis.tahun_lulus')
-
-            ->get();
-
-
-
-        // Kirim data ke view 'map'
+        $dataPekerjaan = RiwayatPekerjaan::with([
+            'alumni.akademik',
+            'alumni.alamat',
+            'perusahaan.lokasiUtama'
+        ])
+        ->where('is_current', true)
+        ->get();
 
         return view('index', compact('dataPekerjaan'));
     }

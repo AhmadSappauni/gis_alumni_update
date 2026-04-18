@@ -228,38 +228,41 @@
     }
 }
 </style>
-<div id="modal-profil-{{ $alumni->id }}" class="profil-modal-overlay">
+<div id="modal-profil-<?php echo e($alumni->id); ?>" class="profil-modal-overlay">
 
     <div class="profil-modal-card">
 
-        {{-- CLOSE --}}
-        <button type="button" class="profil-close-btn" onclick="closeProfilModal('{{ $alumni->id }}')">
+        
+        <button type="button" class="profil-close-btn" onclick="closeProfilModal('<?php echo e($alumni->id); ?>')">
             &times;
         </button>
 
 
-        {{-- HEADER --}}
+        
         <div class="profil-header">
 
-            <img src="{{ $alumni->foto_profil ? asset('storage/' . $alumni->foto_profil) : asset('images/default-user.png') }}"
+            <img src="<?php echo e($alumni->foto_profil ? asset('storage/' . $alumni->foto_profil) : asset('images/default-user.png')); ?>"
                 class="profil-avatar">
 
             <div class="profil-header-info">
 
-                <h2>{{ $alumni->nama_lengkap }}</h2>
+                <h2><?php echo e($alumni->nama_lengkap); ?></h2>
 
                 <div class="profil-badge-group">
 
                     <span class="badge-light">
-                        NIM : {{ $alumni->nim }}
+                        NIM : <?php echo e($alumni->nim); ?>
+
                     </span>
 
                     <span class="badge-light">
-                        Lulusan {{ $alumni->akademik?->tahun_lulus ?? '-' }}
+                        Lulusan <?php echo e($alumni->akademik?->tahun_lulus ?? '-'); ?>
+
                     </span>
 
                     <span class="badge-light">
-                        {{ $alumni->akademik?->angkatan ?? '-' }}
+                        <?php echo e($alumni->akademik?->angkatan ?? '-'); ?>
+
                     </span>
 
                 </div>
@@ -270,11 +273,11 @@
 
 
 
-        {{-- BODY --}}
+        
         <div class="profil-body">
 
 
-            {{-- INFO PRIBADI --}}
+            
             <div class="profil-section">
 
                 <div class="section-title">
@@ -285,26 +288,28 @@
 
                     <div class="info-item">
                         <small>Email</small>
-                        <span>{{ $alumni->email ?? '-' }}</span>
+                        <span><?php echo e($alumni->email ?? '-'); ?></span>
                     </div>
 
                     <div class="info-item">
                         <small>No WhatsApp</small>
-                        <span>{{ $alumni->no_hp ?? '-' }}</span>
+                        <span><?php echo e($alumni->no_hp ?? '-'); ?></span>
                     </div>
 
                     <div class="info-item full">
                         <small>Judul Skripsi</small>
-                        <span>{{ $alumni->akademik?->judul_skripsi ?? '-' }}</span>
+                        <span><?php echo e($alumni->akademik?->judul_skripsi ?? '-'); ?></span>
                     </div>
 
                     <div class="info-item full">
                         <small>Domisili Saat Ini</small>
                         <span>
-                            {{ $alumni->alamat?->kota ?? '-' }}
+                            <?php echo e($alumni->alamat?->kota ?? '-'); ?>
+
                             <br>
                             <small class="muted">
-                                {{ $alumni->alamat?->alamat_lengkap ?? '-' }}
+                                <?php echo e($alumni->alamat?->alamat_lengkap ?? '-'); ?>
+
                             </small>
                         </span>
                     </div>
@@ -315,7 +320,7 @@
 
 
 
-            {{-- RIWAYAT KARIR --}}
+            
             <div class="profil-section">
 
                 <div class="section-title between">
@@ -323,22 +328,22 @@
                     <span>Riwayat Karir</span>
 
                     <span class="badge-total">
-                        {{ $alumni->pekerjaan->count() }} Data
+                        <?php echo e($alumni->pekerjaan->count()); ?> Data
                     </span>
 
                 </div>
 
 
-                @if ($alumni->pekerjaan->isEmpty())
+                <?php if($alumni->pekerjaan->isEmpty()): ?>
 
                     <div class="empty-box">
                         Belum ada riwayat pekerjaan
                     </div>
-                @else
+                <?php else: ?>
                     <div class="career-list">
 
-                        @foreach ($alumni->pekerjaan->sortByDesc('is_current') as $job)
-                            @php
+                        <?php $__currentLoopData = $alumni->pekerjaan->sortByDesc('is_current'); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $job): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <?php
                                 $lokasi = $job->perusahaan?->lokasiUtama ?? $job->perusahaan?->lokasi->first();
 
                                 $warna = match ($job->status_karir) {
@@ -348,25 +353,28 @@
                                 };
 
                                 $linear = $job->perusahaan?->linearitas ?? '-';
-                            @endphp
+                            ?>
 
 
-                            <div class="career-card {{ $warna }}">
+                            <div class="career-card <?php echo e($warna); ?>">
 
                                 <div class="career-top">
 
                                     <div>
                                         <h4>
-                                            {{ $job->perusahaan?->nama_perusahaan ?? '-' }}
+                                            <?php echo e($job->perusahaan?->nama_perusahaan ?? '-'); ?>
+
                                         </h4>
 
                                         <p>
-                                            {{ $job->jabatan ?? '-' }}
+                                            <?php echo e($job->jabatan ?? '-'); ?>
+
                                         </p>
                                     </div>
 
-                                    <span class="status-badge {{ $warna }}">
-                                        {{ strtoupper($job->status_karir) }}
+                                    <span class="status-badge <?php echo e($warna); ?>">
+                                        <?php echo e(strtoupper($job->status_karir)); ?>
+
                                     </span>
 
                                 </div>
@@ -376,43 +384,46 @@
 
                                     <div>
                                         <small>Bidang</small>
-                                        <span>{{ $job->bidang_pekerjaan ?? '-' }}</span>
+                                        <span><?php echo e($job->bidang_pekerjaan ?? '-'); ?></span>
                                     </div>
 
                                     <div>
                                         <small>Linearitas</small>
-                                        <span>{{ $linear }}</span>
+                                        <span><?php echo e($linear); ?></span>
                                     </div>
 
                                     <div>
                                         <small>Gaji</small>
                                         <span>
-                                            {{ $job->gaji_nominal ? 'Rp ' . number_format($job->gaji_nominal, 0, ',', '.') : 'Dirahasiakan' }}
+                                            <?php echo e($job->gaji_nominal ? 'Rp ' . number_format($job->gaji_nominal, 0, ',', '.') : 'Dirahasiakan'); ?>
+
                                         </span>
                                     </div>
 
                                     <div>
                                         <small>Lokasi</small>
                                         <span>
-                                            {{ $lokasi?->kota ?? '-' }}
+                                            <?php echo e($lokasi?->kota ?? '-'); ?>
+
                                         </span>
                                     </div>
 
                                     <div class="full">
                                         <small>Alamat</small>
                                         <span>
-                                            {{ $lokasi?->alamat_lengkap ?? '-' }}
+                                            <?php echo e($lokasi?->alamat_lengkap ?? '-'); ?>
+
                                         </span>
                                     </div>
 
                                 </div>
 
                             </div>
-                        @endforeach
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
 
                     </div>
 
-                @endif
+                <?php endif; ?>
 
             </div>
 
@@ -434,3 +445,4 @@
         document.getElementById('modal-profil-' + id).style.display = 'none';
     }
 </script>
+<?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_3\resources\views/admin/komponen/modal-profil.blade.php ENDPATH**/ ?>

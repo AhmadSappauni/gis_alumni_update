@@ -2,39 +2,42 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Alumni extends Model
 {
-    protected $primaryKey = 'nim';
-    public $incrementing = false; // Karena NIM adalah string/primary key
-    protected $keyType = 'string';
+    use HasFactory;
+
+    protected $table = 'alumnis';
 
     protected $fillable = [
-        'nim', 
-        'nama_lengkap', 
+        'nim',
+        'nama_lengkap',
+        'jenis_kelamin',
         'email',
         'no_hp',
-        'angkatan', 
-        'tahun_lulus', 
-        'judul_skripsi', 
-        'foto_profil',
-        'kota_tinggal',    
-        'alamat_tinggal',  
-        'latitude_tinggal',
-        'longitude_tinggal',
-        'tahun_yudisium', 
-        'nilai_toefl', 
+        'foto_profil'
     ];
 
-    // Relasi ke tabel pekerjaan
-    public function pekerjaans()
+    public function akademik()
     {
-        return $this->hasMany(Pekerjaan::class, 'nim', 'nim');
+        return $this->hasOne(AlumniAkademik::class, 'alumni_id');
     }
-    public function pekerjaanAktif()
+
+    public function alamat()
     {
-        return $this->hasOne(Pekerjaan::class, 'nim', 'nim')
+        return $this->hasOne(AlamatAlumni::class, 'alumni_id')
                     ->where('is_current', true);
+    }
+
+    public function pekerjaan()
+    {
+        return $this->hasMany(RiwayatPekerjaan::class, 'alumni_id');
+    }
+
+    public function studiLanjut()
+    {
+        return $this->hasMany(StudiLanjut::class, 'alumni_id');
     }
 }

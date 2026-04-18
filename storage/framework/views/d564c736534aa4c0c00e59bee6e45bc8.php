@@ -1,7 +1,5 @@
-@extends('admin.layout')
-
-@push('styles')
-    <link rel="stylesheet" href="{{ asset('css/admin-create.css') }}">
+<?php $__env->startPush('styles'); ?>
+    <link rel="stylesheet" href="<?php echo e(asset('css/admin-create.css')); ?>">
     <style>
         /* Status Helper (Fix Kembang Kempis) */
         #nim-status, #kota-status {
@@ -53,13 +51,13 @@
             text-decoration: none; color: #004a87; font-weight: 700; font-size: 13px;
         }
     </style>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@section('content')
+<?php $__env->startSection('content'); ?>
 <header class="top-header glass-panel">
     <h1>Tambah Alumni Baru</h1>
     <div style="display: flex; align-items: center; gap: 15px;">
-        <a href="{{ route('admin.alumni.index') }}" class="btn-batal">← Batal</a>
+        <a href="<?php echo e(route('admin.alumni.index')); ?>" class="btn-batal">← Batal</a>
     </div>
 </header>
 
@@ -73,39 +71,40 @@
         <div class="step" id="s3">3</div>
     </div>
 
-    @if(session('error'))
+    <?php if(session('error')): ?>
     <div style="background:#fee2e2;color:#991b1b;padding:10px;margin-bottom:20px;border-radius:8px;">
-        {{ session('error') }}
-    </div>
-    @endif
+        <?php echo e(session('error')); ?>
 
-    <form action="{{ route('admin.alumni.store') }}" method="POST" enctype="multipart/form-data" id="wizardForm">
-        @csrf
+    </div>
+    <?php endif; ?>
+
+    <form action="<?php echo e(route('admin.alumni.store')); ?>" method="POST" enctype="multipart/form-data" id="wizardForm">
+        <?php echo csrf_field(); ?>
         
         <div class="form-step active" id="step1">
             <h3 style="color: var(--pilkom-blue-dark); margin-bottom: 25px;">Data Pribadi & Akademik</h3>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 <div>
                     <label class="label-admin">NIM</label>
-                    <input type="text" name="nim" id="nim" class="custom-input-admin" placeholder="211013..." value="{{ old('nim') }}">
+                    <input type="text" name="nim" id="nim" class="custom-input-admin" placeholder="211013..." value="<?php echo e(old('nim')); ?>">
                     <small id="nim-status"></small>
                 </div>
                 <div>
                     <label class="label-admin">Nama Lengkap</label>
-                    <input type="text" name="nama_lengkap" class="custom-input-admin" value="{{ old('nama_lengkap') }}" required>
+                    <input type="text" name="nama_lengkap" class="custom-input-admin" value="<?php echo e(old('nama_lengkap')); ?>" required>
                 </div>
                 <div>
                     <label class="label-admin">Angkatan</label>
-                    <input type="number" name="angkatan" class="custom-input-admin" value="{{ old('angkatan', 2021) }}">
+                    <input type="number" name="angkatan" class="custom-input-admin" value="<?php echo e(old('angkatan', 2021)); ?>">
                 </div>
                 <div>
                     <label class="label-admin">Tahun Lulus</label>
-                    <input type="number" name="tahun_lulus" class="custom-input-admin" value="{{ old('tahun_lulus', 2026) }}">
+                    <input type="number" name="tahun_lulus" class="custom-input-admin" value="<?php echo e(old('tahun_lulus', 2026)); ?>">
                 </div>
             </div>
             <div style="margin-top: 20px;">
                 <label class="label-admin">Judul Skripsi</label>
-                <textarea name="judul_skripsi" class="custom-input-admin" rows="2">{{ old('judul_skripsi') }}</textarea>
+                <textarea name="judul_skripsi" class="custom-input-admin" rows="2"><?php echo e(old('judul_skripsi')); ?></textarea>
             </div>
             <div style="margin-top: 20px; background: rgba(0,74,135,0.03); padding: 20px; border-radius: 15px;">
                 <label class="label-admin">Foto Profil</label>
@@ -126,7 +125,7 @@
             <div id="section-pekerjaan" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 <div>
                     <label class="label-admin">Pekerjaan / Jabatan</label>
-                    <input type="text" name="jabatan" class="custom-input-admin" value="{{ old('jabatan') }}" placeholder="Software Engineer">
+                    <input type="text" name="jabatan" class="custom-input-admin" value="<?php echo e(old('jabatan')); ?>" placeholder="Software Engineer">
                 </div>
                 <div>
                     <label class="label-admin">Kategori Bidang</label>
@@ -149,15 +148,15 @@
                 </div>
                 <div>
                     <label class="label-admin">Nama Perusahaan</label>
-                    <input type="text" name="nama_perusahaan" class="custom-input-admin" value="{{ old('nama_perusahaan') }}">
+                    <input type="text" name="nama_perusahaan" class="custom-input-admin" value="<?php echo e(old('nama_perusahaan')); ?>">
                 </div>
                 <div>
                     <label class="label-admin">Estimasi Gaji (Opsional)</label>
-                    <input type="text" name="gaji_nominal" class="custom-input-admin" value="{{ old('gaji_nominal') }}" placeholder="Rp 5.000.000">
+                    <input type="text" name="gaji_nominal" class="custom-input-admin" value="<?php echo e(old('gaji_nominal')); ?>" placeholder="Rp 5.000.000">
                 </div>
                 <div >
                     <label class="label-admin">Link LinkedIn</label>
-                    <input type="url" name="link_linkedin" class="custom-input-admin" value="{{ old('link_linkedin') }}" placeholder="https://linkedin.com/in/username">
+                    <input type="url" name="link_linkedin" class="custom-input-admin" value="<?php echo e(old('link_linkedin')); ?>" placeholder="https://linkedin.com/in/username">
                 </div>
             </div>
             
@@ -200,7 +199,7 @@
                             id="kota"
                             class="custom-input-admin"
                             placeholder="Ketik nama kota..."
-                            value="{{ old('kota') }}">
+                            value="<?php echo e(old('kota')); ?>">
                             
                         <small id="kota-status"
                             style="
@@ -258,10 +257,10 @@
         </div>
     </form>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
-<script src="{{ asset('js/admin/create.js') }}"></script>
+<?php $__env->startPush('scripts'); ?>
+<script src="<?php echo e(asset('js/admin/create.js')); ?>"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function(){
@@ -322,4 +321,5 @@ document.addEventListener("DOMContentLoaded", function(){
 
 });
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
+<?php echo $__env->make('admin.layout', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_3\resources\views/admin/create.blade.php ENDPATH**/ ?>

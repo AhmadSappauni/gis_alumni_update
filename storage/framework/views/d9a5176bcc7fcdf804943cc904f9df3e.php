@@ -5,8 +5,8 @@
             style="color: #004a87; margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px;">
             Tambah Riwayat Pekerjaan</h3>
 
-        <form action="{{ route('admin.pekerjaan.store', $alumni->id) }}" method="POST">
-            @csrf
+        <form action="<?php echo e(route('admin.pekerjaan.store', $alumni->id)); ?>" method="POST">
+            <?php echo csrf_field(); ?>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                 <div style="grid-column: span 2;">
                     <label class="label-admin">Nama Perusahaan</label>
@@ -84,8 +84,8 @@
             Edit Riwayat Pekerjaan</h3>
 
         <form id="form-edit-pekerjaan" method="POST">
-            @csrf
-            @method('PUT')
+            <?php echo csrf_field(); ?>
+            <?php echo method_field('PUT'); ?>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                 <div style="grid-column: span 2;">
                     <label class="label-admin">Nama Perusahaan</label>
@@ -148,3 +148,4 @@
         </form>
     </div>
 </div>
+<?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_3\resources\views/admin/komponen/riwayat-pekerjaan.blade.php ENDPATH**/ ?>

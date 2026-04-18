@@ -1,6 +1,5 @@
-@extends('admin.layout')
-@push('styles')
-<link rel="stylesheet" href="{{ asset('css/admin/filter.css') }}">
+<?php $__env->startPush('styles'); ?>
+<link rel="stylesheet" href="<?php echo e(asset('css/admin/filter.css')); ?>">
 <style >
 /* Membuat area scroll halus */
 .table-scroll {
@@ -36,9 +35,9 @@
 
 
 </style>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@section('content')
+<?php $__env->startSection('content'); ?>
     <header class="top-header glass-panel">
         <div class="header-left">
             <h1>Data Alumni</h1>
@@ -101,10 +100,10 @@
         </div>
     </header>
 
-    @include('admin.komponen.content')
-@endsection
-@push('scripts')
-<script src="{{ asset('js/admin/filter-data.js') }}"></script>
+    <?php echo $__env->make('admin.komponen.content', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+<?php $__env->stopSection(); ?>
+<?php $__env->startPush('scripts'); ?>
+<script src="<?php echo e(asset('js/admin/filter-data.js')); ?>"></script>
 <script>
 function confirmDelete(id, nim,nama,) {
     Swal.fire({
@@ -124,8 +123,8 @@ function confirmDelete(id, nim,nama,) {
             form.action = `/admin/alumni/${id}`;
             form.method = 'POST';
             form.innerHTML = `
-                @csrf
-                @method('DELETE')
+                <?php echo csrf_field(); ?>
+                <?php echo method_field('DELETE'); ?>
             `;
             document.body.appendChild(form);
             form.submit();
@@ -134,4 +133,5 @@ function confirmDelete(id, nim,nama,) {
 }
 
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
+<?php echo $__env->make('admin.layout', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_3\resources\views/admin/index.blade.php ENDPATH**/ ?>

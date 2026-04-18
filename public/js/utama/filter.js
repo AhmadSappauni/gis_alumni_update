@@ -1,284 +1,556 @@
-// VARIABEL BARU: Untuk menyimpan referensi semua marker di peta
-var arrayMarker = []; 
+// ======================================================
+// FILTER.JS FINAL PROFESSIONAL
+// Support:
+// ✔ Search alumni / perusahaan
+// ✔ Filter linearitas
+// ✔ Filter tahun lulus
+// ✔ Filter wilayah
+// ✔ Sidebar hasil pencarian
+// ✔ Marker normal + cluster
+// ✔ Status kerja / belum kerja
+// ✔ Lokasi perusahaan / domisili otomatis
+// ======================================================
 
-// BUNGKUS DENGAN DOMContentLoaded AGAR JS MENUNGGU HTML SELESAI DIMUAT
-document.addEventListener("DOMContentLoaded", function() {
+let arrayMarker = [];
 
-    // 1. EVENT LISTENER UNTUK SEMUA FILTER & PENCARIAN
-    document.getElementById('search-category').addEventListener('change', filterDanTampilkanMarker);
-    document.getElementById('filter-linearitas').addEventListener('change', filterDanTampilkanMarker);
-    document.getElementById('filter-tahun').addEventListener('change', filterDanTampilkanMarker);
-    document.getElementById('filter-wilayah').addEventListener('input', filterDanTampilkanMarker);
+// ======================================================
+// WADAH MARKER
+// ======================================================
+window.wadahNormal = L.featureGroup();
 
-    document.getElementById('btn-search').addEventListener('click', filterDanTampilkanMarker);
+window.wadahCluster = L.markerClusterGroup({
+    chunkedLoading: true,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+    maxClusterRadius: 50
+});
 
-    document.getElementById('search-input').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            filterDanTampilkanMarker();
-        }
-    });
+window.statusClusterAktif = false;
 
-    // 5. EVENT LISTENER TOGGLE TOMBOL FILTER 
-    document.getElementById('toggle-filter').addEventListener('click', function() {
-        var filterBody = document.getElementById('filter-body');
-        filterBody.classList.toggle('hidden'); 
-    });
+// ======================================================
+// SAAT DOM READY
+// ======================================================
+document.addEventListener("DOMContentLoaded", function () {
 
-    // 4. Jalankan fungsi saat web pertama kali dibuka
+    bindFilterEvents();
+
+    initCustomSelect();
+
     filterDanTampilkanMarker();
+});
 
-    // =====================================================================
-    // FITUR BARU: MENYULAP SELECT BAWAAN BROWSER JADI DROPDOWN PREMIUM
-    // =====================================================================
-    const selects = document.querySelectorAll('.custom-select');
-    
-    selects.forEach(select => {
-        // 1. Buat pembungkus dan sembunyikan select asli
-        const wrapper = document.createElement('div');
-        wrapper.className = 'custom-dropdown-wrapper';
-        select.parentNode.insertBefore(wrapper, select);
-        wrapper.appendChild(select);
-        select.style.display = 'none';
+// ======================================================
+// EVENT FILTER
+// ======================================================
+function bindFilterEvents() {
 
-        // 2. Buat tombol yang terlihat
-        const trigger = document.createElement('div');
-        trigger.className = 'custom-dropdown-trigger';
-        trigger.innerHTML = `<span>${select.options[select.selectedIndex].text}</span><div class="arrow"></div>`;
-        wrapper.appendChild(trigger);
+    document.getElementById('search-category')
+        ?.addEventListener('change', filterDanTampilkanMarker);
 
-        // 3. Buat kotak melayang untuk pilihan
-        const optionsList = document.createElement('div');
-        optionsList.className = 'custom-dropdown-options';
-        wrapper.appendChild(optionsList);
+    document.getElementById('filter-linearitas')
+        ?.addEventListener('change', filterDanTampilkanMarker);
 
-        // 4. Pindahkan semua opsi ke bentuk div cantik
-        Array.from(select.options).forEach(option => {
-            const customOption = document.createElement('div');
-            customOption.className = 'custom-option' + (option.selected ? ' selected' : '');
-            customOption.dataset.value = option.value;
-            customOption.textContent = option.text;
+    document.getElementById('filter-tahun')
+        ?.addEventListener('change', filterDanTampilkanMarker);
 
-            // Jika pilihan diklik
-            customOption.addEventListener('click', function() {
-                select.value = this.dataset.value; // Update sistem asli
-                trigger.querySelector('span').textContent = this.textContent; // Update teks
-                
-                optionsList.querySelectorAll('.custom-option').forEach(opt => opt.classList.remove('selected'));
-                this.classList.add('selected'); // Beri warna biru
-                
-                optionsList.classList.remove('open');
-                trigger.classList.remove('active');
-                
-                // PENTING: Pancing sistem agar memfilter peta ulang
-                select.dispatchEvent(new Event('change'));
-            });
-            optionsList.appendChild(customOption);
+    document.getElementById('filter-wilayah')
+        ?.addEventListener('input', filterDanTampilkanMarker);
+
+    document.getElementById('btn-search')
+        ?.addEventListener('click', filterDanTampilkanMarker);
+
+    document.getElementById('search-input')
+        ?.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                filterDanTampilkanMarker();
+            }
         });
 
-        // 5. Logika buka tutup saat diklik
-        trigger.addEventListener('click', function(e) {
+    document.getElementById('toggle-filter')
+        ?.addEventListener('click', function () {
+            document.getElementById('filter-body')
+                ?.classList.toggle('hidden');
+        });
+}
+
+// ======================================================
+// CUSTOM SELECT PREMIUM
+// ======================================================
+function initCustomSelect() {
+
+    const selects = document.querySelectorAll('.custom-select');
+
+    selects.forEach(select => {
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'custom-dropdown-wrapper';
+
+        select.parentNode.insertBefore(wrapper, select);
+        wrapper.appendChild(select);
+
+        select.style.display = 'none';
+
+        const trigger = document.createElement('div');
+        trigger.className = 'custom-dropdown-trigger';
+
+        trigger.innerHTML =
+            `<span>${select.options[select.selectedIndex].text}</span>
+             <div class="arrow"></div>`;
+
+        wrapper.appendChild(trigger);
+
+        const list = document.createElement('div');
+        list.className = 'custom-dropdown-options';
+        wrapper.appendChild(list);
+
+        Array.from(select.options).forEach(option => {
+
+            const item = document.createElement('div');
+
+            item.className =
+                'custom-option' + (option.selected ? ' selected' : '');
+
+            item.dataset.value = option.value;
+            item.textContent = option.text;
+
+            item.addEventListener('click', function () {
+
+                select.value = this.dataset.value;
+
+                trigger.querySelector('span').textContent =
+                    this.textContent;
+
+                list.querySelectorAll('.custom-option')
+                    .forEach(x => x.classList.remove('selected'));
+
+                this.classList.add('selected');
+
+                list.classList.remove('open');
+                trigger.classList.remove('active');
+
+                select.dispatchEvent(new Event('change'));
+            });
+
+            list.appendChild(item);
+        });
+
+        trigger.addEventListener('click', function (e) {
+
             e.stopPropagation();
-            // Tutup dropdown lain jika ada yang terbuka
-            document.querySelectorAll('.custom-dropdown-options').forEach(list => {
-                if (list !== optionsList) list.classList.remove('open');
-            });
-            document.querySelectorAll('.custom-dropdown-trigger').forEach(trig => {
-                if (trig !== trigger) trig.classList.remove('active');
-            });
-            
-            optionsList.classList.toggle('open');
+
+            document.querySelectorAll('.custom-dropdown-options')
+                .forEach(x => {
+                    if (x !== list) x.classList.remove('open');
+                });
+
+            document.querySelectorAll('.custom-dropdown-trigger')
+                .forEach(x => {
+                    if (x !== trigger) x.classList.remove('active');
+                });
+
+            list.classList.toggle('open');
             trigger.classList.toggle('active');
         });
     });
 
-    // 6. Tutup dropdown jika klik sembarang tempat di peta
-    document.addEventListener('click', function() {
-        document.querySelectorAll('.custom-dropdown-options').forEach(list => list.classList.remove('open'));
-        document.querySelectorAll('.custom-dropdown-trigger').forEach(trigger => trigger.classList.remove('active'));
+    document.addEventListener('click', function () {
+        document.querySelectorAll('.custom-dropdown-options')
+            .forEach(x => x.classList.remove('open'));
+
+        document.querySelectorAll('.custom-dropdown-trigger')
+            .forEach(x => x.classList.remove('active'));
     });
-    // =====================================================================
+}
 
-}); // Akhir dari penunggu DOMContentLoaded
+// ======================================================
+// TAMPILAN PETA
+// ======================================================
+window.perbaruiTampilanPeta = function () {
 
+    if (map.hasLayer(window.wadahNormal)) {
+        map.removeLayer(window.wadahNormal);
+    }
 
-// 2. Fungsi Utama: Menyaring & Menampilkan Marker + Daftar List
-// =====================================================================
-// PERSIAPAN WADAH MARKER CLUSTER (Dibuat Global dengan window.)
-// =====================================================================
-window.wadahNormal = L.featureGroup(); 
-window.wadahCluster = L.markerClusterGroup({
-    chunkedLoading: true, 
-    spiderfyOnMaxZoom: true,
-    showCoverageOnHover: false, 
-    maxClusterRadius: 50 
-});
-window.statusClusterAktif = false; 
+    if (map.hasLayer(window.wadahCluster)) {
+        map.removeLayer(window.wadahCluster);
+    }
 
-// Fungsi untuk bongkar-pasang wadah di atas peta (Dibuat global dengan window.)
-window.perbaruiTampilanPeta = function() {
-    if(map.hasLayer(window.wadahNormal)) map.removeLayer(window.wadahNormal);
-    if(map.hasLayer(window.wadahCluster)) map.removeLayer(window.wadahCluster);
-
-    if(window.statusClusterAktif) {
+    if (window.statusClusterAktif) {
         map.addLayer(window.wadahCluster);
     } else {
         map.addLayer(window.wadahNormal);
     }
 };
 
-// =====================================================================
-// FUNGSI UTAMA PENCETAK MARKER
-// =====================================================================
-function filterDanTampilkanMarker() {
-    let keyword = document.getElementById('search-input').value.toLowerCase();
-    
-    let searchCategory = document.getElementById('search-category').value;
-    let linearitasTerpilih = document.getElementById('filter-linearitas').value;
-    let tahunTerpilih = document.getElementById('filter-tahun').value;
-    let wilayahKetik = document.getElementById('filter-wilayah').value.toLowerCase();
+// ======================================================
+// WARNA MARKER
+// ======================================================
+function getMarkerColor(linearitas) {
 
-    // BERSIHKAN KEDUA WADAH SEBELUM MULAI LOOPING BARU (Pake window.)
+    switch (linearitas) {
+
+        case 'Sangat Erat':
+            return 'green';
+
+        case 'Erat':
+            return 'blue';
+
+        case 'Cukup Erat':
+            return 'yellow';
+
+        case 'Kurang Erat':
+            return 'orange';
+
+        default:
+            return 'red';
+    }
+}
+
+// ======================================================
+// BADGE CSS
+// ======================================================
+function getStatusClass(linearitas) {
+
+    switch (linearitas) {
+
+        case 'Sangat Erat':
+            return 'status-sangat';
+
+        case 'Erat':
+            return 'status-erat';
+
+        case 'Cukup Erat':
+            return 'status-cukup';
+
+        case 'Kurang Erat':
+            return 'status-kurang';
+
+        default:
+            return 'status-tidak';
+    }
+}
+
+// ======================================================
+// FILTER UTAMA
+// ======================================================
+function filterDanTampilkanMarker() {
+
+    const keyword =
+        document.getElementById('search-input')
+            ?.value.toLowerCase() || '';
+
+    const kategori =
+        document.getElementById('search-category')
+            ?.value || 'semua';
+
+    const linearitasFilter =
+        document.getElementById('filter-linearitas')
+            ?.value || 'semua';
+
+    const tahunFilter =
+        document.getElementById('filter-tahun')
+            ?.value || 'semua';
+
+    const wilayahFilter =
+        document.getElementById('filter-wilayah')
+            ?.value.toLowerCase() || '';
+
     window.wadahNormal.clearLayers();
     window.wadahCluster.clearLayers();
-    arrayMarker = []; 
 
-    let resultsHTML = ''; 
-    let jumlahDitemukan = 0;
-    
-    // PERHATIAN: Memeriksa apakah semua filter dalam kondisi kosong
-    let isDefaultState = (keyword === '' && linearitasTerpilih === 'semua' && tahunTerpilih === 'semua' && wilayahKetik === '');
+    arrayMarker = [];
 
-    alumniData.forEach(function(alumni, index) { 
-        let namaAlumni = alumni.nama_lengkap.toLowerCase();
-        let namaPerusahaan = alumni.nama_perusahaan.toLowerCase();
-        
-        let cocokKeyword = true;
-        if (keyword !== '') {
-            if (searchCategory === 'semua') {
-                cocokKeyword = namaAlumni.includes(keyword) || namaPerusahaan.includes(keyword);
-            } 
-            else if (searchCategory === 'nama') {
-                cocokKeyword = namaAlumni.includes(keyword);
-            } 
-            else if (searchCategory === 'perusahaan') {
-                cocokKeyword = namaPerusahaan.includes(keyword);
-            }
-        }
+    let hasilHTML = '';
+    let jumlah = 0;
 
-        let cocokLinearitas = (linearitasTerpilih === 'semua' || alumni.linearitas === linearitasTerpilih);
-        
-        let cocokTahun = false;
-        if (tahunTerpilih === 'semua') {
-            cocokTahun = true;
+    const isDefaultState =
+        keyword === '' &&
+        linearitasFilter === 'semua' &&
+        tahunFilter === 'semua' &&
+        wilayahFilter === '';
+
+    alumniData.forEach(function (item, index) {
+
+        const nama = item.alumni?.nama_lengkap || '';
+        const perusahaan = item.perusahaan?.nama_perusahaan || '-';
+        const jabatan = item.jabatan || '-';
+        const tahunLulus = item.alumni?.akademik?.tahun_lulus || '-';
+
+        const statusKerja =
+            item.status_kerja || 'Belum Bekerja';
+
+        const linearitas =
+            item.perusahaan?.linearitas || 'Tidak Erat';
+
+        let latitude = null;
+        let longitude = null;
+        let alamatLengkap = '';
+
+        // =====================================
+        // Tentukan sumber lokasi
+        // =====================================
+        if (statusKerja === 'Bekerja') {
+
+            latitude =
+                parseFloat(item.perusahaan?.lokasi_utama?.latitude);
+
+            longitude =
+                parseFloat(item.perusahaan?.lokasi_utama?.longitude);
+
+            alamatLengkap =
+                item.perusahaan?.lokasi_utama?.alamat_lengkap || '';
+
         } else {
-            let tahunSaatIni = new Date().getFullYear(); 
-            let tahunAlumni = parseInt(alumni.tahun_lulus); 
-            let selisihTahun = tahunSaatIni - tahunAlumni; 
-            let batasTahun = parseInt(tahunTerpilih); 
 
-            if (selisihTahun >= 0 && selisihTahun <= batasTahun) {
-                cocokTahun = true;
+            latitude =
+                parseFloat(item.alumni?.alamat?.latitude);
+
+            longitude =
+                parseFloat(item.alumni?.alamat?.longitude);
+
+            alamatLengkap =
+                item.alumni?.alamat?.alamat_lengkap || '';
+        }
+
+        if (!latitude || !longitude) return;
+
+        // =====================================
+        // FILTER
+        // =====================================
+        let cocokKeyword = true;
+
+        if (keyword !== '') {
+
+            const n = nama.toLowerCase();
+            const p = perusahaan.toLowerCase();
+
+            if (kategori === 'nama') {
+                cocokKeyword = n.includes(keyword);
+            }
+            else if (kategori === 'perusahaan') {
+                cocokKeyword = p.includes(keyword);
+            }
+            else {
+                cocokKeyword =
+                    n.includes(keyword) ||
+                    p.includes(keyword);
             }
         }
-        
-        let teksWilayah = (alumni.alamat_lengkap || alumni.nama_perusahaan || "").toLowerCase(); 
-        let cocokWilayah = (wilayahKetik === '' || teksWilayah.includes(wilayahKetik));
 
-        // JIKA SYARAT COCOK & PUNYA KOORDINAT -> CETAK MARKER
-        if(cocokKeyword && cocokLinearitas && cocokTahun && cocokWilayah && alumni.latitude && alumni.longitude) {
-            
-            var markerColor = (alumni.linearitas === 'Linier') ? 'blue' : 'red';
-            var customIcon = L.icon({
-                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-' + markerColor + '.png',
-                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34],
-            });
+        const cocokLinearitas =
+            linearitasFilter === 'semua' ||
+            linearitas === linearitasFilter;
 
-            var marker = L.marker([alumni.latitude, alumni.longitude], {icon: customIcon});
-            
-            var placeholderUrl = 'https://ui-avatars.com/api/?name=' + alumni.nama_lengkap.replace(/\s+/g, '+') + '&background=004a87&color=fff&size=60&rounded=true';
-            let badgeClass = (alumni.linearitas === 'Linier') ? 'badge-linier' : 'badge-tidak';
+        let cocokTahun = true;
 
-            var popupContent = `
-                <div class="premium-popup">
-                    <div class="popup-cover"></div>
-                    <div class="popup-avatar">
-                        <img src="${placeholderUrl}" alt="Avatar">
-                    </div>
-                    <div class="popup-body">
-                        <h3 class="popup-name">${alumni.nama_lengkap}</h3>
-                        <span class="popup-year">Lulusan Tahun ${alumni.tahun_lulus}</span>
-                        <div class="popup-info">
-                            <div class="info-row">
-                                <span class="icon">🏢</span>
-                                <span><b>${alumni.nama_perusahaan}</b></span>
-                            </div>
-                            <div class="info-row">
-                                <span class="icon">💼</span>
-                                <span>${alumni.jabatan}</span>
-                            </div>
-                        </div>
-                        <div class="popup-footer">
-                            <span class="popup-badge ${badgeClass}">${alumni.linearitas}</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            marker.bindPopup(popupContent);
-            
-            // KODE BARU: Masukkan marker ke dalam DUA wadah sekaligus (Pake window.)
-            window.wadahNormal.addLayer(marker);
-            window.wadahCluster.addLayer(marker);
+        if (tahunFilter !== 'semua') {
 
-            // Simpan marker di array global (untuk fitur "terbang ke lokasi")
-            arrayMarker[index] = marker;
+            const selisih =
+                new Date().getFullYear() -
+                parseInt(tahunLulus);
 
-            // Cetak list kartu di sidebar filter (Hanya jika sedang mencari sesuatu)
-            if (!isDefaultState) {
-                let statusClass = (alumni.linearitas === 'Linier') ? 'status-linier' : 'status-tidak';
-                resultsHTML += `
-                    <div class="result-card" onclick="terbangKeLokasi(${index})">
-                        <div class="result-name">${alumni.nama_lengkap} <span style="font-weight:normal; font-size:11px; color:#94a3b8;">(${alumni.tahun_lulus})</span></div>
-                        <div class="result-job">🏢 ${alumni.nama_perusahaan}</div>
-                        <div class="result-status ${statusClass}">${alumni.linearitas}</div>
-                    </div>
-                `;
-                jumlahDitemukan++;
-            }
+            cocokTahun =
+                selisih >= 0 &&
+                selisih <= parseInt(tahunFilter);
         }
-    }); // Akhir Looping
 
-    // UPDATE PETA SETELAH LOOPING SELESAI (Pake window.)
-    window.perbaruiTampilanPeta();
+        const teksWilayah =
+            (alamatLengkap + ' ' + perusahaan).toLowerCase();
 
-    // UPDATE DAFTAR HASIL DI PANEL FILTER
-    let resultsContainer = document.getElementById('search-results');
-    
-    if (isDefaultState) {
-        resultsContainer.innerHTML = '';
-    } else if (jumlahDitemukan > 0) {
-        resultsContainer.innerHTML = `<div class="result-count">Ditemukan ${jumlahDitemukan} Alumni</div>` + resultsHTML;
-    } else {
-        resultsContainer.innerHTML = `<div class="result-empty">Data tidak ditemukan.</div>`;
-    }
-}
+        const cocokWilayah =
+            wilayahFilter === '' ||
+            teksWilayah.includes(wilayahFilter);
 
-// 3. Terbang ke marker dan Buka Pop-up (Tetap di luar karena dipanggil lewat onClick HTML)
-function terbangKeLokasi(index) {
-    let targetMarker = arrayMarker[index]; 
-    
-    if(targetMarker) {
-        let posisi = targetMarker.getLatLng(); 
+        if (
+            !cocokKeyword ||
+            !cocokLinearitas ||
+            !cocokTahun ||
+            !cocokWilayah
+        ) return;
 
-        map.flyTo(posisi, 16, {
-            animate: true,
-            duration: 1.5
+        // =====================================
+        // WARNA MARKER
+        // =====================================
+        let warna;
+
+        if (statusKerja === 'Belum Bekerja') {
+            warna = 'grey';
+        } else {
+            warna = getMarkerColor(linearitas);
+        }
+
+        const icon = L.icon({
+            iconUrl:
+                'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-' +
+                warna + '.png',
+
+            shadowUrl:
+                'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34]
         });
 
-        setTimeout(function() {
-            targetMarker.openPopup();
-        }, 300); 
+        const marker =
+            L.marker([latitude, longitude], { icon });
+
+        const avatar =
+            'https://ui-avatars.com/api/?name=' +
+            encodeURIComponent(nama) +
+            '&background=004a87&color=fff&size=60&rounded=true';
+
+        const infoKerja =
+            statusKerja === 'Belum Bekerja'
+                ?
+                `
+                <div class="info-row">
+                    <span class="icon">🏠</span>
+                    <span>Domisili Saat Ini</span>
+                </div>
+
+                <div class="info-row">
+                    <span class="icon">📌</span>
+                    <span>${alamatLengkap}</span>
+                </div>
+                `
+                :
+                `
+                <div class="info-row">
+                    <span class="icon">🏢</span>
+                    <span><b>${perusahaan}</b></span>
+                </div>
+
+                <div class="info-row">
+                    <span class="icon">💼</span>
+                    <span>${jabatan}</span>
+                </div>
+                `;
+
+        const popup = `
+            <div class="premium-popup">
+
+                <div class="popup-cover"></div>
+
+                <div class="popup-avatar">
+                    <img src="${avatar}">
+                </div>
+
+                <div class="popup-body">
+
+                    <h3 class="popup-name">${nama}</h3>
+
+                    <span class="popup-year">
+                        Lulusan Tahun ${tahunLulus}
+                    </span>
+
+                    <div class="popup-info">
+                        ${infoKerja}
+                    </div>
+
+                    <div class="popup-footer">
+                        <span class="popup-badge">
+                            ${statusKerja === 'Belum Bekerja'
+                                ? 'Belum Bekerja'
+                                : linearitas}
+                        </span>
+                    </div>
+
+                </div>
+            </div>
+        `;
+
+        marker.bindPopup(popup);
+
+        window.wadahNormal.addLayer(marker);
+        window.wadahCluster.addLayer(marker);
+
+        arrayMarker[index] = marker;
+
+        // =====================================
+        // SIDEBAR
+        // =====================================
+        if (!isDefaultState) {
+
+            const statusClass =
+                getStatusClass(linearitas);
+
+            hasilHTML += `
+                <div class="result-card"
+                     onclick="terbangKeLokasi(${index})">
+
+                    <div class="result-name">
+                        ${nama}
+                        <span style="font-size:11px;color:#94a3b8;">
+                            (${tahunLulus})
+                        </span>
+                    </div>
+
+                    <div class="result-job">
+                        ${
+                            statusKerja === 'Belum Bekerja'
+                            ? '🏠 Belum Bekerja'
+                            : '🏢 ' + perusahaan
+                        }
+                    </div>
+
+                    <div class="result-status ${statusClass}">
+                        ${
+                            statusKerja === 'Belum Bekerja'
+                            ? 'Belum Bekerja'
+                            : linearitas
+                        }
+                    </div>
+
+                </div>
+            `;
+
+            jumlah++;
+        }
+
+    });
+
+    window.perbaruiTampilanPeta();
+
+    const container =
+        document.getElementById('search-results');
+
+    if (!container) return;
+
+    if (isDefaultState) {
+        container.innerHTML = '';
+    }
+    else if (jumlah > 0) {
+        container.innerHTML =
+            `<div class="result-count">
+                Ditemukan ${jumlah} Alumni
+             </div>` + hasilHTML;
+    }
+    else {
+        container.innerHTML =
+            `<div class="result-empty">
+                Data tidak ditemukan.
+             </div>`;
     }
 }
 
+// ======================================================
+// FLY TO MARKER
+// ======================================================
+function terbangKeLokasi(index) {
+
+    const marker = arrayMarker[index];
+
+    if (!marker) return;
+
+    const posisi = marker.getLatLng();
+
+    map.flyTo(posisi, 16, {
+        animate: true,
+        duration: 1.5
+    });
+
+    setTimeout(function () {
+        marker.openPopup();
+    }, 350);
+}
