@@ -37,10 +37,13 @@ document.addEventListener("DOMContentLoaded", function() {
         let jumlahDitemukan = 0;
 
         alumniData.forEach((alumni, index) => {
+            const namaAlumni = alumni.nama || '';
+            const namaPerusahaan = alumni.perusahaan || 'Belum Bekerja';
+
             // Logika pencarian: Cocokkan nama alumni dengan kata kunci (huruf kecil)
-            if (alumni.nama_lengkap.toLowerCase().includes(kataKunci.toLowerCase())) {
+            if (namaAlumni.toLowerCase().includes(kataKunci.toLowerCase())) {
                 
-                let avatarUrl = 'https://ui-avatars.com/api/?name=' + alumni.nama_lengkap.replace(/\s+/g, '+') + '&background=004a87&color=fff&size=60';
+                let avatarUrl = 'https://ui-avatars.com/api/?name=' + namaAlumni.replace(/\s+/g, '+') + '&background=004a87&color=fff&size=60';
                 
                 let cardHTML = `
                     <div class="dir-card-modal">
@@ -48,10 +51,10 @@ document.addEventListener("DOMContentLoaded", function() {
                         <div class="dir-content-left">
                             <img src="${avatarUrl}" class="dir-avatar-modal" alt="Avatar">
                             <div class="dir-info-modal">
-                                <h4>${alumni.nama_lengkap}</h4>
+                                <h4>${namaAlumni}</h4>
                                 <p>
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px; opacity: 0.7;"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
-                                    ${alumni.nama_perusahaan}
+                                    ${namaPerusahaan}
                                 </p>
                             </div>
                         </div>
@@ -92,13 +95,9 @@ document.addEventListener("DOMContentLoaded", function() {
         
         // 2. (Opsional tapi penting): Reset filter utama agar marker pasti ada di peta
         // Jika sebelumnya peta difilter, bisa jadi marker alumni ini disembunyikan
-        document.getElementById('search-category').value = 'semua';
-        document.getElementById('filter-linearitas').value = 'semua';
-        document.getElementById('filter-tahun').value = 'semua';
-        document.getElementById('search-input').value = '';
-        
-        // Jalankan ulang fungsi filter agar semua marker muncul
-        if(typeof filterDanTampilkanMarker === 'function') {
+        if (typeof window.resetSemuaFilter === 'function') {
+            window.resetSemuaFilter();
+        } else if(typeof filterDanTampilkanMarker === 'function') {
             filterDanTampilkanMarker();
         }
 

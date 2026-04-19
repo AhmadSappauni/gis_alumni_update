@@ -169,6 +169,88 @@
 /* Label & Tombol Pill */
 .filter-section { margin-bottom: 16px; }
 
+.filter-actions {
+    margin-top: 6px;
+}
+
+.advanced-filter {
+    margin-top: 4px;
+    margin-bottom: 16px;
+}
+
+.advanced-filter-toggle {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1px solid rgba(0, 74, 135, 0.14);
+    border-radius: 10px;
+    background: rgba(241, 245, 249, 0.75);
+    color: #004a87;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+}
+
+.advanced-filter-toggle:hover,
+.advanced-filter-toggle.active {
+    background: rgba(224, 242, 254, 0.95);
+    border-color: rgba(2, 132, 199, 0.35);
+}
+
+.advanced-filter-arrow {
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid #004a87;
+    border-bottom: 2px solid #004a87;
+    transform: rotate(45deg) translateY(-2px);
+    transition: transform 0.25s ease;
+}
+
+.advanced-filter-toggle.active .advanced-filter-arrow {
+    transform: rotate(225deg) translateY(0) translateX(-3px);
+}
+
+.advanced-filter-body {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: all 0.25s ease;
+    overflow: hidden;
+    opacity: 1;
+    padding-top: 14px;
+}
+
+.advanced-filter-body.hidden {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    padding-top: 0;
+}
+
+.advanced-filter-content {
+    min-height: 0;
+}
+
+.reset-filter-btn {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1px solid rgba(0, 74, 135, 0.18);
+    border-radius: 10px;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    color: #004a87;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.reset-filter-btn:hover {
+    background: linear-gradient(135deg, #004a87 0%, #0284c7 100%);
+    color: #ffffff;
+    box-shadow: 0 6px 18px rgba(0, 74, 135, 0.18);
+}
+
 /* --- CUSTOM DROPDOWN GLASSMORPHISM --- */
 
 /* Wrapper Utama */

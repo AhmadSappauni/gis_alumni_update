@@ -1,23 +1,159 @@
-/* --- PANEL KONTROL CLUSTER MENGAMBANG --- */
-.cluster-control-panel {
+/* --- PANEL KONTROL LAYER MENGAMBANG --- */
+.layer-control-panel {
     position: absolute;
     top: 15px;
-    right: 15px; /* Mengambang di pojok kanan atas */
-    z-index: 1000; /* Pastikan di atas layer peta Leaflet */
-    background-color: #ffffff;
-    padding: 8px 12px;
-    border-radius: 8px;
+    right: 15px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+.layer-toggle-btn {
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #004a87;
     display: flex;
     align-items: center;
-    gap: 10px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-    border: 2px solid rgba(0,0,0,0.2);
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    transition: all 0.2s ease;
 }
-.cluster-label {
+
+.layer-toggle-btn:hover {
+    transform: translateY(-1px);
+    background: #ffffff;
+}
+
+.layer-control-menu {
+    min-width: 210px;
+    max-width: 260px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 14px;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.18);
+    padding: 10px 12px;
+    backdrop-filter: blur(10px);
+}
+
+.layer-control-menu.hidden {
+    display: none;
+}
+
+.layer-control-section + .layer-control-section {
+    border-top: 1px solid rgba(226, 232, 240, 0.9);
+    margin-top: 8px;
+    padding-top: 8px;
+}
+
+.layer-control-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 8px 2px;
+}
+
+.layer-label {
     font-size: 13px;
     font-weight: 700;
     color: #004a87;
     font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.polygon-wilayah-list {
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 2px 2px 2px 0;
+    margin-top: 8px;
+}
+
+.polygon-wilayah-list.hidden {
+    display: none;
+}
+
+.polygon-wilayah-toggle-btn {
+    width: 100%;
+    margin-top: 4px;
+    border: 1px solid rgba(203, 213, 225, 0.9);
+    background: rgba(248, 250, 252, 0.95);
+    color: #334155;
+    border-radius: 10px;
+    padding: 9px 11px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    transition: all 0.2s ease;
+}
+
+.polygon-wilayah-toggle-btn:hover {
+    background: #ffffff;
+    border-color: rgba(148, 163, 184, 0.95);
+}
+
+.polygon-wilayah-arrow {
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid #475569;
+    border-bottom: 2px solid #475569;
+    transform: rotate(45deg);
+    transition: transform 0.2s ease;
+}
+
+.polygon-wilayah-arrow.open {
+    transform: rotate(225deg);
+}
+
+.polygon-wilayah-list::-webkit-scrollbar {
+    width: 5px;
+}
+
+.polygon-wilayah-list::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.5);
+    border-radius: 999px;
+}
+
+.polygon-wilayah-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 2px;
+}
+
+.polygon-wilayah-item + .polygon-wilayah-item {
+    border-top: 1px dashed rgba(203, 213, 225, 0.8);
+}
+
+.polygon-wilayah-name {
+    font-size: 12px;
+    color: #334155;
+    line-height: 1.35;
+    font-weight: 600;
+}
+
+.switch-kustom.switch-mini {
+    width: 38px;
+    height: 22px;
+}
+
+.switch-kustom.switch-mini .slider-kustom:before {
+    width: 16px;
+    height: 16px;
+}
+
+.switch-kustom.switch-mini input:checked + .slider-kustom:before {
+    transform: translateX(16px);
 }
 
 /* --- TOGGLE SWITCH KUSTOM --- */

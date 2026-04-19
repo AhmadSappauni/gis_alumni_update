@@ -10,3 +10,11 @@ body {
     width: 100%; 
     z-index: 1; 
 }
+
+/* Hilangkan outline fokus bawaan browser pada polygon Leaflet */
+.leaflet-interactive:focus,
+.leaflet-pane svg path:focus,
+.leaflet-pane svg g:focus,
+.leaflet-container a:focus {
+    outline: none !important;
+}

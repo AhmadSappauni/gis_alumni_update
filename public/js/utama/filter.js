@@ -34,6 +34,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     bindFilterEvents();
 
+    populateBidangFilter();
+    populateAngkatanFilter();
+
     initCustomSelect();
 
     filterDanTampilkanMarker();
@@ -45,24 +48,45 @@ document.addEventListener("DOMContentLoaded", function () {
 function bindFilterEvents() {
 
     document.getElementById('search-category')
-        ?.addEventListener('change', filterDanTampilkanMarker);
+        ?.addEventListener('change', function () {
+            const kategori = this.value || 'semua';
+            const keyword =
+                document.getElementById('search-input')
+                    ?.value.trim() || '';
+
+            if (
+                kategori !== 'wilayah' &&
+                !(kategori === 'semua' && keyword !== '') &&
+                typeof window.resetHighlightWilayah === 'function'
+            ) {
+                window.resetHighlightWilayah();
+            }
+
+            filterDanTampilkanMarker();
+        });
 
     document.getElementById('filter-linearitas')
+        ?.addEventListener('change', filterDanTampilkanMarker);
+
+    document.getElementById('filter-bidang')
+        ?.addEventListener('change', filterDanTampilkanMarker);
+
+    document.getElementById('filter-status-kerja')
         ?.addEventListener('change', filterDanTampilkanMarker);
 
     document.getElementById('filter-tahun')
         ?.addEventListener('change', filterDanTampilkanMarker);
 
-    document.getElementById('filter-wilayah')
-        ?.addEventListener('input', filterDanTampilkanMarker);
+    document.getElementById('filter-angkatan')
+        ?.addEventListener('change', filterDanTampilkanMarker);
 
     document.getElementById('btn-search')
-        ?.addEventListener('click', filterDanTampilkanMarker);
+        ?.addEventListener('click', handleSearchSubmit);
 
     document.getElementById('search-input')
         ?.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
-                filterDanTampilkanMarker();
+                handleSearchSubmit();
             }
         });
 
@@ -71,6 +95,124 @@ function bindFilterEvents() {
             document.getElementById('filter-body')
                 ?.classList.toggle('hidden');
         });
+
+    document.getElementById('toggle-advanced-filter')
+        ?.addEventListener('click', function () {
+            document.getElementById('advanced-filter-body')
+                ?.classList.toggle('hidden');
+
+            this.classList.toggle('active');
+        });
+
+    document.getElementById('btn-reset-filter')
+        ?.addEventListener('click', resetSemuaFilter);
+}
+
+function handleSearchSubmit() {
+
+    const kategori =
+        document.getElementById('search-category')
+            ?.value || 'semua';
+
+    const keyword =
+        document.getElementById('search-input')
+            ?.value.trim() || '';
+
+    if (keyword === '' && typeof window.resetHighlightWilayah === 'function') {
+        window.resetHighlightWilayah();
+    }
+
+    if (kategori === 'wilayah' && keyword !== '') {
+
+        const berhasilZoom =
+            typeof window.cariWilayahDanZoom === 'function' &&
+            window.cariWilayahDanZoom(keyword);
+
+        filterDanTampilkanMarker();
+
+        if (!berhasilZoom) {
+            const container =
+                document.getElementById('search-results');
+
+            if (container && container.innerHTML.trim() === '') {
+                container.innerHTML =
+                    `<div class="result-empty">Tidak ada alumni di wilayah "${keyword}".</div>`;
+            }
+        }
+
+        return;
+    }
+
+    if (kategori === 'semua' && keyword !== '') {
+
+        const berhasilZoom =
+            typeof window.cariWilayahDanZoom === 'function' &&
+            window.cariWilayahDanZoom(keyword);
+
+        if (berhasilZoom) {
+            const container =
+                document.getElementById('search-results');
+
+            if (container) {
+                container.innerHTML =
+                    `<div class="result-count">Menampilkan wilayah: ${keyword}</div>`;
+            }
+        }
+        else if (typeof window.resetHighlightWilayah === 'function') {
+            window.resetHighlightWilayah();
+        }
+    }
+    else if (typeof window.resetHighlightWilayah === 'function') {
+        window.resetHighlightWilayah();
+    }
+
+    filterDanTampilkanMarker();
+}
+
+function populateBidangFilter() {
+
+    const select =
+        document.getElementById('filter-bidang');
+
+    if (!select || !Array.isArray(alumniData)) {
+        return;
+    }
+
+    const bidangList = [...new Set(
+        alumniData
+            .map(item => (item?.bidang || '').trim())
+            .filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b, 'id'));
+
+    bidangList.forEach(bidang => {
+        const option = document.createElement('option');
+        option.value = bidang;
+        option.textContent = bidang;
+        select.appendChild(option);
+    });
+}
+
+function populateAngkatanFilter() {
+
+    const select =
+        document.getElementById('filter-angkatan');
+
+    if (!select || !Array.isArray(alumniData)) {
+        return;
+    }
+
+    const angkatanList = [...new Set(
+        alumniData
+            .map(item => String(item?.angkatan || '').trim())
+            .filter(Boolean)
+    )].sort((a, b) => Number(b) - Number(a));
+
+    angkatanList.forEach(angkatan => {
+        const option = document.createElement('option');
+        option.value = angkatan;
+        option.textContent = angkatan;
+        select.appendChild(option);
+    });
 }
 
 // ======================================================
@@ -134,6 +276,8 @@ function initCustomSelect() {
             list.appendChild(item);
         });
 
+        select.dataset.customSelectInitialized = 'true';
+
         trigger.addEventListener('click', function (e) {
 
             e.stopPropagation();
@@ -161,6 +305,68 @@ function initCustomSelect() {
             .forEach(x => x.classList.remove('active'));
     });
 }
+
+window.syncCustomSelectValue = function (selectId, value) {
+
+    const select = document.getElementById(selectId);
+
+    if (!select) {
+        return;
+    }
+
+    select.value = value;
+
+    const wrapper = select.closest('.custom-dropdown-wrapper');
+    const trigger = wrapper?.querySelector('.custom-dropdown-trigger span');
+    const options = wrapper?.querySelectorAll('.custom-option') || [];
+
+    if (trigger && select.selectedIndex >= 0) {
+        trigger.textContent = select.options[select.selectedIndex].text;
+    }
+
+    options.forEach(option => {
+        option.classList.toggle('selected', option.dataset.value === value);
+    });
+};
+
+window.resetSemuaFilter = function () {
+
+    if (typeof window.syncCustomSelectValue === 'function') {
+        window.syncCustomSelectValue('search-category', 'semua');
+        window.syncCustomSelectValue('filter-linearitas', 'semua');
+        window.syncCustomSelectValue('filter-bidang', 'semua');
+        window.syncCustomSelectValue('filter-status-kerja', 'semua');
+        window.syncCustomSelectValue('filter-tahun', 'semua');
+        window.syncCustomSelectValue('filter-angkatan', 'semua');
+    } else {
+        const ids = [
+            'search-category',
+            'filter-linearitas',
+            'filter-bidang',
+            'filter-status-kerja',
+            'filter-tahun',
+            'filter-angkatan'
+        ];
+
+        ids.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.value = 'semua';
+            }
+        });
+    }
+
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+
+    if (typeof window.resetHighlightWilayah === 'function') {
+        window.resetHighlightWilayah();
+    }
+
+    filterDanTampilkanMarker();
+};
 
 // ======================================================
 // TAMPILAN PETA
@@ -201,6 +407,9 @@ function getMarkerColor(linearitas) {
         case 'Kurang Erat':
             return 'orange';
 
+        case 'Tidak Erat':
+            return 'red';
+
         default:
             return 'red';
     }
@@ -225,6 +434,9 @@ function getStatusClass(linearitas) {
         case 'Kurang Erat':
             return 'status-kurang';
 
+        case 'Tidak Erat':
+            return 'status-tidak';
+
         default:
             return 'status-tidak';
     }
@@ -247,13 +459,21 @@ function filterDanTampilkanMarker() {
         document.getElementById('filter-linearitas')
             ?.value || 'semua';
 
+    const bidangFilter =
+        document.getElementById('filter-bidang')
+            ?.value || 'semua';
+
+    const statusKerjaFilter =
+        document.getElementById('filter-status-kerja')
+            ?.value || 'semua';
+
     const tahunFilter =
         document.getElementById('filter-tahun')
             ?.value || 'semua';
 
-    const wilayahFilter =
-        document.getElementById('filter-wilayah')
-            ?.value.toLowerCase() || '';
+    const angkatanFilter =
+        document.getElementById('filter-angkatan')
+            ?.value || 'semua';
 
     window.wadahNormal.clearLayers();
     window.wadahCluster.clearLayers();
@@ -266,21 +486,22 @@ function filterDanTampilkanMarker() {
     const isDefaultState =
         keyword === '' &&
         linearitasFilter === 'semua' &&
+        bidangFilter === 'semua' &&
+        statusKerjaFilter === 'semua' &&
         tahunFilter === 'semua' &&
-        wilayahFilter === '';
+        angkatanFilter === 'semua' &&
+        kategori !== 'wilayah';
 
     alumniData.forEach(function (item, index) {
 
-        const nama = item.alumni?.nama_lengkap || '';
-        const perusahaan = item.perusahaan?.nama_perusahaan || '-';
+        const nama = item.nama || '';
+        const perusahaan = item.perusahaan || '-';
         const jabatan = item.jabatan || '-';
-        const tahunLulus = item.alumni?.akademik?.tahun_lulus || '-';
-
-        const statusKerja =
-            item.status_kerja || 'Belum Bekerja';
-
-        const linearitas =
-            item.perusahaan?.linearitas || 'Tidak Erat';
+        const bidang = (item.bidang || '').trim();
+        const tahunLulus = item.tahun_lulus || '-';
+        const angkatan = String(item.angkatan || '').trim();
+        const statusKerja = item.status || 'Belum Bekerja';
+        const linearitas = item.linearitas || 'Tidak Erat';
 
         let latitude = null;
         let longitude = null;
@@ -291,25 +512,14 @@ function filterDanTampilkanMarker() {
         // =====================================
         if (statusKerja === 'Bekerja') {
 
-            latitude =
-                parseFloat(item.perusahaan?.lokasi_utama?.latitude);
-
-            longitude =
-                parseFloat(item.perusahaan?.lokasi_utama?.longitude);
-
-            alamatLengkap =
-                item.perusahaan?.lokasi_utama?.alamat_lengkap || '';
-
+            latitude = parseFloat(item.latitude);
+            longitude = parseFloat(item.longitude);
+            alamatLengkap = item.alamat || '';
         } else {
 
-            latitude =
-                parseFloat(item.alumni?.alamat?.latitude);
-
-            longitude =
-                parseFloat(item.alumni?.alamat?.longitude);
-
-            alamatLengkap =
-                item.alumni?.alamat?.alamat_lengkap || '';
+            latitude = parseFloat(item.latitude);
+            longitude = parseFloat(item.longitude);
+            alamatLengkap = item.alamat || '';
         }
 
         if (!latitude || !longitude) return;
@@ -323,6 +533,12 @@ function filterDanTampilkanMarker() {
 
             const n = nama.toLowerCase();
             const p = perusahaan.toLowerCase();
+            const teksWilayahPencarian = [
+                item.kota || '',
+                item.provinsi || '',
+                alamatLengkap || '',
+                perusahaan || ''
+            ].join(' ').toLowerCase();
 
             if (kategori === 'nama') {
                 cocokKeyword = n.includes(keyword);
@@ -330,10 +546,15 @@ function filterDanTampilkanMarker() {
             else if (kategori === 'perusahaan') {
                 cocokKeyword = p.includes(keyword);
             }
+            else if (kategori === 'wilayah') {
+                cocokKeyword =
+                    teksWilayahPencarian.includes(keyword);
+            }
             else {
                 cocokKeyword =
                     n.includes(keyword) ||
-                    p.includes(keyword);
+                    p.includes(keyword) ||
+                    teksWilayahPencarian.includes(keyword);
             }
         }
 
@@ -341,7 +562,18 @@ function filterDanTampilkanMarker() {
             linearitasFilter === 'semua' ||
             linearitas === linearitasFilter;
 
+        const cocokBidang =
+            bidangFilter === 'semua' ||
+            bidang === bidangFilter;
+
+        const cocokStatusKerja =
+            statusKerjaFilter === 'semua' ||
+            statusKerja === statusKerjaFilter;
+
         let cocokTahun = true;
+        const cocokAngkatan =
+            angkatanFilter === 'semua' ||
+            angkatan === angkatanFilter;
 
         if (tahunFilter !== 'semua') {
 
@@ -354,42 +586,22 @@ function filterDanTampilkanMarker() {
                 selisih <= parseInt(tahunFilter);
         }
 
-        const teksWilayah =
-            (alamatLengkap + ' ' + perusahaan).toLowerCase();
-
-        const cocokWilayah =
-            wilayahFilter === '' ||
-            teksWilayah.includes(wilayahFilter);
-
         if (
             !cocokKeyword ||
             !cocokLinearitas ||
+            !cocokBidang ||
+            !cocokStatusKerja ||
             !cocokTahun ||
-            !cocokWilayah
+            !cocokAngkatan
         ) return;
 
-        // =====================================
-        // WARNA MARKER
-        // =====================================
-        let warna;
-
-        if (statusKerja === 'Belum Bekerja') {
-            warna = 'grey';
-        } else {
-            warna = getMarkerColor(linearitas);
-        }
-
         const icon = L.icon({
-            iconUrl:
-                'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-' +
-                warna + '.png',
-
-            shadowUrl:
-                'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            popupAnchor: [1, -34]
+            iconUrl: statusKerja === 'Belum Bekerja'
+                ? '/img/icon alumni nganggur.png'
+                : '/img/icon alumni kerja.png',
+            iconSize: [34, 48],
+            iconAnchor: [17, 48],
+            popupAnchor: [0, -42]
         });
 
         const marker =

@@ -35,23 +35,17 @@
                 <div class="filter-section">
                     <label class="filter-label">Cari Berdasarkan:</label>
                     <select id="search-category" class="custom-select">
-                        <option value="semua">Semua (Nama & Tempat Kerja)</option>
+                        <option value="semua">Semua (Nama, Tempat Kerja & Wilayah)</option>
                         <option value="nama">Nama Alumni Saja</option>
                         <option value="perusahaan">Tempat Kerja Saja</option>
+                        <option value="wilayah">Wilayah / Kota / Kabupaten</option>
                     </select>
                 </div>
 
                 <div class="filter-section">
-                    <label class="filter-label">Wilayah (Kota/Kab):</label>
-                    <input type="text" id="filter-wilayah" class="custom-input" placeholder="Contoh: Banjarbaru">
-                </div>
-
-                <div class="filter-section">
-                    <label class="filter-label">Kesesuaian Bidang:</label>
-                    <select id="filter-linearitas" class="custom-select">
-                        <option value="semua">Semua Kesesuaian</option>
-                        <option value="Linier">Linier</option>
-                        <option value="Tidak Linier">Tidak Linier</option>
+                    <label class="filter-label">Bidang Kerja:</label>
+                    <select id="filter-bidang" class="custom-select">
+                        <option value="semua">Semua Bidang Kerja</option>
                     </select>
                 </div>
 
@@ -64,6 +58,51 @@
                         <option value="3">3 Tahun Terakhir</option>
                         <option value="5">5 Tahun Terakhir</option>
                     </select>
+                </div>
+
+                <div class="advanced-filter">
+                    <button id="toggle-advanced-filter" type="button" class="advanced-filter-toggle">
+                        <span>Filter Lanjutan</span>
+                        <span class="advanced-filter-arrow"></span>
+                    </button>
+
+                    <div id="advanced-filter-body" class="advanced-filter-body hidden">
+                        <div class="advanced-filter-content">
+                            <div class="filter-section">
+                                <label class="filter-label">Kesesuaian Bidang:</label>
+                                <select id="filter-linearitas" class="custom-select">
+                                    <option value="semua">Semua Kesesuaian</option>
+                                    <option value="Sangat Erat">Sangat Erat</option>
+                                    <option value="Erat">Erat</option>
+                                    <option value="Cukup Erat">Cukup Erat</option>
+                                    <option value="Kurang Erat">Kurang Erat</option>
+                                    <option value="Tidak Erat">Tidak Erat</option>
+                                </select>
+                            </div>
+
+                            <div class="filter-section">
+                                <label class="filter-label">Status Kerja:</label>
+                                <select id="filter-status-kerja" class="custom-select">
+                                    <option value="semua">Semua Status Kerja</option>
+                                    <option value="Bekerja">Sedang Bekerja</option>
+                                    <option value="Belum Bekerja">Belum Bekerja</option>
+                                </select>
+                            </div>
+
+                            <div class="filter-section">
+                                <label class="filter-label">Angkatan:</label>
+                                <select id="filter-angkatan" class="custom-select">
+                                    <option value="semua">Semua Angkatan</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-actions">
+                    <button id="btn-reset-filter" type="button" class="reset-filter-btn">
+                        Reset Filter
+                    </button>
                 </div>
             </div>
         </div>
