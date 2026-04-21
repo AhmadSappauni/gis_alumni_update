@@ -27,6 +27,17 @@
 
     <div class="status-legend" role="status" aria-live="polite">
         <div class="status-legend-title">Keterangan :</div>
+        <div class="status-legend-summary" aria-label="Jumlah alumni">
+            <img
+                class="status-legend-logo"
+                src="<?php echo e(asset('img/ULM-PNG-Baru.png')); ?>"
+                alt="Logo ULM"
+            >
+            <div class="status-legend-summary-text">
+                <div class="status-legend-summary-label">Jumlah Alumni</div>
+                <div class="status-legend-summary-count" id="legend-total-count">0 orang</div>
+            </div>
+        </div>
         <div class="status-legend-item">
             <img src="<?php echo e(asset('img/icon alumni kerja.png')); ?>" alt="Alumni Bekerja">
             <span>Alumni Bekerja</span>

@@ -35,10 +35,10 @@
                 <div class="filter-section">
                     <label class="filter-label">Cari Berdasarkan:</label>
                     <select id="search-category" class="custom-select">
-                        <option value="semua">Semua (Nama, Tempat Kerja & Wilayah)</option>
-                        <option value="nama">Nama Alumni Saja</option>
-                        <option value="perusahaan">Tempat Kerja Saja</option>
-                        <option value="wilayah">Wilayah / Kota / Kabupaten</option>
+                        <option value="semua">Semua</option>
+                        <option value="nama">Nama</option>
+                        <option value="perusahaan">Tempat Kerja</option>
+                        <option value="wilayah">Wilayah</option>
                     </select>
                 </div>
 

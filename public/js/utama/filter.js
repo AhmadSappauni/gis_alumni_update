@@ -37,10 +37,47 @@ document.addEventListener("DOMContentLoaded", function () {
     populateBidangFilter();
     populateAngkatanFilter();
 
+    // Bidang Kerja dibuat multi-select (tetap tampil dropdown via custom select)
+    const bidangSelect = document.getElementById('filter-bidang');
+    if (bidangSelect) {
+        bidangSelect.multiple = true;
+    }
+
+    // Cari Berdasarkan dibuat multi-select (tetap tampil dropdown via custom select)
+    const cariBerdasarkanSelect = document.getElementById('search-category');
+    if (cariBerdasarkanSelect) {
+        cariBerdasarkanSelect.multiple = true;
+    }
+
     initCustomSelect();
 
     filterDanTampilkanMarker();
 });
+
+function getCariBerdasarkanScopes() {
+    const select = document.getElementById('search-category');
+
+    if (!select) {
+        return { nama: true, perusahaan: true, wilayah: true, isSemua: true };
+    }
+
+    const values = Array.from(select.selectedOptions || [])
+        .map(o => o.value)
+        .filter(Boolean);
+
+    const isSemua = values.length === 0 || values.includes('semua');
+
+    if (isSemua) {
+        return { nama: true, perusahaan: true, wilayah: true, isSemua: true };
+    }
+
+    return {
+        nama: values.includes('nama'),
+        perusahaan: values.includes('perusahaan'),
+        wilayah: values.includes('wilayah'),
+        isSemua: false
+    };
+}
 
 // ======================================================
 // EVENT FILTER
@@ -49,14 +86,14 @@ function bindFilterEvents() {
 
     document.getElementById('search-category')
         ?.addEventListener('change', function () {
-            const kategori = this.value || 'semua';
             const keyword =
                 document.getElementById('search-input')
                     ?.value.trim() || '';
 
+            const scopes = getCariBerdasarkanScopes();
+
             if (
-                kategori !== 'wilayah' &&
-                !(kategori === 'semua' && keyword !== '') &&
+                (!scopes.wilayah || keyword === '') &&
                 typeof window.resetHighlightWilayah === 'function'
             ) {
                 window.resetHighlightWilayah();
@@ -110,9 +147,7 @@ function bindFilterEvents() {
 
 function handleSearchSubmit() {
 
-    const kategori =
-        document.getElementById('search-category')
-            ?.value || 'semua';
+    const scopes = getCariBerdasarkanScopes();
 
     const keyword =
         document.getElementById('search-input')
@@ -122,33 +157,22 @@ function handleSearchSubmit() {
         window.resetHighlightWilayah();
     }
 
-    if (kategori === 'wilayah' && keyword !== '') {
+    let berhasilZoom = false;
 
-        const berhasilZoom =
+    if (scopes.wilayah && keyword !== '') {
+        berhasilZoom =
             typeof window.cariWilayahDanZoom === 'function' &&
             window.cariWilayahDanZoom(keyword);
-
-        filterDanTampilkanMarker();
-
-        if (!berhasilZoom) {
-            const container =
-                document.getElementById('search-results');
-
-            if (container && container.innerHTML.trim() === '') {
-                container.innerHTML =
-                    `<div class="result-empty">Tidak ada alumni di wilayah "${keyword}".</div>`;
-            }
-        }
-
-        return;
+    } else if (typeof window.resetHighlightWilayah === 'function') {
+        window.resetHighlightWilayah();
     }
 
-    if (kategori === 'semua' && keyword !== '') {
+    filterDanTampilkanMarker();
 
-        const berhasilZoom =
-            typeof window.cariWilayahDanZoom === 'function' &&
-            window.cariWilayahDanZoom(keyword);
+    // Tampilkan pesan khusus hanya jika mode pencarian memang wilayah saja
+    const wilayahSaja = scopes.wilayah && !scopes.nama && !scopes.perusahaan;
 
+    if (wilayahSaja && keyword !== '') {
         if (berhasilZoom) {
             const container =
                 document.getElementById('search-results');
@@ -157,16 +181,16 @@ function handleSearchSubmit() {
                 container.innerHTML =
                     `<div class="result-count">Menampilkan wilayah: ${keyword}</div>`;
             }
-        }
-        else if (typeof window.resetHighlightWilayah === 'function') {
-            window.resetHighlightWilayah();
-        }
-    }
-    else if (typeof window.resetHighlightWilayah === 'function') {
-        window.resetHighlightWilayah();
-    }
+        } else {
+            const container =
+                document.getElementById('search-results');
 
-    filterDanTampilkanMarker();
+            if (container && container.innerHTML.trim() === '') {
+                container.innerHTML =
+                    `<div class="result-empty">Tidak ada alumni di wilayah "${keyword}".</div>`;
+            }
+        }
+    }
 }
 
 function populateBidangFilter() {
@@ -222,10 +246,61 @@ function initCustomSelect() {
 
     const selects = document.querySelectorAll('.custom-select');
 
+    function getMultiSelectTriggerText(select) {
+        const selectedValues = Array.from(select.selectedOptions || [])
+            .map(o => o.value)
+            .filter(Boolean);
+
+        const isSemua = selectedValues.length === 0 || selectedValues.includes('semua');
+        if (isSemua) {
+            return select.options[0]?.text || 'Semua';
+        }
+
+        const selectedTexts = Array.from(select.selectedOptions || [])
+            .filter(o => o.value !== 'semua')
+            .map(o => o.text)
+            .filter(Boolean);
+
+        if (selectedTexts.length === 1) {
+            return selectedTexts[0];
+        }
+
+        if (selectedTexts.length === 2) {
+            const gabungan = selectedTexts.join(', ');
+            return gabungan.length <= 32 ? gabungan : `${selectedTexts[0]} +1`;
+        }
+
+        const first = selectedTexts[0] || 'Bidang Kerja';
+        return `${first} +${selectedTexts.length - 1}`;
+    }
+
+    function updateCustomSelectUI(select) {
+        const wrapper = select.closest('.custom-dropdown-wrapper');
+        const triggerTextEl = wrapper?.querySelector('.custom-dropdown-trigger span');
+        const options = wrapper?.querySelectorAll('.custom-option') || [];
+
+        if (triggerTextEl) {
+            triggerTextEl.textContent = select.multiple
+                ? getMultiSelectTriggerText(select)
+                : (select.options[select.selectedIndex]?.text || '');
+        }
+
+        options.forEach(optionEl => {
+            const value = optionEl.dataset.value;
+            const optionNode = Array.from(select.options).find(o => o.value === value);
+            optionEl.classList.toggle('selected', !!optionNode?.selected);
+        });
+    }
+
+    window.updateCustomSelectUI = updateCustomSelectUI;
+
     selects.forEach(select => {
 
         const wrapper = document.createElement('div');
         wrapper.className = 'custom-dropdown-wrapper';
+        if (select.multiple) {
+            wrapper.classList.add('is-multi');
+        }
 
         select.parentNode.insertBefore(wrapper, select);
         wrapper.appendChild(select);
@@ -235,8 +310,12 @@ function initCustomSelect() {
         const trigger = document.createElement('div');
         trigger.className = 'custom-dropdown-trigger';
 
+        const triggerLabel = select.multiple
+            ? getMultiSelectTriggerText(select)
+            : select.options[select.selectedIndex].text;
+
         trigger.innerHTML =
-            `<span>${select.options[select.selectedIndex].text}</span>
+            `<span>${triggerLabel}</span>
              <div class="arrow"></div>`;
 
         wrapper.appendChild(trigger);
@@ -257,19 +336,49 @@ function initCustomSelect() {
 
             item.addEventListener('click', function () {
 
-                select.value = this.dataset.value;
+                if (!select.multiple) {
+                    select.value = this.dataset.value;
 
-                trigger.querySelector('span').textContent =
-                    this.textContent;
+                    trigger.querySelector('span').textContent =
+                        this.textContent;
 
-                list.querySelectorAll('.custom-option')
-                    .forEach(x => x.classList.remove('selected'));
+                    list.querySelectorAll('.custom-option')
+                        .forEach(x => x.classList.remove('selected'));
 
-                this.classList.add('selected');
+                    this.classList.add('selected');
 
-                list.classList.remove('open');
-                trigger.classList.remove('active');
+                    list.classList.remove('open');
+                    trigger.classList.remove('active');
 
+                    select.dispatchEvent(new Event('change'));
+                    return;
+                }
+
+                const clickedValue = this.dataset.value;
+                const options = Array.from(select.options);
+
+                if (clickedValue === 'semua') {
+                    options.forEach(o => { o.selected = (o.value === 'semua'); });
+                } else {
+                    const semuaOption = options.find(o => o.value === 'semua');
+                    if (semuaOption) {
+                        semuaOption.selected = false;
+                    }
+
+                    const clickedOption = options.find(o => o.value === clickedValue);
+                    if (clickedOption) {
+                        clickedOption.selected = !clickedOption.selected;
+                    }
+
+                    const adaSpesifik = options.some(o => o.value !== 'semua' && o.selected);
+                    if (!adaSpesifik) {
+                        if (semuaOption) {
+                            semuaOption.selected = true;
+                        }
+                    }
+                }
+
+                updateCustomSelectUI(select);
                 select.dispatchEvent(new Event('change'));
             });
 
@@ -314,19 +423,42 @@ window.syncCustomSelectValue = function (selectId, value) {
         return;
     }
 
-    select.value = value;
+    if (select.multiple) {
+        const values = Array.isArray(value) ? value : [value];
+        const options = Array.from(select.options);
 
-    const wrapper = select.closest('.custom-dropdown-wrapper');
-    const trigger = wrapper?.querySelector('.custom-dropdown-trigger span');
-    const options = wrapper?.querySelectorAll('.custom-option') || [];
-
-    if (trigger && select.selectedIndex >= 0) {
-        trigger.textContent = select.options[select.selectedIndex].text;
+        if (values.includes('semua')) {
+            options.forEach(o => { o.selected = (o.value === 'semua'); });
+        } else {
+            options.forEach(o => { o.selected = values.includes(o.value); });
+            const adaSpesifik = options.some(o => o.value !== 'semua' && o.selected);
+            if (!adaSpesifik) {
+                const semuaOption = options.find(o => o.value === 'semua');
+                if (semuaOption) {
+                    semuaOption.selected = true;
+                }
+            }
+        }
+    } else {
+        select.value = value;
     }
 
-    options.forEach(option => {
-        option.classList.toggle('selected', option.dataset.value === value);
-    });
+    const wrapper = select.closest('.custom-dropdown-wrapper');
+
+    if (wrapper && typeof window.updateCustomSelectUI === 'function') {
+        window.updateCustomSelectUI(select);
+    } else {
+        const trigger = wrapper?.querySelector('.custom-dropdown-trigger span');
+        const optionEls = wrapper?.querySelectorAll('.custom-option') || [];
+
+        if (trigger && select.selectedIndex >= 0) {
+            trigger.textContent = select.options[select.selectedIndex].text;
+        }
+
+        optionEls.forEach(option => {
+            option.classList.toggle('selected', option.dataset.value === value);
+        });
+    }
 };
 
 window.resetSemuaFilter = function () {
@@ -447,21 +579,53 @@ function getStatusClass(linearitas) {
 // ======================================================
 function filterDanTampilkanMarker() {
 
+    function normalisasiTeksWilayah(teks) {
+        return (teks || '')
+            .toString()
+            .toLowerCase()
+            .replace(/kab\.?/g, '')
+            .replace(/kabupaten/g, '')
+            .replace(/kota/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function escapeRegex(teks) {
+        return (teks || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function cocokFrasaWilayah(teks, frasa) {
+        const t = normalisasiTeksWilayah(teks);
+        const f = normalisasiTeksWilayah(frasa);
+
+        if (t === '' || f === '') {
+            return false;
+        }
+
+        // Cocokkan sebagai frasa utuh (menghindari "banjar" ikut cocok ke "banjarbaru")
+        const re = new RegExp('(^|\\s)' + escapeRegex(f) + '($|\\s)');
+        return re.test(t);
+    }
+
     const keyword =
         document.getElementById('search-input')
             ?.value.toLowerCase() || '';
 
-    const kategori =
-        document.getElementById('search-category')
-            ?.value || 'semua';
+    const scopes = getCariBerdasarkanScopes();
 
     const linearitasFilter =
         document.getElementById('filter-linearitas')
             ?.value || 'semua';
 
-    const bidangFilter =
-        document.getElementById('filter-bidang')
-            ?.value || 'semua';
+    const bidangSelect =
+        document.getElementById('filter-bidang');
+
+    const bidangFilters = bidangSelect
+        ? Array.from(bidangSelect.selectedOptions || []).map(o => o.value)
+        : ['semua'];
+
+    const bidangFilterIsSemua =
+        bidangFilters.length === 0 || bidangFilters.includes('semua');
 
     const statusKerjaFilter =
         document.getElementById('filter-status-kerja')
@@ -488,11 +652,11 @@ function filterDanTampilkanMarker() {
     const isDefaultState =
         keyword === '' &&
         linearitasFilter === 'semua' &&
-        bidangFilter === 'semua' &&
+        bidangFilterIsSemua &&
         statusKerjaFilter === 'semua' &&
         tahunFilter === 'semua' &&
         angkatanFilter === 'semua' &&
-        kategori !== 'wilayah';
+        scopes.isSemua;
 
     alumniData.forEach(function (item, index) {
 
@@ -542,22 +706,23 @@ function filterDanTampilkanMarker() {
                 perusahaan || ''
             ].join(' ').toLowerCase();
 
-            if (kategori === 'nama') {
-                cocokKeyword = n.includes(keyword);
+            const cocokNama = scopes.nama && n.includes(keyword);
+            const cocokPerusahaan = scopes.perusahaan && p.includes(keyword);
+
+            let cocokWilayah = false;
+            if (scopes.wilayah) {
+                // Pencocokan wilayah dibuat ketat (frasa utuh) agar tidak match "Banjar" -> "Banjarbaru"
+                const kotaWilayah = item.kota || '';
+                const provinsiWilayah = item.provinsi || '';
+
+                cocokWilayah =
+                    cocokFrasaWilayah(kotaWilayah, keyword) ||
+                    (kotaWilayah === '' && cocokFrasaWilayah(alamatLengkap || '', keyword)) ||
+                    cocokFrasaWilayah(provinsiWilayah, keyword) ||
+                    cocokFrasaWilayah(teksWilayahPencarian, keyword);
             }
-            else if (kategori === 'perusahaan') {
-                cocokKeyword = p.includes(keyword);
-            }
-            else if (kategori === 'wilayah') {
-                cocokKeyword =
-                    teksWilayahPencarian.includes(keyword);
-            }
-            else {
-                cocokKeyword =
-                    n.includes(keyword) ||
-                    p.includes(keyword) ||
-                    teksWilayahPencarian.includes(keyword);
-            }
+
+            cocokKeyword = cocokNama || cocokPerusahaan || cocokWilayah;
         }
 
         const cocokLinearitas =
@@ -565,8 +730,8 @@ function filterDanTampilkanMarker() {
             linearitas === linearitasFilter;
 
         const cocokBidang =
-            bidangFilter === 'semua' ||
-            bidang === bidangFilter;
+            bidangFilterIsSemua ||
+            bidangFilters.includes(bidang);
 
         const cocokStatusKerja =
             statusKerjaFilter === 'semua' ||
@@ -683,13 +848,70 @@ function filterDanTampilkanMarker() {
         marker.bindTooltip(
             `${nama} - ${tooltipTempat}`,
             {
-                direction: 'top',
-                sticky: false,
+                direction: 'right',
+                sticky: true,
                 opacity: 0.95,
-                offset: [0, -10],
+                offset: [12, 10],
                 className: 'alumni-tooltip'
             }
         );
+
+        // Delay tooltip supaya tidak langsung muncul saat kursor lewat marker
+        const TOOLTIP_DELAY_MS = 650;
+        let tooltipTimer = null;
+        let lastMouseLatLng = null;
+        let lastOriginalEvent = null;
+
+        // Matikan open/close tooltip bawaan Leaflet agar bisa pakai delay,
+        // tapi tetap biarkan mekanisme follow-mouse (sticky) Leaflet berjalan setelah tooltip terbuka.
+        if (typeof marker._openTooltip === 'function') {
+            marker.off('mouseover', marker._openTooltip, marker);
+        }
+        if (typeof marker._closeTooltip === 'function') {
+            marker.off('mouseout', marker._closeTooltip, marker);
+        }
+
+        marker.on('mousemove', function (e) {
+            if (!e || !e.originalEvent || typeof map === 'undefined' || !map) {
+                return;
+            }
+
+            lastOriginalEvent = e.originalEvent;
+
+            if (typeof map.mouseEventToLatLng === 'function') {
+                lastMouseLatLng = map.mouseEventToLatLng(lastOriginalEvent);
+            }
+        });
+
+        marker.on('mouseover', function (e) {
+            clearTimeout(tooltipTimer);
+
+            if (e && e.originalEvent && typeof map !== 'undefined' && map && typeof map.mouseEventToLatLng === 'function') {
+                lastOriginalEvent = e.originalEvent;
+                lastMouseLatLng = map.mouseEventToLatLng(lastOriginalEvent);
+            }
+
+            tooltipTimer = setTimeout(function () {
+                if (lastMouseLatLng) {
+                    marker.openTooltip(lastMouseLatLng);
+                } else if (e && e.originalEvent && typeof map !== 'undefined' && map && typeof map.mouseEventToLatLng === 'function') {
+                    marker.openTooltip(map.mouseEventToLatLng(e.originalEvent));
+                } else {
+                    marker.openTooltip();
+                }
+
+                // Paksa posisi tooltip langsung di lokasi kursor (tanpa harus menunggu mousemove berikutnya)
+                const tooltip = marker.getTooltip && marker.getTooltip();
+                if (tooltip && typeof tooltip._move === 'function' && lastOriginalEvent) {
+                    tooltip._move({ originalEvent: lastOriginalEvent });
+                }
+            }, TOOLTIP_DELAY_MS);
+        });
+
+        marker.on('mouseout', function () {
+            clearTimeout(tooltipTimer);
+            marker.closeTooltip();
+        });
 
         window.wadahNormal.addLayer(marker);
         window.wadahCluster.addLayer(marker);
@@ -774,9 +996,11 @@ function perbaruiLegendaStatus(jumlahBekerja, jumlahBelumBekerja) {
 
     const bekerjaEl = document.getElementById('legend-bekerja-count');
     const belumEl = document.getElementById('legend-belum-count');
+    const totalEl = document.getElementById('legend-total-count');
 
     if (bekerjaEl) bekerjaEl.textContent = `(${jumlahBekerja} orang)`;
     if (belumEl) belumEl.textContent = `(${jumlahBelumBekerja} orang)`;
+    if (totalEl) totalEl.textContent = `${jumlahBekerja + jumlahBelumBekerja} orang`;
 }
 
 // ======================================================
