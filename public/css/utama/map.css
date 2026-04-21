@@ -11,10 +11,173 @@ body {
     z-index: 1; 
 }
 
+/* Sedikit bayangan untuk marker icon (terlihat lebih "3D") */
+#map img.leaflet-marker-icon {
+    -webkit-filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35));
+    filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35));
+}
+
+.is-hidden {
+    display: none !important;
+}
+
+/* Atur jarak tombol zoom dari tepi peta (sesuaikan angkanya) */
+:root {
+    --zoom-offset-right: 16px;
+    --zoom-offset-top: 74px; /* posisi zoom di bawah tombol "atur polygon" */
+    --zoom-offset-bottom: 16px;
+    --zoom-button-gap: 0px; /* jarak antara tombol + dan - (opsional) */
+}
+
+#map .leaflet-top.leaflet-right .leaflet-control-zoom {
+    margin-right: var(--zoom-offset-right) !important;
+    margin-top: var(--zoom-offset-top) !important;
+}
+
+#map .leaflet-top.leaflet-right .leaflet-control-reset {
+    margin-right: var(--zoom-offset-right) !important;
+    margin-top: 8px !important;
+}
+
+#map .leaflet-bottom.leaflet-right .leaflet-control-zoom {
+    margin-right: var(--zoom-offset-right) !important;
+    margin-bottom: var(--zoom-offset-bottom) !important;
+}
+
+#map .leaflet-control-zoom a.leaflet-control-zoom-out {
+    margin-top: var(--zoom-button-gap) !important;
+}
+
+#map .leaflet-control-reset a.leaflet-control-reset-link {
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+    text-align: center;
+    font-size: 18px;
+    color: #334155;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(148, 163, 184, 0.7);
+    border-radius: 4px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+}
+
+.leaflet-control-reset a.leaflet-control-reset-link:hover {
+    background: #ffffff;
+    color: #0f172a;
+}
+
+.kompas-ui {
+    position: fixed;
+    /* Turunkan sedikit agar tidak menutupi panel polygon (top-right) */
+    top: 8px;
+    right: 67px;
+    z-index: 900;
+    width: 84px;
+    height: 84px;
+    pointer-events: none;
+}
+
+.kompas-ui img {
+    width: 90%;
+    height: 100%;
+    object-fit: contain;
+    -webkit-filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.35));
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.35));
+}
+
+.status-legend {
+    position: fixed;
+    right: 16px;
+    bottom: 8px;
+    z-index: 900;
+    min-width: 240px;
+    max-width: 320px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.18);
+    backdrop-filter: blur(10px);
+    color: #0f172a;
+    font-family: 'Inter', sans-serif;
+    pointer-events: none;
+}
+
+.status-legend-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: #334155;
+    margin-bottom: 10px;
+}
+
+.status-legend-item {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #0f172a;
+    padding: 6px 0;
+}
+
+.status-legend-item img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    -webkit-filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
+}
+
+.status-legend-item b {
+    font-size: 14px;
+    font-weight: 900;
+    color: #004a87;
+}
+
 /* Hilangkan outline fokus bawaan browser pada polygon Leaflet */
 .leaflet-interactive:focus,
 .leaflet-pane svg path:focus,
 .leaflet-pane svg g:focus,
 .leaflet-container a:focus {
     outline: none !important;
+}
+
+/* Scale bar (Leaflet / leaflet-betterscale) - supaya lebih terbaca */
+#map .leaflet-control-scale,
+#map .leaflet-control-betterscale {
+    background: rgba(255, 255, 255, 0.8);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #0f172a;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+    backdrop-filter: blur(6px);
+}
+
+/* Mini map (Leaflet.MiniMap) */
+#map .leaflet-control-minimap {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.18);
+    border: 1px solid rgba(148, 163, 184, 0.55);
+    background: rgba(255, 255, 255, 0.8);
+}
+
+#map .leaflet-control-minimap .leaflet-control-minimap-toggle-display {
+    border-radius: 6px;
+}
+
+/* Tooltip marker alumni */
+#map .leaflet-tooltip.alumni-tooltip {
+    background: rgba(0, 0, 0, 0.85);
+    color: #ffffff;
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 0;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+}
+
+#map .leaflet-tooltip.alumni-tooltip.leaflet-tooltip-top:before {
+    border-top-color: rgba(0, 0, 0, 0.85);
 }

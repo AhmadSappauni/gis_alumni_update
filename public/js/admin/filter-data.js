@@ -24,28 +24,85 @@ document.addEventListener("DOMContentLoaded", function () {
     if (savedPref) {
         switchView(savedPref);
     }
+
+    initDynamicFilterOptions();
 });
 
-// GABUNGKAN SEMUA FILTER DI SINI
+function normalizeFilterValue(value) {
+    return (value || "").toString().trim().toLowerCase();
+}
+
+function populateSelectOptions(selectId, values, defaultLabel) {
+    const select = document.getElementById(selectId);
+
+    if (!select) {
+        return;
+    }
+
+    select.innerHTML = `<option value="">${defaultLabel}</option>`;
+
+    values.forEach(value => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+    });
+}
+
+function initDynamicFilterOptions() {
+    const rows = Array.from(document.querySelectorAll("#main-alumni-data tr"));
+
+    const tahunSet = new Set();
+    const bidangSet = new Set();
+
+    rows.forEach(row => {
+        const tahun = row.dataset.tahun || "";
+        const bidang = row.dataset.bidang || "";
+
+        if (tahun) {
+            tahunSet.add(tahun);
+        }
+
+        if (bidang) {
+            bidangSet.add(bidang);
+        }
+    });
+
+    const tahunList = Array.from(tahunSet).sort((a, b) => Number(b) - Number(a));
+    const bidangList = Array.from(bidangSet).sort((a, b) => a.localeCompare(b, 'id'));
+
+    populateSelectOptions("filterTahun", tahunList, "Semua Tahun");
+    populateSelectOptions("filterBidang", bidangList, "Semua Bidang");
+}
+
 function applyFilters() {
-    const searchText = document.getElementById("alumniSearch").value.toLowerCase();
+    const searchText = normalizeFilterValue(document.getElementById("alumniSearch").value);
     const filterTahun = document.getElementById("filterTahun").value;
-    const filterLinear = document.getElementById("filterLinear").value.toLowerCase();
+    const filterLinear = normalizeFilterValue(document.getElementById("filterLinear").value);
+    const filterBidang = normalizeFilterValue(document.getElementById("filterBidang").value);
 
     const paginations = document.querySelectorAll('.pagination-wrapper, .pagination-card-container');
-    const isFiltering = searchText.length > 0 || filterTahun !== "" || filterLinear !== "";
+    const isFiltering =
+        searchText.length > 0 ||
+        filterTahun !== "" ||
+        filterLinear !== "" ||
+        filterBidang !== "";
     
     paginations.forEach(p => p.style.display = isFiltering ? 'none' : 'flex');
 
-    // 1. Filter Card (Logika sudah benar)
     let visibleCards = 0;
     document.querySelectorAll(".data-card").forEach(card => {
-        const fullText = card.innerText.toLowerCase();
-        const textMatch = fullText.includes(searchText);
-        const tahunMatch = filterTahun === "" || fullText.includes(filterTahun);
-        const linearMatch = filterLinear === "" || fullText.includes(filterLinear);
+        const fullText = normalizeFilterValue(card.innerText);
+        const cardTahun = card.dataset.tahun || "";
+        const cardLinear = normalizeFilterValue(card.dataset.linearitas);
+        const cardBidang = normalizeFilterValue(card.dataset.bidang);
 
-        if (textMatch && tahunMatch && linearMatch) {
+        const textMatch = fullText.includes(searchText);
+        const tahunMatch = filterTahun === "" || cardTahun === filterTahun;
+        const linearMatch = filterLinear === "" || cardLinear === filterLinear;
+        const bidangMatch = filterBidang === "" || cardBidang === filterBidang;
+
+        if (textMatch && tahunMatch && linearMatch && bidangMatch) {
             card.style.display = "";
             visibleCards++;
         } else {
@@ -53,15 +110,19 @@ function applyFilters() {
         }
     });
 
-    // 2. Filter Table (Logika sudah benar)
     let visibleRows = 0;
     document.querySelectorAll("#main-alumni-data tr").forEach(row => {
-        const fullText = row.innerText.toLowerCase();
-        const textMatch = fullText.includes(searchText);
-        const tahunMatch = filterTahun === "" || fullText.includes(filterTahun);
-        const linearMatch = filterLinear === "" || fullText.includes(filterLinear);
+        const fullText = normalizeFilterValue(row.innerText);
+        const rowTahun = row.dataset.tahun || "";
+        const rowLinear = normalizeFilterValue(row.dataset.linearitas);
+        const rowBidang = normalizeFilterValue(row.dataset.bidang);
 
-        if (textMatch && tahunMatch && linearMatch) {
+        const textMatch = fullText.includes(searchText);
+        const tahunMatch = filterTahun === "" || rowTahun === filterTahun;
+        const linearMatch = filterLinear === "" || rowLinear === filterLinear;
+        const bidangMatch = filterBidang === "" || rowBidang === filterBidang;
+
+        if (textMatch && tahunMatch && linearMatch && bidangMatch) {
             row.style.display = "";
             visibleRows++;
         } else {
@@ -116,5 +177,6 @@ function resetFilters() {
     document.getElementById("alumniSearch").value = "";
     document.getElementById("filterTahun").value = "";
     document.getElementById("filterLinear").value = "";
+    document.getElementById("filterBidang").value = "";
     applyFilters();
 }

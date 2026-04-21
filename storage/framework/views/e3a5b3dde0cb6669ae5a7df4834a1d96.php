@@ -1,7 +1,43 @@
 <?php $__env->startPush('styles'); ?>
     <link rel="stylesheet" href="<?php echo e(asset('css/admin-create.css')); ?>">
     <link rel="stylesheet" href="<?php echo e(asset('css/admin/edit.css')); ?>">
-    
+    <style>
+        .foto-edit-preview {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .foto-edit-thumbnail {
+            width: 90px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 20px;
+            border: 3px solid white;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .foto-edit-actions {
+            flex-grow: 1;
+        }
+
+        .foto-edit-reset {
+            display: none;
+            margin-top: 10px;
+            border: none;
+            border-radius: 10px;
+            background: #fee2e2;
+            color: #b91c1c;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 10px 14px;
+            cursor: pointer;
+        }
+
+        .foto-edit-reset.active {
+            display: inline-flex;
+        }
+    </style>
 <?php $__env->stopPush(); ?>
 
 <?php $__env->startSection('content'); ?>
@@ -58,6 +94,18 @@
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                         <div><label class="label-admin">NIM</label><input type="text" name="nim" class="custom-input-admin" value="<?php echo e(old('nim', $alumni->nim)); ?>" required></div>
                         <div><label class="label-admin">Nama Lengkap</label><input type="text" name="nama_lengkap" class="custom-input-admin" value="<?php echo e(old('nama_lengkap', $alumni->nama_lengkap)); ?>" required></div>
+                        <div>
+                            <label class="label-admin">Jenis Kelamin</label>
+                            <select name="jenis_kelamin" class="custom-input-admin" required>
+                                <option value="">Pilih Jenis Kelamin</option>
+                                <option value="L" <?php echo e(old('jenis_kelamin', $alumni->jenis_kelamin) == 'L' ? 'selected' : ''); ?>>Laki-laki</option>
+                                <option value="P" <?php echo e(old('jenis_kelamin', $alumni->jenis_kelamin) == 'P' ? 'selected' : ''); ?>>Perempuan</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="label-admin">IPK</label>
+                            <input type="number" name="ipk" class="custom-input-admin" value="<?php echo e(old('ipk', $alumni->akademik?->ipk)); ?>" min="0" max="4" step="0.01" placeholder="Contoh: 3.75">
+                        </div>
                         <div><label class="label-admin">Angkatan</label><input type="number" name="angkatan" class="custom-input-admin" value="<?php echo e(old('angkatan', $alumni->akademik?->angkatan)); ?>"></div>
                         <div><label class="label-admin">Tahun Lulus</label><input type="number" name="tahun_lulus" class="custom-input-admin" value="<?php echo e(old('tahun_lulus', $alumni->akademik?->tahun_lulus)); ?>" required></div>
                     </div>
@@ -67,11 +115,17 @@
                     </div>
                     <div style="margin-top: 20px; background: rgba(0,74,135,0.03); padding: 20px; border-radius: 15px;">
                         <label class="label-admin">Foto Profil</label>
-                        <div style="display: flex; align-items: center; gap: 20px;">
-                            <img src="<?php echo e($alumni->foto_profil ? asset('storage/' . $alumni->foto_profil) : '/default.png'); ?>" style="width:90px; height:90px; object-fit:cover; border-radius:20px; border:3px solid white; box-shadow:0 10px 20px rgba(0,0,0,0.1);">
-                            <div style="flex-grow: 1;">
-                                <input type="file" name="foto" class="custom-input-admin">
+                        <div class="foto-edit-preview">
+                            <img
+                                id="edit-preview-foto"
+                                class="foto-edit-thumbnail"
+                                src="<?php echo e($alumni->foto_profil ? (\Illuminate\Support\Str::startsWith($alumni->foto_profil, ['http://', 'https://']) ? $alumni->foto_profil : asset('storage/' . $alumni->foto_profil)) : '/default.png'); ?>"
+                                data-default-src="<?php echo e($alumni->foto_profil ? (\Illuminate\Support\Str::startsWith($alumni->foto_profil, ['http://', 'https://']) ? $alumni->foto_profil : asset('storage/' . $alumni->foto_profil)) : '/default.png'); ?>"
+                                alt="Foto profil alumni">
+                            <div class="foto-edit-actions">
+                                <input type="file" name="foto" id="edit-foto" class="custom-input-admin" accept="image/*">
                                 <small style="color: #64748b; display: block; margin-top: 8px;">Pilih file baru jika ingin mengganti foto</small>
+                                <button type="button" id="btn-reset-edit-foto" class="foto-edit-reset">Batalkan Ganti Foto</button>
                             </div>
                         </div>
                     </div>
@@ -160,9 +214,22 @@
                                         <?php echo e($p->perusahaan?->lokasi->first()?->kota ?? '-'); ?>
 
                                     </small>
+                                    <small style="color: #64748b; display: block; margin-top: 8px; line-height: 1.5;">
+                                        Periode:
+                                        <?php echo e($p->tanggal_mulai?->translatedFormat('d M Y') ?? '-'); ?>
+
+                                        -
+                                        <?php echo e($p->is_current ? 'Sekarang' : ($p->tanggal_selesai?->translatedFormat('d M Y') ?? '-')); ?>
+
+                                    </small>
                                 </td>
                                 <td style="padding: 15px; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;">
                                     <span style="color: #475569; font-weight: 600;"><?php echo e($p->jabatan); ?></span>
+                                    <small style="display: block; color: #94a3b8; margin-top: 6px;">
+                                        Masa tunggu:
+                                        <?php echo e($p->masa_tunggu !== null ? $p->masa_tunggu . ' bulan' : '-'); ?>
+
+                                    </small>
                                 </td>
                                 <td style="padding: 15px; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;">
                                     <?php if($p->status_karir == 'Utama'): ?>
@@ -201,6 +268,11 @@
                                             "latitude" => $p->perusahaan?->lokasi->first()?->latitude,
                                             "longitude" => $p->perusahaan?->lokasi->first()?->longitude,
                                             "gaji" => $p->gaji_nominal,
+                                            "tanggal_mulai" => $p->tanggal_mulai?->format('Y-m-d'),
+                                            "tanggal_selesai" => $p->tanggal_selesai?->format('Y-m-d'),
+                                            "masa_tunggu" => $p->masa_tunggu,
+                                            "is_current" => $p->is_current,
+                                            "status_karir" => $p->status_karir,
                                         ];
                                         ?>
         
@@ -241,4 +313,5 @@
 
     <script src="<?php echo e(asset('js/admin/edit.js')); ?>"></script>
 <?php $__env->stopPush(); ?>
+
 <?php echo $__env->make('admin.layout', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_3\resources\views/admin/edit.blade.php ENDPATH**/ ?>

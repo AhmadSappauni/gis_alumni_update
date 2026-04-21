@@ -1,16 +1,97 @@
 // 1. Inisialisasi Peta & Base Map
+const defaultCenter = [-3.316694, 114.590111];
+const defaultZoom = 8; // Zoom saya ubah ke 8 agar Kalsel terlihat utuh
+
 var map = L.map("map", {
-    zoomControl: false 
-}).setView([-3.316694, 114.590111], 8); // Zoom saya ubah ke 8 agar Kalsel terlihat utuh
+    zoomControl: false
+}).setView(defaultCenter, defaultZoom);
 
 // Pindahkan tombol zoom ke pojok kanan bawah
 L.control.zoom({
-    position: 'bottomright'
+    position: 'topright'
 }).addTo(map);
+
+// Tombol Reset Peta (kembali ke posisi & zoom awal)
+const ResetControl = L.Control.extend({
+    options: { position: 'topright' },
+    onAdd: function () {
+        const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-reset');
+        const link = L.DomUtil.create('a', 'leaflet-control-reset-link', container);
+
+        link.href = '#';
+        link.title = 'Reset Peta';
+        link.setAttribute('role', 'button');
+        link.setAttribute('aria-label', 'Reset Peta');
+        link.innerHTML = '⟲';
+
+        L.DomEvent.disableClickPropagation(container);
+        L.DomEvent.on(link, 'click', function (e) {
+            L.DomEvent.preventDefault(e);
+            map.setView(defaultCenter, defaultZoom);
+        });
+
+        return container;
+    }
+});
+
+new ResetControl().addTo(map);
+
+// Tambahkan graphic scale bar (leaflet-betterscale) untuk referensi jarak
+const betterScaleFactory = (L.control && (L.control.betterscale || L.control.betterScale)) || null;
+const scaleControlFactory = betterScaleFactory || L.control.scale;
+
+window.scaleBarControl = scaleControlFactory({
+    position: 'bottomleft',
+    metric: true,
+    imperial: false,
+    maxWidth: 150,
+    updateWhenIdle: true
+}).addTo(map);
+
+// Tambahkan mini map (overview map) pakai Leaflet.MiniMap
+// Diletakkan setelah scale bar agar minimap tampil di atas scale bar (posisi sama: bottomleft).
+if (L.Control && L.Control.MiniMap) {
+    const miniMapLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+        subdomains: 'abcd',
+        maxZoom: 10,
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+    });
+
+    window.miniMapControl = new L.Control.MiniMap(miniMapLayer, {
+        position: 'bottomleft',
+        width: 120,
+        height: 120,
+        zoomLevelOffset: -5,
+        minimized: false,
+        aimingRectOptions: {
+            color: '#ff7800',
+            weight: 2
+        },
+        shadowRectOptions: {
+            color: '#ff7800',
+            weight: 2,
+            opacity: 0,
+            fillOpacity: 0
+        },
+        zoomAnimation: false,
+        mapOptions: {
+            maxZoom: 10
+        }
+    }).addTo(map);
+
+    const toggleMiniMap = document.getElementById('toggle-minimap-ui');
+    const miniMapContainer = window.miniMapControl.getContainer && window.miniMapControl.getContainer();
+    if (toggleMiniMap && miniMapContainer && !toggleMiniMap.checked) {
+        miniMapContainer.classList.add('is-hidden');
+    }
+}
 
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: '&copy; OpenStreetMap contributors',
 }).addTo(map);
+
+// Hapus teks "Leaflet" di attribution (attribution OSM tetap wajib ditampilkan)
+map.attributionControl.setPrefix(false);
 
 var markerLayer = L.layerGroup().addTo(map);
 window.layerWilayahKalsel = null;
@@ -34,21 +115,36 @@ function getStyleWilayah(feature) {
 
 // 1. Fungsi untuk menentukan warna berdasarkan nama kabupaten
 // Kamu bisa menyesuaikan list warna ini agar estetik
-function getColor(d) {
-    return d === 'Banjarmasin'  ? '#004a87' :
-           d === 'Banjarbaru'   ? '#0ea5e9' :
-           d === 'Banjar'       ? '#10b981' :
-           d === 'Barito Kuala' ? '#f59e0b' :
-           d === 'Tanah Laut'   ? '#ef4444' :
-           d === 'Tanah Bumbu'  ? '#8b5cf6' :
-           d === 'Kotabaru'     ? '#ec4899' :
-           d === 'Tapin'        ? '#f97316' :
-           d === 'Hulu Sungai Selatan' ? '#14b8a6' :
-           d === 'Hulu Sungai Tengah'  ? '#6366f1' :
-           d === 'Hulu Sungai Utara'   ? '#a855f7' :
-           d === 'Balangan'     ? '#fbbf24' :
-           d === 'Tabalong'     ? '#4ade80' :
-                                  '#94a3b8'; // Warna default jika nama tidak cocok
+// Sumber data warna wilayah (dipakai oleh polygon & UI toggle)
+const WILAYAH_CONFIG = {
+    'banjarmasin': { regionId: 'banjarmasin', regionName: 'Banjarmasin', color: '#004a87' },
+    'banjarbaru': { regionId: 'banjarbaru', regionName: 'Banjarbaru', color: '#0ea5e9' },
+    'banjar': { regionId: 'banjar', regionName: 'Banjar', color: '#10b981' },
+    'barito kuala': { regionId: 'barito kuala', regionName: 'Barito Kuala', color: '#f59e0b' },
+    'tanah laut': { regionId: 'tanah laut', regionName: 'Tanah Laut', color: '#ef4444' },
+    'tanah bumbu': { regionId: 'tanah bumbu', regionName: 'Tanah Bumbu', color: '#8b5cf6' },
+    'kotabaru': { regionId: 'kotabaru', regionName: 'Kotabaru', color: '#ec4899' },
+    'tapin': { regionId: 'tapin', regionName: 'Tapin', color: '#f97316' },
+    'hulu sungai selatan': { regionId: 'hulu sungai selatan', regionName: 'Hulu Sungai Selatan', color: '#14b8a6' },
+    'hulu sungai tengah': { regionId: 'hulu sungai tengah', regionName: 'Hulu Sungai Tengah', color: '#6366f1' },
+    'hulu sungai utara': { regionId: 'hulu sungai utara', regionName: 'Hulu Sungai Utara', color: '#a855f7' },
+    'balangan': { regionId: 'balangan', regionName: 'Balangan', color: '#fbbf24' },
+    'tabalong': { regionId: 'tabalong', regionName: 'Tabalong', color: '#4ade80' }
+};
+
+window.wilayahConfig = WILAYAH_CONFIG;
+window.wilayahRegistry = window.wilayahRegistry || {};
+
+function getWarnaWilayahByKey(key) {
+    return WILAYAH_CONFIG[key]?.color || '#94a3b8';
+}
+
+function getWarnaWilayah(namaWilayah) {
+    return getWarnaWilayahByKey(getKeyWilayah(namaWilayah));
+}
+
+function getColor(namaWilayah) {
+    return getWarnaWilayah(namaWilayah);
 }
 
 function getNamaWilayah(feature) {
@@ -248,11 +344,19 @@ window.perbaruiTampilanPolygon = function () {
 
             aturTampilanPolygonWilayah(layer, aktif);
         });
+
+        if (typeof window.sinkronkanKontrolPolygonWilayah === 'function') {
+            window.sinkronkanKontrolPolygonWilayah();
+        }
     } else {
         window.resetHighlightWilayah();
 
         if (map.hasLayer(window.layerWilayahKalsel)) {
             map.removeLayer(window.layerWilayahKalsel);
+        }
+
+        if (typeof window.sinkronkanKontrolPolygonWilayah === 'function') {
+            window.sinkronkanKontrolPolygonWilayah();
         }
     }
 };
@@ -263,6 +367,9 @@ window.setStatusPolygonWilayah = function (namaWilayah, isVisible) {
     window.statusPolygonWilayah[key] = isVisible;
 
     if (!window.layerWilayahKalsel) {
+        if (typeof window.sinkronkanKontrolPolygonWilayah === 'function') {
+            window.sinkronkanKontrolPolygonWilayah();
+        }
         return;
     }
 
@@ -279,6 +386,10 @@ window.setStatusPolygonWilayah = function (namaWilayah, isVisible) {
 
         aturTampilanPolygonWilayah(layer, isVisible);
     });
+
+    if (typeof window.sinkronkanKontrolPolygonWilayah === 'function') {
+        window.sinkronkanKontrolPolygonWilayah();
+    }
 };
 
 window.renderKontrolPolygonWilayah = function () {
@@ -293,6 +404,14 @@ window.renderKontrolPolygonWilayah = function () {
     window.layerWilayahKalsel.eachLayer(function (layer) {
         const namaWilayah = getNamaWilayah(layer.feature);
         const key = getKeyWilayah(namaWilayah);
+        const color = getWarnaWilayahByKey(key);
+
+        window.wilayahRegistry[key] = {
+            regionId: key,
+            regionName: namaWilayah,
+            color,
+            layer
+        };
 
         if (!(key in window.statusPolygonWilayah)) {
             window.statusPolygonWilayah[key] = true;
@@ -300,7 +419,8 @@ window.renderKontrolPolygonWilayah = function () {
 
         wilayahList.push({
             key,
-            nama: namaWilayah
+            nama: namaWilayah,
+            color
         });
     });
 
@@ -310,10 +430,15 @@ window.renderKontrolPolygonWilayah = function () {
 
     container.innerHTML = wilayahList.map(function (item) {
         const checked = window.statusPolygonWilayah[item.key] !== false ? 'checked' : '';
+        const visible = window.statusPolygonAktif && window.statusPolygonWilayah[item.key] !== false;
+        const visibleClass = visible ? 'is-wilayah-visible' : '';
 
         return `
-            <label class="polygon-wilayah-item">
-                <span class="polygon-wilayah-name">${item.nama}</span>
+            <label class="polygon-wilayah-item ${visibleClass}" data-wilayah-key="${item.key}" style="--wilayah-color: ${item.color};">
+                <span class="polygon-wilayah-label">
+                    <span class="polygon-wilayah-swatch" aria-hidden="true"></span>
+                    <span class="polygon-wilayah-name">${item.nama}</span>
+                </span>
                 <span class="switch-kustom switch-mini">
                     <input
                         type="checkbox"
@@ -326,7 +451,87 @@ window.renderKontrolPolygonWilayah = function () {
             </label>
         `;
     }).join('');
+
+    if (typeof window.sinkronkanKontrolPolygonWilayah === 'function') {
+        window.sinkronkanKontrolPolygonWilayah();
+    }
 };
+
+window.sinkronkanKontrolPolygonWilayah = function () {
+    const container = document.getElementById('polygon-wilayah-list');
+    if (!container) {
+        return;
+    }
+
+    const items = container.querySelectorAll('.polygon-wilayah-item[data-wilayah-key]');
+
+    items.forEach(function (item) {
+        const key = item.dataset.wilayahKey || '';
+        const visible = window.statusPolygonAktif && window.statusPolygonWilayah[key] !== false;
+        item.classList.toggle('is-wilayah-visible', !!visible);
+    });
+};
+
+window.previewHighlightWilayah = function (key, hover) {
+    if (!window.layerWilayahKalsel) {
+        return;
+    }
+
+    const registry = window.wilayahRegistry || {};
+    const target = registry[key]?.layer || null;
+
+    const isVisible =
+        window.statusPolygonAktif &&
+        window.statusPolygonWilayah[key] !== false;
+
+    if (!hover) {
+        if (window.previewWilayahLayer && window.highlightWilayah !== window.previewWilayahLayer) {
+            window.layerWilayahKalsel.resetStyle(window.previewWilayahLayer);
+        }
+
+        window.previewWilayahLayer = null;
+        window.previewWilayahKey = null;
+        return;
+    }
+
+    if (!target || !isVisible) {
+        return;
+    }
+
+    if (window.previewWilayahLayer && window.previewWilayahLayer !== target) {
+        if (window.highlightWilayah !== window.previewWilayahLayer) {
+            window.layerWilayahKalsel.resetStyle(window.previewWilayahLayer);
+        }
+    }
+
+    window.previewWilayahLayer = target;
+    window.previewWilayahKey = key;
+
+    if (window.highlightWilayah === target) {
+        return;
+    }
+
+    target.setStyle({
+        weight: 2,
+        color: '#0f172a',
+        fillOpacity: 0.75
+    });
+
+    if (typeof target.bringToFront === 'function') {
+        target.bringToFront();
+    }
+};
+
+document.addEventListener('wilayah-panel-hover', function (e) {
+    const key = e?.detail?.key || '';
+    const hover = !!e?.detail?.hover;
+
+    if (!key || typeof window.previewHighlightWilayah !== 'function') {
+        return;
+    }
+
+    window.previewHighlightWilayah(key, hover);
+});
 
 // 2. Load GeoJSON Kalsel
 fetch('/data/data_kalsel.geojson')
@@ -339,6 +544,12 @@ fetch('/data/data_kalsel.geojson')
                 layer.on({
                     mouseover: function (e) {
                         var layer = e.target;
+                        const namaWilayah = getNamaWilayah(layer.feature);
+                        const key = getKeyWilayah(namaWilayah);
+
+                        document.dispatchEvent(new CustomEvent('wilayah-map-hover', {
+                            detail: { key, hover: true }
+                        }));
 
                          if (window.highlightWilayah === layer) {
                              return;
@@ -351,6 +562,12 @@ fetch('/data/data_kalsel.geojson')
                     },
                     mouseout: function (e) {
                         var layer = e.target;
+                        const namaWilayah = getNamaWilayah(layer.feature);
+                        const key = getKeyWilayah(namaWilayah);
+
+                        document.dispatchEvent(new CustomEvent('wilayah-map-hover', {
+                            detail: { key, hover: false }
+                        }));
 
                         if (window.highlightWilayah === layer) {
                             return;

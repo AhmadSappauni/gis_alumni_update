@@ -52,6 +52,25 @@
                     <input type="url" name="link_linkedin" class="custom-input-admin"
                         placeholder="https://linkedin.com/in/username">
                 </div>
+                <div>
+                    <label class="label-admin">Tanggal Mulai</label>
+                    <input type="date" name="tanggal_mulai" class="custom-input-admin">
+                </div>
+                <div>
+                    <label class="label-admin">Tanggal Selesai</label>
+                    <input type="date" name="tanggal_selesai" id="tambah_tanggal_selesai" class="custom-input-admin">
+                </div>
+                <div>
+                    <label class="label-admin">Masa Tunggu (bulan)</label>
+                    <input type="number" name="masa_tunggu" class="custom-input-admin" min="0" placeholder="Contoh: 3">
+                    <small style="display:block; color:#94a3b8; margin-top:6px; font-size:12px;">Kosongkan jika ingin dihitung otomatis dari tahun lulus dan tanggal mulai.</small>
+                </div>
+                <div style="display:flex; align-items:flex-end;">
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13px; font-weight:700; color:#334155; padding-bottom:10px;">
+                        <input type="checkbox" name="is_current_pekerjaan" id="tambah_is_current" value="1" checked style="width:18px; height:18px;">
+                        Masih bekerja di sini
+                    </label>
+                </div>
 
                 <div style="grid-column: span 2; margin-top: 10px;">
                     <label class="label-admin" style="display: flex; justify-content: space-between;">
@@ -126,6 +145,25 @@
                 <div>
                     <label class="label-admin">Link LinkedIn (Opsional)</label>
                     <input type="url" name="link_linkedin" id="edit_linkedin" class="custom-input-admin">
+                </div>
+                <div>
+                    <label class="label-admin">Tanggal Mulai</label>
+                    <input type="date" name="tanggal_mulai" id="edit_tanggal_mulai" class="custom-input-admin">
+                </div>
+                <div>
+                    <label class="label-admin">Tanggal Selesai</label>
+                    <input type="date" name="tanggal_selesai" id="edit_tanggal_selesai" class="custom-input-admin">
+                </div>
+                <div>
+                    <label class="label-admin">Masa Tunggu (bulan)</label>
+                    <input type="number" name="masa_tunggu" id="edit_masa_tunggu" class="custom-input-admin" min="0" placeholder="Contoh: 3">
+                    <small style="display:block; color:#94a3b8; margin-top:6px; font-size:12px;">Kosongkan jika ingin dihitung otomatis dari tahun lulus dan tanggal mulai.</small>
+                </div>
+                <div style="display:flex; align-items:flex-end;">
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13px; font-weight:700; color:#334155; padding-bottom:10px;">
+                        <input type="checkbox" name="is_current_pekerjaan" id="edit_is_current" value="1" style="width:18px; height:18px;">
+                        Masih bekerja di sini
+                    </label>
                 </div>
 
                 <div style="grid-column: span 2; margin-top: 10px;">

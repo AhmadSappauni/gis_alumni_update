@@ -62,8 +62,11 @@ function createMap(id, lat, lng) {
     const map = L.map(id).setView([lat, lng], 15);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap'
+        attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
+
+    // Hapus teks "Leaflet" di attribution (attribution OSM tetap wajib ditampilkan)
+    map.attributionControl.setPrefix(false);
 
     const marker = L.marker([lat, lng], {
         draggable: true
@@ -250,6 +253,7 @@ window.nextPrev = function (n) {
 window.openModalKerja = function () {
 
     $('modal-pekerjaan').classList.add('active');
+    toggleTanggalSelesai('tambah_is_current', 'tambah_tanggal_selesai');
 
     if (!mapTambah) {
 
@@ -293,6 +297,10 @@ window.editPekerjaan = function (data) {
     $('edit_alamat').value = data.alamat_lengkap ?? '';
     $('edit_gaji').value = data.gaji ?? '';
     $('edit_linkedin').value = data.link_linkedin ?? '';
+    $('edit_tanggal_mulai').value = data.tanggal_mulai ?? '';
+    $('edit_tanggal_selesai').value = data.tanggal_selesai ?? '';
+    $('edit_masa_tunggu').value = data.masa_tunggu ?? '';
+    $('edit_is_current').checked = Boolean(data.is_current);
 
     $('edit_lat').value = data.latitude;
     $('edit_lng').value = data.longitude;
@@ -301,6 +309,7 @@ window.editPekerjaan = function (data) {
         `${PEKERJAAN_URL}/${data.id}`;
 
     $('modal-edit-pekerjaan').classList.add('active');
+    toggleTanggalSelesai('edit_is_current', 'edit_tanggal_selesai');
 
     const lat = data.latitude || DEFAULT_LAT;
     const lng = data.longitude || DEFAULT_LNG;
@@ -382,6 +391,99 @@ function initTooltip() {
     }
 }
 
+function toggleTanggalSelesai(checkboxId, inputId) {
+    const checkbox = $(checkboxId);
+    const input = $(inputId);
+
+    if (!checkbox || !input) {
+        return;
+    }
+
+    input.disabled = checkbox.checked;
+
+    if (checkbox.checked) {
+        input.value = '';
+        input.style.backgroundColor = '#f1f5f9';
+    } else {
+        input.style.backgroundColor = '#ffffff';
+    }
+}
+
+function initTanggalPekerjaanToggle() {
+    const pasangan = [
+        ['tambah_is_current', 'tambah_tanggal_selesai'],
+        ['edit_is_current', 'edit_tanggal_selesai']
+    ];
+
+    pasangan.forEach(([checkboxId, inputId]) => {
+        const checkbox = $(checkboxId);
+
+        if (!checkbox) {
+            return;
+        }
+
+        checkbox.addEventListener('change', function () {
+            toggleTanggalSelesai(checkboxId, inputId);
+        });
+
+        toggleTanggalSelesai(checkboxId, inputId);
+    });
+}
+
+function resetEditFotoInput() {
+    const input = $('edit-foto');
+    const preview = $('edit-preview-foto');
+    const resetBtn = $('btn-reset-edit-foto');
+
+    if (input) {
+        input.value = '';
+    }
+
+    if (preview) {
+        preview.src = preview.dataset.defaultSrc || '/default.png';
+    }
+
+    if (resetBtn) {
+        resetBtn.classList.remove('active');
+    }
+}
+
+function initEditFotoUpload() {
+    const input = $('edit-foto');
+    const preview = $('edit-preview-foto');
+    const resetBtn = $('btn-reset-edit-foto');
+
+    if (!input || !preview || !resetBtn) {
+        return;
+    }
+
+    input.addEventListener('change', function (e) {
+        const file = e.target.files?.[0];
+
+        if (!file) {
+            resetEditFotoInput();
+            return;
+        }
+
+        if (!file.type.startsWith('image/')) {
+            resetEditFotoInput();
+            alert('File foto harus berupa gambar.');
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = function (event) {
+            preview.src = event.target?.result || preview.dataset.defaultSrc || '/default.png';
+            resetBtn.classList.add('active');
+        };
+
+        reader.readAsDataURL(file);
+    });
+
+    resetBtn.addEventListener('click', resetEditFotoInput);
+}
+
 /* ==========================================
    INIT
 ========================================== */
@@ -427,4 +529,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initDeleteButton();
     initTooltip();
+    initEditFotoUpload();
+    initTanggalPekerjaanToggle();
 });

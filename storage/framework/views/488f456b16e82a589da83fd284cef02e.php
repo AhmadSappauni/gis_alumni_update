@@ -63,17 +63,23 @@
                             <label>Tahun Lulus</label>
                             <select id="filterTahun" onchange="applyFilters()">
                                 <option value="">Semua Tahun</option>
-                                <option value="2026">2026</option>
-                                <option value="2025">2025</option>
-                                <option value="2024">2024</option>
                             </select>
                         </div>
                         <div class="filter-group">
                             <label>Linearitas Pekerjaan</label>
                             <select id="filterLinear" onchange="applyFilters()">
-                                <option value="">Semua Status</option>
-                                <option value="Linier">Linier</option>
-                                <option value="Tidak Linier">Tidak Linier</option>
+                                <option value="">Semua Linearitas</option>
+                                <option value="Sangat Erat">Sangat Erat</option>
+                                <option value="Erat">Erat</option>
+                                <option value="Cukup Erat">Cukup Erat</option>
+                                <option value="Kurang Erat">Kurang Erat</option>
+                                <option value="Tidak Erat">Tidak Erat</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Bidang Pekerjaan</label>
+                            <select id="filterBidang" onchange="applyFilters()">
+                                <option value="">Semua Bidang</option>
                             </select>
                         </div>
                         <button onclick="resetFilters()" id="reset-filter">
@@ -132,6 +138,127 @@ function confirmDelete(id, nim,nama,) {
     })
 }
 
+function initBulkDeleteAlumni() {
+    const checkboxes = Array.from(document.querySelectorAll('.alumni-bulk-checkbox'));
+    const selectAllTop = document.getElementById('select-all-alumni');
+    const selectAllTable = document.getElementById('select-all-alumni-table');
+    const toggleBtn = document.getElementById('btn-toggle-bulk-delete');
+    const cancelBtn = document.getElementById('btn-cancel-bulk-delete');
+    const actionBar = document.getElementById('bulk-action-bar');
+    const selectLabel = document.getElementById('bulk-select-label');
+    const headerCell = document.getElementById('bulk-checkbox-header');
+    const rowCells = Array.from(document.querySelectorAll('.bulk-checkbox-cell'));
+    const countLabel = document.getElementById('selected-alumni-count');
+    const deleteBtn = document.getElementById('btn-delete-selected');
+    const form = document.getElementById('bulk-delete-form');
+    const inputs = document.getElementById('bulk-delete-inputs');
+
+    if (!checkboxes.length || !selectAllTop || !selectAllTable || !toggleBtn || !cancelBtn || !actionBar || !selectLabel || !headerCell || !countLabel || !deleteBtn || !form || !inputs) {
+        return;
+    }
+
+    let bulkModeActive = false;
+
+    function setBulkMode(active) {
+        bulkModeActive = active;
+        actionBar.style.display = active ? 'flex' : 'none';
+        selectLabel.style.display = active ? 'flex' : 'none';
+        headerCell.style.display = active ? 'table-cell' : 'none';
+        rowCells.forEach(cell => {
+            cell.style.display = active ? 'table-cell' : 'none';
+        });
+        toggleBtn.style.display = active ? 'none' : 'inline-flex';
+
+        if (!active) {
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+            });
+            inputs.innerHTML = '';
+        }
+
+        updateBulkDeleteState();
+    }
+
+    function updateBulkDeleteState() {
+        const selected = checkboxes.filter(cb => cb.checked);
+        const selectedCount = selected.length;
+        const allChecked = selectedCount > 0 && selectedCount === checkboxes.length;
+
+        countLabel.textContent = `${selectedCount} dipilih`;
+        deleteBtn.disabled = selectedCount === 0;
+        deleteBtn.style.cursor = selectedCount === 0 ? 'not-allowed' : 'pointer';
+        deleteBtn.style.opacity = selectedCount === 0 ? '.6' : '1';
+
+        selectAllTop.checked = allChecked;
+        selectAllTable.checked = allChecked;
+        selectAllTop.indeterminate = selectedCount > 0 && selectedCount < checkboxes.length;
+        selectAllTable.indeterminate = selectedCount > 0 && selectedCount < checkboxes.length;
+    }
+
+    function setAllChecked(checked) {
+        checkboxes.forEach(cb => {
+            cb.checked = checked;
+        });
+
+        updateBulkDeleteState();
+    }
+
+    selectAllTop.addEventListener('change', function () {
+        setAllChecked(this.checked);
+    });
+
+    selectAllTable.addEventListener('change', function () {
+        setAllChecked(this.checked);
+    });
+
+    toggleBtn.addEventListener('click', function () {
+        setBulkMode(true);
+    });
+
+    cancelBtn.addEventListener('click', function () {
+        setBulkMode(false);
+    });
+
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', updateBulkDeleteState);
+    });
+
+    deleteBtn.addEventListener('click', function () {
+        const selected = checkboxes.filter(cb => cb.checked);
+
+        if (!selected.length) {
+            return;
+        }
+
+        Swal.fire({
+            title: 'Hapus data terpilih?',
+            text: `${selected.length} data alumni akan dihapus permanen.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Ya, Hapus Semua!',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
+        }).then((result) => {
+            if (!result.isConfirmed) {
+                return;
+            }
+
+            inputs.innerHTML = selected
+                .map(cb => `<input type="hidden" name="ids[]" value="${cb.value}">`)
+                .join('');
+
+            form.submit();
+        });
+    });
+
+    setBulkMode(false);
+}
+
+document.addEventListener('DOMContentLoaded', initBulkDeleteAlumni);
+
 </script>
 <?php $__env->stopPush(); ?>
+
 <?php echo $__env->make('admin.layout', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_3\resources\views/admin/index.blade.php ENDPATH**/ ?>

@@ -9,14 +9,75 @@ use App\Models\AlumniAkademik;
 use App\Models\LokasiPerusahaan;
 use App\Models\Perusahaan;
 use App\Models\RiwayatPekerjaan;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
 class AdminAlumniController extends Controller
 {
+    private function normalizeJenisKelamin(?string $value): ?string
+    {
+        return match ($value) {
+            'L', 'Laki-laki' => 'L',
+            'P', 'Perempuan' => 'P',
+            default => null,
+        };
+    }
+
+    private function shouldJobBeCurrent(Request $request): bool
+    {
+        return $request->boolean('is_current_pekerjaan');
+    }
+
+    private function validatePekerjaanRequest(Request $request): void
+    {
+        $request->validate([
+            'nama_perusahaan'   => 'required|string|max:255',
+            'jabatan'           => 'required|string|max:255',
+            'kota'              => 'required|string|max:255',
+            'bidang_pekerjaan'  => 'required|string|max:255',
+            'linearitas'        => 'required|string|max:255',
+            'tanggal_mulai'     => 'nullable|date',
+            'tanggal_selesai'   => 'nullable|date|after_or_equal:tanggal_mulai',
+            'masa_tunggu'       => 'nullable|integer|min:0',
+            'alamat_lengkap'    => 'required|string',
+            'latitude'          => 'required',
+            'longitude'         => 'required',
+            'link_linkedin'     => 'nullable|url',
+        ]);
+    }
+
+    private function parseMasaTunggu(Request $request, ?int $alumniId = null): ?int
+    {
+        if ($request->filled('masa_tunggu')) {
+            return (int) $request->masa_tunggu;
+        }
+
+        if (!$request->filled('tanggal_mulai')) {
+            return null;
+        }
+
+        $alumni = $alumniId ? Alumni::with('akademik')->find($alumniId) : null;
+        $tahunLulus = $alumni?->akademik?->tahun_lulus;
+
+        if (!$tahunLulus) {
+            return null;
+        }
+
+        try {
+            $tanggalMulai = Carbon::parse($request->tanggal_mulai)->startOfMonth();
+            $patokanLulus = Carbon::create((int) $tahunLulus, 1, 1)->startOfMonth();
+
+            return max(0, $patokanLulus->diffInMonths($tanggalMulai, false));
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
    public function index()
     {
         $dataAlumni = Alumni::with([
@@ -109,28 +170,42 @@ class AdminAlumniController extends Controller
 
         $filename = Str::random(20) . '.' . $file->getClientOriginalExtension();
 
-        $response = Http::withHeaders([
-            'apikey' => env('SUPABASE_KEY'),
-            'Authorization' => 'Bearer ' . env('SUPABASE_KEY'),
-        ])->attach(
-            'file',
-            file_get_contents($file),
-            $filename
-        )->post(
-            env('SUPABASE_URL') .
-            '/storage/v1/object/' .
-            env('SUPABASE_BUCKET') .
-            '/' . $filename
-        );
+        $supabaseUrl = rtrim((string) env('SUPABASE_URL'), '/');
+        $supabaseKey = env('SUPABASE_KEY');
+        $supabaseBucket = env('SUPABASE_BUCKET');
 
-        if ($response->failed()) {
-            return null;
+        if ($supabaseUrl && $supabaseKey && $supabaseBucket) {
+            try {
+                $response = Http::withHeaders([
+                    'apikey' => $supabaseKey,
+                    'Authorization' => 'Bearer ' . $supabaseKey,
+                ])->attach(
+                    'file',
+                    file_get_contents($file),
+                    $filename
+                )->post(
+                    $supabaseUrl .
+                    '/storage/v1/object/' .
+                    $supabaseBucket .
+                    '/' . $filename
+                );
+
+                if ($response->successful()) {
+                    return $supabaseUrl
+                        . '/storage/v1/object/public/'
+                        . $supabaseBucket
+                        . '/' . $filename;
+                }
+            } catch (\Throwable $e) {
+                // Fallback ke storage lokal bila Supabase gagal diakses.
+            }
         }
 
-        return env('SUPABASE_URL')
-            . '/storage/v1/object/public/'
-            . env('SUPABASE_BUCKET')
-            . '/' . $filename;
+        return Storage::disk('public')->putFileAs(
+            'alumni_foto',
+            $file,
+            $filename
+        );
     }
 
     public function store(Request $request)
@@ -168,7 +243,7 @@ class AdminAlumniController extends Controller
             $alumni = Alumni::create([
                 'nim'           => $request->nim,
                 'nama_lengkap'  => $request->nama_lengkap,
-                'jenis_kelamin' => $request->jenis_kelamin,
+                'jenis_kelamin' => $this->normalizeJenisKelamin($request->jenis_kelamin),
                 'email'         => $request->email,
                 'no_hp'         => $request->no_hp,
                 'foto_profil'   => $foto
@@ -206,23 +281,6 @@ class AdminAlumniController extends Controller
                     'latitude'        => $request->latitude,
                     'longitude'       => $request->longitude,
                     'is_current'      => true
-                ]);
-
-                /*
-                |--------------------------------------------------------------------------
-                | Simpan status belum bekerja
-                |--------------------------------------------------------------------------
-                */
-                RiwayatPekerjaan::create([
-                    'alumni_id'        => $alumni->id,
-                    'perusahaan_id'    => null,
-                    'jabatan'          => 'Belum Bekerja',
-                    'bidang_pekerjaan' => null,
-                    'status_kerja'     => 'Belum Bekerja',
-                    'status_karir'     => 'Pencari Kerja',
-                    'is_current'       => true,
-                    'masa_tunggu'      => null,
-                    'gaji_nominal'     => null
                 ]);
 
                 return;
@@ -309,7 +367,7 @@ class AdminAlumniController extends Controller
             $alumni->update([
                 'nim' => $request->nim,
                 'nama_lengkap' => $request->nama_lengkap,
-                'jenis_kelamin' => $request->jenis_kelamin,
+                'jenis_kelamin' => $this->normalizeJenisKelamin($request->jenis_kelamin),
                 'email' => $request->email,
                 'no_hp' => $request->no_hp,
                 'foto_profil' => $foto
@@ -355,9 +413,27 @@ class AdminAlumniController extends Controller
         return back()->with('success', 'Data alumni berhasil dihapus');
     }
 
+    public function bulkDestroy(Request $request)
+    {
+        $ids = collect($request->input('ids', []))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return back()->with('error', 'Pilih minimal satu data alumni untuk dihapus.');
+        }
+
+        Alumni::whereIn('id', $ids)->delete();
+
+        return back()->with('success', $ids->count() . ' data alumni berhasil dihapus.');
+    }
+
     //Pekerjaan 
     public function storePekerjaan(Request $request, $id)
     {
+        $this->validatePekerjaanRequest($request);
+
         DB::transaction(function () use ($request, $id) {
 
             /*
@@ -400,6 +476,9 @@ class AdminAlumniController extends Controller
                 ->where('status_karir', 'Utama')
                 ->exists();
 
+            $isCurrentPekerjaan = $this->shouldJobBeCurrent($request);
+            $masaTunggu = $this->parseMasaTunggu($request, (int) $id);
+
             /*
             |--------------------------------------------------------------------------
             | 4. RIWAYAT PEKERJAAN
@@ -412,12 +491,16 @@ class AdminAlumniController extends Controller
                 'bidang_pekerjaan' => $request->bidang_pekerjaan,
 
                 'status_kerja'     => 'Bekerja',
-                'status_karir'     => $sudahAdaUtama ? 'Sampingan' : 'Utama',
-                'is_current'       => true,
+                'status_karir'     => $isCurrentPekerjaan
+                    ? ($sudahAdaUtama ? 'Sampingan' : 'Utama')
+                    : 'Riwayat',
+                'is_current'       => $isCurrentPekerjaan,
+                'tanggal_mulai'    => $request->tanggal_mulai ?: null,
+                'tanggal_selesai'  => $isCurrentPekerjaan
+                    ? null
+                    : ($request->tanggal_selesai ?: null),
 
-                'masa_tunggu' => $request->masa_tunggu !== ''
-                    ? $request->masa_tunggu
-                    : null,
+                'masa_tunggu' => $masaTunggu,
 
                 'gaji_nominal' => $request->gaji_nominal
                     ? preg_replace('/[^0-9]/', '', $request->gaji_nominal)
@@ -522,6 +605,8 @@ class AdminAlumniController extends Controller
 
     public function updatePekerjaan(Request $request, $id)
     {
+        $this->validatePekerjaanRequest($request);
+
         DB::transaction(function () use ($request, $id) {
 
             /*
@@ -530,6 +615,10 @@ class AdminAlumniController extends Controller
             |--------------------------------------------------------------------------
             */
             $job = RiwayatPekerjaan::findOrFail($id);
+            $statusKarirSebelumnya = $job->status_karir;
+
+            $isCurrentPekerjaan = $this->shouldJobBeCurrent($request);
+            $masaTunggu = $this->parseMasaTunggu($request, $job->alumni_id);
 
             /*
             |--------------------------------------------------------------------------
@@ -595,19 +684,52 @@ class AdminAlumniController extends Controller
             | 4. UPDATE RIWAYAT PEKERJAAN
             |--------------------------------------------------------------------------
             */
+            $statusKarirBaru = $job->status_karir;
+
+            if (!$isCurrentPekerjaan) {
+                $statusKarirBaru = 'Riwayat';
+            } elseif ($job->status_karir === 'Riwayat') {
+                $adaUtamaLain = RiwayatPekerjaan::where('alumni_id', $job->alumni_id)
+                    ->where('id', '!=', $job->id)
+                    ->where('status_karir', 'Utama')
+                    ->where('is_current', true)
+                    ->exists();
+
+                $statusKarirBaru = $adaUtamaLain ? 'Sampingan' : 'Utama';
+            }
+
             $job->update([
                 'perusahaan_id'    => $perusahaan->id,
                 'jabatan'          => $request->jabatan,
                 'bidang_pekerjaan' => $request->bidang_pekerjaan,
+                'status_karir'     => $statusKarirBaru,
+                'is_current'       => $isCurrentPekerjaan,
+                'tanggal_mulai'    => $request->tanggal_mulai ?: null,
+                'tanggal_selesai'  => $isCurrentPekerjaan
+                    ? null
+                    : ($request->tanggal_selesai ?: null),
 
-                'masa_tunggu' => $request->masa_tunggu !== ''
-                    ? $request->masa_tunggu
-                    : null,
+                'masa_tunggu' => $masaTunggu,
 
                 'gaji_nominal' => $request->gaji_nominal
                     ? preg_replace('/[^0-9]/', '', $request->gaji_nominal)
                     : null
             ]);
+
+            if (!$isCurrentPekerjaan && $statusKarirSebelumnya === 'Utama') {
+                $penggantiUtama = RiwayatPekerjaan::where('alumni_id', $job->alumni_id)
+                    ->where('id', '!=', $job->id)
+                    ->where('is_current', true)
+                    ->orderByDesc('id')
+                    ->first();
+
+                if ($penggantiUtama) {
+                    $penggantiUtama->update([
+                        'status_karir' => 'Utama',
+                        'is_current' => true
+                    ]);
+                }
+            }
         });
 
         return back()->with('success', 'Riwayat pekerjaan berhasil diperbarui');

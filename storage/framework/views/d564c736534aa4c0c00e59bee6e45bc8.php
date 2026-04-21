@@ -50,6 +50,50 @@
             background: #fdb813; padding: 10px 18px; border-radius: 12px;
             text-decoration: none; color: #004a87; font-weight: 700; font-size: 13px;
         }
+
+        .foto-upload-preview {
+            display: none;
+            margin-top: 14px;
+            padding: 14px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0, 74, 135, 0.08);
+            align-items: center;
+            gap: 14px;
+        }
+
+        .foto-upload-preview.active {
+            display: flex;
+        }
+
+        .foto-upload-meta {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .foto-upload-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #0f172a;
+            word-break: break-word;
+        }
+
+        .foto-upload-note {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .btn-reset-foto {
+            border: none;
+            border-radius: 10px;
+            background: #fee2e2;
+            color: #b91c1c;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 10px 14px;
+            cursor: pointer;
+        }
     </style>
 <?php $__env->stopPush(); ?>
 
@@ -94,6 +138,18 @@
                     <input type="text" name="nama_lengkap" class="custom-input-admin" value="<?php echo e(old('nama_lengkap')); ?>" required>
                 </div>
                 <div>
+                    <label class="label-admin">Jenis Kelamin</label>
+                    <select name="jenis_kelamin" class="custom-input-admin" required>
+                        <option value="">Pilih Jenis Kelamin</option>
+                        <option value="L" <?php echo e(old('jenis_kelamin') == 'L' ? 'selected' : ''); ?>>Laki-laki</option>
+                        <option value="P" <?php echo e(old('jenis_kelamin') == 'P' ? 'selected' : ''); ?>>Perempuan</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="label-admin">IPK</label>
+                    <input type="number" name="ipk" class="custom-input-admin" value="<?php echo e(old('ipk')); ?>" min="0" max="4" step="0.01" placeholder="Contoh: 3.75">
+                </div>
+                <div>
                     <label class="label-admin">Angkatan</label>
                     <input type="number" name="angkatan" class="custom-input-admin" value="<?php echo e(old('angkatan', 2021)); ?>">
                 </div>
@@ -108,8 +164,15 @@
             </div>
             <div style="margin-top: 20px; background: rgba(0,74,135,0.03); padding: 20px; border-radius: 15px;">
                 <label class="label-admin">Foto Profil</label>
-                <input type="file" name="foto" id="foto" class="custom-input-admin">
-                <img id="preview-foto" style="width:80px; height:80px; object-fit:cover; border-radius:15px; margin-top:10px; display:none; border:2px solid white; box-shadow:0 5px 10px rgba(0,0,0,0.1);">
+                <input type="file" name="foto" id="foto" class="custom-input-admin" accept="image/*">
+                <div id="foto-preview-wrapper" class="foto-upload-preview">
+                    <img id="preview-foto" alt="Preview foto profil" style="width:80px; height:80px; object-fit:cover; border-radius:15px; border:2px solid white; box-shadow:0 5px 10px rgba(0,0,0,0.1);">
+                    <div class="foto-upload-meta">
+                        <div id="foto-file-name" class="foto-upload-name">Belum ada file dipilih</div>
+                        <div class="foto-upload-note">Preview akan tampil setelah gambar dipilih.</div>
+                    </div>
+                    <button type="button" id="btn-reset-foto" class="btn-reset-foto">Batalkan Foto</button>
+                </div>
             </div>
         </div>
 
@@ -152,7 +215,7 @@
                 </div>
                 <div>
                     <label class="label-admin">Estimasi Gaji (Opsional)</label>
-                    <input type="text" name="gaji_nominal" class="custom-input-admin" value="<?php echo e(old('gaji_nominal')); ?>" placeholder="Rp 5.000.000">
+                    <input type="text" name="gaji_nominal" id="gaji_nominal" class="custom-input-admin" value="<?php echo e(old('gaji_nominal')); ?>" placeholder="Contoh: 5.000.000" inputmode="numeric" autocomplete="off">
                 </div>
                 <div >
                     <label class="label-admin">Link LinkedIn</label>
@@ -244,8 +307,8 @@
                 Konfirmasi Data Alumni
             </h4>
             <div class="review-grid">
-                <div class="review-item"><b>Identitas</b><span id="review_nama">-</span><br><small id="review_nim" style="color:#64748b"></small></div>
-                <div class="review-item"><b>Akademik</b><span id="review_angkatan_lulus">-</span></div>
+                <div class="review-item"><b>Identitas</b><span id="review_nama">-</span><br><small id="review_nim" style="color:#64748b"></small><br><small id="review_jenis_kelamin" style="color:#64748b"></small></div>
+                <div class="review-item"><b>Akademik</b><span id="review_angkatan_lulus">-</span><br><small id="review_ipk" style="color:#64748b"></small></div>
                 <div class="review-item"><b>Karir</b><span id="review_jabatan">-</span><br><small id="review_perusahaan" style="color:#64748b"></small></div>
                 <div class="review-item"><b>Lokasi</b><span id="review_kota">-</span></div>
             </div>
@@ -322,4 +385,5 @@ document.addEventListener("DOMContentLoaded", function(){
 });
 </script>
 <?php $__env->stopPush(); ?>
+
 <?php echo $__env->make('admin.layout', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_3\resources\views/admin/create.blade.php ENDPATH**/ ?>

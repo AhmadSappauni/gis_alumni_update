@@ -44,6 +44,9 @@ Route::prefix('admin')->group(function () {
     Route::put('/alumni/{id}', [AdminAlumniController::class, 'update'])
         ->name('admin.alumni.update');
 
+    Route::delete('/alumni', [AdminAlumniController::class, 'bulkDestroy'])
+        ->name('admin.alumni.bulk-destroy');
+
     Route::delete('/alumni/{id}', [AdminAlumniController::class, 'destroy'])
         ->name('admin.alumni.destroy');
 

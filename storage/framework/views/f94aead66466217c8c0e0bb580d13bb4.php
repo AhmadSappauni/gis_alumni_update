@@ -5,7 +5,10 @@
             <?php
                 $pekerjaanAktif = $alumni->pekerjaan->where('is_current', true)->first();
             ?>
-                <div class="data-card glass-panel">
+                <div class="data-card glass-panel"
+                    data-tahun="<?php echo e($alumni->akademik?->tahun_lulus ?? ''); ?>"
+                    data-linearitas="<?php echo e($pekerjaanAktif?->perusahaan?->linearitas ?? ''); ?>"
+                    data-bidang="<?php echo e($pekerjaanAktif?->bidang_pekerjaan ?? ''); ?>">
                     <div class="card-profile-img">
                         <?php if($alumni->foto_profil): ?>
                             <img src="<?php echo e(asset('storage/' . $alumni->foto_profil)); ?>"
@@ -138,12 +141,38 @@
     </div>
 
     <div id="list-view" class="glass-panel" style="display: none; padding: 0; overflow: visible; margin-top: 10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:15px; padding:15px 20px; border-bottom:1px solid rgba(0,0,0,0.05); background:rgba(255,255,255,0.35);">
+            <button type="button" id="btn-toggle-bulk-delete"
+                style="border:none; border-radius:10px; background:#fee2e2; color:#991b1b; font-size:12px; font-weight:800; padding:10px 14px; cursor:pointer;">
+                Hapus Banyak
+            </button>
+
+            <label id="bulk-select-label" style="display:none; align-items:center; gap:10px; font-size:13px; font-weight:700; color:#334155; cursor:pointer;">
+                <input type="checkbox" id="select-all-alumni" style="width:16px; height:16px;">
+                Pilih semua data di halaman ini
+            </label>
+
+            <div id="bulk-action-bar" style="display:none; align-items:center; gap:12px;">
+                <span id="selected-alumni-count" style="font-size:12px; color:#64748b;">0 dipilih</span>
+                <button type="button" id="btn-delete-selected" disabled
+                    style="border:none; border-radius:10px; background:#fecaca; color:#991b1b; font-size:12px; font-weight:800; padding:10px 14px; cursor:not-allowed; opacity:.6;">
+                    Hapus Terpilih
+                </button>
+                <button type="button" id="btn-cancel-bulk-delete"
+                    style="border:none; border-radius:10px; background:#e2e8f0; color:#334155; font-size:12px; font-weight:800; padding:10px 14px; cursor:pointer;">
+                    Batal
+                </button>
+            </div>
+        </div>
 
         <div class="table-scroll" style="max-height: 480px; overflow-y: auto;">
             <table class="alumni-table" style="width: 100%; border-collapse: collapse;">
                 <thead
                     style="position: sticky; top: 0; z-index: 10; background: #f8fafc; box-shadow: 0 1px 0 rgba(0,0,0,0.05);">
                     <tr>
+                        <th id="bulk-checkbox-header" style="width:42px; text-align:center; display:none;">
+                            <input type="checkbox" id="select-all-alumni-table" style="width:16px; height:16px;">
+                        </th>
                         <th>Alumni</th>
                         <th>NIM</th>
                         <th>Kontak</th>
@@ -157,7 +186,13 @@
                     <?php
                         $pekerjaanAktif = $alumni->pekerjaan->where('is_current', true)->first();
                     ?>
-                        <tr>
+                        <tr
+                            data-tahun="<?php echo e($alumni->akademik?->tahun_lulus ?? ''); ?>"
+                            data-linearitas="<?php echo e($pekerjaanAktif?->perusahaan?->linearitas ?? ''); ?>"
+                            data-bidang="<?php echo e($pekerjaanAktif?->bidang_pekerjaan ?? ''); ?>">
+                            <td class="bulk-checkbox-cell" style="text-align:center; display:none;">
+                                <input type="checkbox" class="alumni-bulk-checkbox" value="<?php echo e($alumni->id); ?>" style="width:16px; height:16px;">
+                            </td>
                             <td>
                                 <div style="display: flex; align-items: center; gap: 10px;">
                                     <?php if($alumni->foto_profil): ?>
@@ -221,7 +256,7 @@
                 </tbody>
                 <tbody id="list-empty" style="display: none;">
                     <tr class="list-empty-row">
-                        <td colspan="5">
+                        <td colspan="7">
                             <div class="list-empty-content">
                                 <span class="no-results-icon" style="font-size: 40px;">📂</span>
                                 <p>Data tidak ditemukan dalam daftar ini.</p>
@@ -238,6 +273,11 @@
             </div>
         </div>
     </div>
+    <form id="bulk-delete-form" action="<?php echo e(route('admin.alumni.bulk-destroy')); ?>" method="POST" style="display:none;">
+        <?php echo csrf_field(); ?>
+        <?php echo method_field('DELETE'); ?>
+        <div id="bulk-delete-inputs"></div>
+    </form>
     <?php $__currentLoopData = $dataAlumni; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $alumni): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
         <?php echo $__env->make('admin.komponen.modal-profil', ['alumni' => $alumni], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>

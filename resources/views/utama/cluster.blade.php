@@ -8,14 +8,57 @@
         </svg>
     </button>
 
-    <div id="layer-control-menu" class="layer-control-menu hidden">
-        <div class="layer-control-section">
-            <div class="layer-control-item">
-                <span class="layer-label">Polygon Wilayah</span>
-                <label class="switch-kustom">
-                    <input type="checkbox" id="toggle-polygon-map" checked>
-                    <span class="slider-kustom"></span>
-                </label>
+        <div id="layer-control-menu" class="layer-control-menu hidden">
+            <div class="layer-control-section">
+                <div class="layer-control-item">
+                    <span class="layer-label">Polygon Wilayah</span>
+                    <label class="switch-kustom">
+                        <input type="checkbox" id="toggle-polygon-map" checked>
+                        <span class="slider-kustom"></span>
+                    </label>
+                </div>
+
+            <button
+                id="toggle-map-components"
+                class="map-components-toggle-btn"
+                type="button"
+            >
+                <span>Komponen Peta</span>
+                <span id="map-components-arrow" class="polygon-wilayah-arrow"></span>
+            </button>
+
+            <div id="map-components-list" class="map-components-list hidden">
+                <div class="layer-control-item">
+                    <span class="layer-label">Kompas</span>
+                    <label class="switch-kustom switch-mini">
+                        <input type="checkbox" id="toggle-kompas-ui">
+                        <span class="slider-kustom"></span>
+                    </label>
+                </div>
+
+                <div class="layer-control-item">
+                    <span class="layer-label">Legenda</span>
+                    <label class="switch-kustom switch-mini">
+                        <input type="checkbox" id="toggle-legenda-ui" checked>
+                        <span class="slider-kustom"></span>
+                    </label>
+                </div>
+
+                <div class="layer-control-item">
+                    <span class="layer-label">Scale Bar</span>
+                    <label class="switch-kustom switch-mini">
+                        <input type="checkbox" id="toggle-scalebar-ui" checked>
+                        <span class="slider-kustom"></span>
+                    </label>
+                </div>
+
+                <div class="layer-control-item">
+                    <span class="layer-label">Mini Map</span>
+                    <label class="switch-kustom switch-mini">
+                        <input type="checkbox" id="toggle-minimap-ui">
+                        <span class="slider-kustom"></span>
+                    </label>
+                </div>
             </div>
 
             <button

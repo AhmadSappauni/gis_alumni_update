@@ -106,8 +106,11 @@ function initMap() {
     map = L.map("map-tambah").setView([-3.3194, 114.5908], 12);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap",
+        attribution: "&copy; OpenStreetMap contributors",
     }).addTo(map);
+
+    // Hapus teks "Leaflet" di attribution (attribution OSM tetap wajib ditampilkan)
+    map.attributionControl.setPrefix(false);
 
     marker = L.marker([-3.3194, 114.5908], {
         draggable: true,
@@ -165,11 +168,14 @@ function updateReview() {
 
     let nama = document.querySelector("input[name='nama_lengkap']")?.value || '';
     let nim = document.querySelector("input[name='nim']")?.value || '';
+    let jenisKelamin =
+        document.querySelector("select[name='jenis_kelamin'] option:checked")?.text || '';
     let email = document.querySelector("input[name='email']")?.value || '';
     let no_hp = document.querySelector("input[name='no_hp']")?.value || '';
 
     let angkatan = document.querySelector("input[name='angkatan']")?.value || '';
     let tahun = document.querySelector("input[name='tahun_lulus']")?.value || '';
+    let ipk = document.querySelector("input[name='ipk']")?.value || '';
 
     let perusahaan = document.querySelector("input[name='nama_perusahaan']")?.value || '';
     let jabatan = document.querySelector("input[name='jabatan']")?.value || '';
@@ -191,8 +197,14 @@ function updateReview() {
         const rnim = document.getElementById("review_nim");
         if (rnim) rnim.innerText = `${nim} | ${email}`;
 
+        const rjk = document.getElementById("review_jenis_kelamin");
+        if (rjk) rjk.innerText = jenisKelamin || "-";
+
         const ral = document.getElementById("review_angkatan_lulus");
         if (ral) ral.innerText = `${angkatan} / ${tahun}`;
+
+        const ripk = document.getElementById("review_ipk");
+        if (ripk) ripk.innerText = ipk ? `IPK: ${ipk}` : "IPK: -";
 
         const rp = document.getElementById("review_perusahaan");
         if (rp) rp.innerText = perusahaan || "-";
@@ -215,8 +227,11 @@ function validateStep(step) {
     if (step == 0) {
         let nim = document.querySelector("input[name='nim']").value;
         let nama = document.querySelector("input[name='nama_lengkap']").value;
-        if (!nim || !nama) {
-            showAlert("Lengkapi data identitas (NIM & Nama).");
+        let jenisKelamin =
+            document.querySelector("select[name='jenis_kelamin']")?.value;
+
+        if (!nim || !nama || !jenisKelamin) {
+            showAlert("Lengkapi data identitas (NIM, Nama, dan Jenis Kelamin).");
             return false;
         }
         if (nimExists) { showAlert("NIM sudah terdaftar"); return false; }
@@ -243,18 +258,91 @@ function updateProgressBar(step) {
     document.getElementById("progress-bar").style.width = percent + "%";
 }
 
-document.getElementById("foto").addEventListener("change", function (e) {
-    let reader = new FileReader();
+function resetFotoProfilInput() {
+    const fotoInput = document.getElementById("foto");
+    const preview = document.getElementById("preview-foto");
+    const previewWrapper = document.getElementById("foto-preview-wrapper");
+    const fileName = document.getElementById("foto-file-name");
 
-    reader.onload = function () {
-        let preview = document.getElementById("preview-foto");
+    if (fotoInput) {
+        fotoInput.value = "";
+    }
 
-        preview.src = reader.result;
-        preview.style.display = "block";
-    };
+    if (preview) {
+        preview.removeAttribute("src");
+    }
 
-    reader.readAsDataURL(e.target.files[0]);
-});
+    if (fileName) {
+        fileName.innerText = "Belum ada file dipilih";
+    }
+
+    if (previewWrapper) {
+        previewWrapper.classList.remove("active");
+    }
+}
+
+function initFotoProfilUpload() {
+    const fotoInput = document.getElementById("foto");
+    const preview = document.getElementById("preview-foto");
+    const previewWrapper = document.getElementById("foto-preview-wrapper");
+    const fileName = document.getElementById("foto-file-name");
+    const resetBtn = document.getElementById("btn-reset-foto");
+
+    if (!fotoInput || !preview || !previewWrapper || !fileName || !resetBtn) {
+        return;
+    }
+
+    fotoInput.addEventListener("change", function (e) {
+        const file = e.target.files?.[0];
+
+        if (!file) {
+            resetFotoProfilInput();
+            return;
+        }
+
+        if (!file.type.startsWith("image/")) {
+            resetFotoProfilInput();
+            showAlert("File foto harus berupa gambar.");
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = function (event) {
+            preview.src = event.target?.result || "";
+            previewWrapper.classList.add("active");
+            fileName.innerText = file.name;
+        };
+
+        reader.readAsDataURL(file);
+    });
+
+    resetBtn.addEventListener("click", resetFotoProfilInput);
+}
+
+function formatNominalRibuan(value) {
+    const angkaSaja = String(value || "").replace(/\D/g, "");
+
+    if (!angkaSaja) {
+        return "";
+    }
+
+    return new Intl.NumberFormat("id-ID").format(Number(angkaSaja));
+}
+
+function initGajiFormatter() {
+    const gajiInput = document.getElementById("gaji_nominal");
+
+    if (!gajiInput) {
+        return;
+    }
+
+    gajiInput.value = formatNominalRibuan(gajiInput.value);
+
+    gajiInput.addEventListener("input", function () {
+        this.value = formatNominalRibuan(this.value);
+    });
+}
 
 function showAlert(message) {
     Swal.fire({
@@ -416,7 +504,8 @@ document.addEventListener("DOMContentLoaded", function () {
         }, 500); // delay 500ms
     });
 }
+    initFotoProfilUpload();
+    initGajiFormatter();
     initMap();
     showTab(currentTab);
 });
-

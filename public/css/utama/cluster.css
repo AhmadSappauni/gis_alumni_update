@@ -78,6 +78,15 @@
     display: none;
 }
 
+.map-components-list.hidden {
+    display: none;
+}
+
+.map-components-list {
+    margin-top: 8px;
+    padding: 2px 2px 2px 0;
+}
+
 .polygon-wilayah-toggle-btn {
     width: 100%;
     margin-top: 4px;
@@ -97,6 +106,29 @@
 }
 
 .polygon-wilayah-toggle-btn:hover {
+    background: #ffffff;
+    border-color: rgba(148, 163, 184, 0.95);
+}
+
+.map-components-toggle-btn {
+    width: 100%;
+    margin-top: 4px;
+    border: 1px solid rgba(203, 213, 225, 0.9);
+    background: rgba(248, 250, 252, 0.95);
+    color: #334155;
+    border-radius: 10px;
+    padding: 9px 11px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    transition: all 0.2s ease;
+}
+
+.map-components-toggle-btn:hover {
     background: #ffffff;
     border-color: rgba(148, 163, 184, 0.95);
 }
@@ -129,10 +161,32 @@
     justify-content: space-between;
     gap: 10px;
     padding: 7px 2px;
+    border-radius: 10px;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .polygon-wilayah-item + .polygon-wilayah-item {
     border-top: 1px dashed rgba(203, 213, 225, 0.8);
+}
+
+.polygon-wilayah-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.polygon-wilayah-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    background: rgba(148, 163, 184, 0.95);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+    flex: 0 0 auto;
+}
+
+.polygon-wilayah-item.is-wilayah-visible .polygon-wilayah-swatch {
+    background: var(--wilayah-color, rgba(2, 132, 199, 1));
 }
 
 .polygon-wilayah-name {
@@ -140,6 +194,9 @@
     color: #334155;
     line-height: 1.35;
     font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .switch-kustom.switch-mini {
@@ -163,3 +220,21 @@
 .slider-kustom:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
 .switch-kustom input:checked + .slider-kustom { background-color: #0284c7; }
 .switch-kustom input:checked + .slider-kustom:before { transform: translateX(20px); }
+
+/* Sinkronisasi warna toggle per wilayah (warna ambil dari --wilayah-color) */
+.polygon-wilayah-item {
+    --wilayah-toggle-on: rgba(148, 163, 184, 0.95); /* default (off / tidak terlihat) */
+}
+
+.polygon-wilayah-item.is-wilayah-visible {
+    --wilayah-toggle-on: var(--wilayah-color, rgba(2, 132, 199, 1));
+}
+
+.polygon-wilayah-item .switch-kustom input:checked + .slider-kustom {
+    background-color: var(--wilayah-toggle-on);
+}
+
+.polygon-wilayah-item.is-hovered {
+    background: rgba(15, 23, 42, 0.045);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}

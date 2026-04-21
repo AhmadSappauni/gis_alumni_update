@@ -482,6 +482,8 @@ function filterDanTampilkanMarker() {
 
     let hasilHTML = '';
     let jumlah = 0;
+    let jumlahBekerja = 0;
+    let jumlahBelumBekerja = 0;
 
     const isDefaultState =
         keyword === '' &&
@@ -673,11 +675,32 @@ function filterDanTampilkanMarker() {
         `;
 
         marker.bindPopup(popup);
+        const tooltipTempat =
+            statusKerja === 'Belum Bekerja'
+                ? 'Belum Bekerja'
+                : (perusahaan && perusahaan.trim() ? perusahaan : 'Tempat kerja belum diisi');
+
+        marker.bindTooltip(
+            `${nama} - ${tooltipTempat}`,
+            {
+                direction: 'top',
+                sticky: false,
+                opacity: 0.95,
+                offset: [0, -10],
+                className: 'alumni-tooltip'
+            }
+        );
 
         window.wadahNormal.addLayer(marker);
         window.wadahCluster.addLayer(marker);
 
         arrayMarker[index] = marker;
+
+        if (statusKerja === 'Belum Bekerja') {
+            jumlahBelumBekerja++;
+        } else {
+            jumlahBekerja++;
+        }
 
         // =====================================
         // SIDEBAR
@@ -722,6 +745,7 @@ function filterDanTampilkanMarker() {
 
     });
 
+    perbaruiLegendaStatus(jumlahBekerja, jumlahBelumBekerja);
     window.perbaruiTampilanPeta();
 
     const container =
@@ -744,6 +768,15 @@ function filterDanTampilkanMarker() {
                 Data tidak ditemukan.
              </div>`;
     }
+}
+
+function perbaruiLegendaStatus(jumlahBekerja, jumlahBelumBekerja) {
+
+    const bekerjaEl = document.getElementById('legend-bekerja-count');
+    const belumEl = document.getElementById('legend-belum-count');
+
+    if (bekerjaEl) bekerjaEl.textContent = `(${jumlahBekerja} orang)`;
+    if (belumEl) belumEl.textContent = `(${jumlahBelumBekerja} orang)`;
 }
 
 // ======================================================
