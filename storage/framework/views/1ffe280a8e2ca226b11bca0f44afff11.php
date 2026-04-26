@@ -77,7 +77,7 @@
             <div class="layer-control-item">
                 <span class="layer-label">Cluster Marker</span>
                 <label class="switch-kustom">
-                    <input type="checkbox" id="toggle-cluster-map">
+                    <input type="checkbox" id="toggle-cluster-map" checked>
                     <span class="slider-kustom"></span>
                 </label>
             </div>

@@ -40,6 +40,10 @@ function initMultiJobStorage() {
         window.multiJobLayerGroup = L.layerGroup().addTo(map);
     }
 
+    if (!window.polylineLayerGroup) {
+        window.polylineLayerGroup = L.layerGroup().addTo(map);
+    }
+
     if (!window.activeMultiJobLayers) {
         window.activeMultiJobLayers = {};
     }
@@ -60,6 +64,10 @@ function clearMultiJobLayers() {
         window.multiJobLayerGroup.clearLayers();
     }
 
+    if (window.polylineLayerGroup) {
+        window.polylineLayerGroup.clearLayers();
+    }
+
     window.activeMultiJobLayers = {};
     window.mainAlumniMarkersById = {};
     window.alumniDataById = {};
@@ -68,21 +76,59 @@ function clearMultiJobLayers() {
 // ======================================================
 // WADAH MARKER
 // ======================================================
-window.wadahNormal = L.featureGroup();
+function initMarkerGroups() {
+    if (!window.mainAlumniLayerGroup) {
+        window.mainAlumniLayerGroup = L.featureGroup();
+    }
 
-window.wadahCluster = L.markerClusterGroup({
-    chunkedLoading: true,
-    spiderfyOnMaxZoom: true,
-    showCoverageOnHover: false,
-    maxClusterRadius: 50
-});
+    if (!window.mainAlumniClusterGroup) {
+        window.mainAlumniClusterGroup = L.markerClusterGroup({
+            chunkedLoading: true,
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            zoomToBoundsOnClick: true,
+            maxClusterRadius: 50,
+            spiderfyDistanceMultiplier: 1.5
+        });
+    }
 
-window.statusClusterAktif = false;
+    if (!window.studiLanjutLayerGroup) {
+        window.studiLanjutLayerGroup = L.layerGroup();
+    }
+
+    if (!window.studiLanjutClusterGroup) {
+        window.studiLanjutClusterGroup = L.markerClusterGroup({
+            chunkedLoading: true,
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            zoomToBoundsOnClick: true,
+            maxClusterRadius: 50,
+            spiderfyDistanceMultiplier: 1.5,
+            iconCreateFunction: function (cluster) {
+                const count = cluster.getChildCount();
+                return L.divIcon({
+                    html: `<div><span>${count}</span></div>`,
+                    className: 'marker-cluster studi-lanjut-cluster',
+                    iconSize: L.point(40, 40)
+                });
+            }
+        });
+    }
+
+    // Alias untuk kompatibilitas kode lama
+    window.wadahNormal = window.mainAlumniLayerGroup;
+    window.wadahCluster = window.mainAlumniClusterGroup;
+}
+
+// Default: cluster aktif saat peta dibuka
+window.statusClusterAktif = true;
 
 // ======================================================
 // SAAT DOM READY
 // ======================================================
 document.addEventListener("DOMContentLoaded", function () {
+
+    initMarkerGroups();
 
     bindFilterEvents();
 
@@ -111,9 +157,41 @@ document.addEventListener("DOMContentLoaded", function () {
 
     initMultiJobStorage();
     initMultiJobToggleHandler();
+    initPopupProfileClickHandler();
 
     filterDanTampilkanMarker();
 });
+
+function initPopupProfileClickHandler() {
+    if (window.__popupProfileClickHandlerInstalled) {
+        return;
+    }
+
+    window.__popupProfileClickHandlerInstalled = true;
+
+    document.addEventListener('click', function (e) {
+        const el = e.target && e.target.closest ? e.target.closest('.clickable-profile[data-alumni-id]') : null;
+        if (!el) {
+            return;
+        }
+
+        const alumniId = (el.dataset.alumniId || '').toString();
+        if (!alumniId) {
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (typeof map !== 'undefined' && map && typeof map.closePopup === 'function') {
+            map.closePopup();
+        }
+
+        if (typeof window.bukaProfilAlumniById === 'function') {
+            window.bukaProfilAlumniById(alumniId);
+        }
+    });
+}
 
 function initMultiJobToggleHandler() {
     if (window.__multiJobToggleHandlerInstalled) {
@@ -150,7 +228,7 @@ function toggleMultiJobLayers(alumniId) {
 
     if (active[id]) {
         (active[id].markers || []).forEach(m => window.multiJobLayerGroup.removeLayer(m));
-        (active[id].lines || []).forEach(l => window.multiJobLayerGroup.removeLayer(l));
+        (active[id].lines || []).forEach(l => window.polylineLayerGroup.removeLayer(l));
         delete active[id];
         window.activeMultiJobLayers = active;
         return;
@@ -252,7 +330,7 @@ function toggleMultiJobLayers(alumniId) {
             }
         );
 
-        window.multiJobLayerGroup.addLayer(line);
+        window.polylineLayerGroup.addLayer(line);
         window.multiJobLayerGroup.addLayer(marker);
 
         markers.push(marker);
@@ -788,18 +866,24 @@ window.resetSemuaFilter = function () {
 // ======================================================
 window.perbaruiTampilanPeta = function () {
 
-    if (map.hasLayer(window.wadahNormal)) {
-        map.removeLayer(window.wadahNormal);
-    }
+    initMarkerGroups();
 
-    if (map.hasLayer(window.wadahCluster)) {
-        map.removeLayer(window.wadahCluster);
-    }
+    const mainNormal = window.mainAlumniLayerGroup;
+    const mainCluster = window.mainAlumniClusterGroup;
+    const studiNormal = window.studiLanjutLayerGroup;
+    const studiCluster = window.studiLanjutClusterGroup;
 
-    if (window.statusClusterAktif) {
-        map.addLayer(window.wadahCluster);
-    } else {
-        map.addLayer(window.wadahNormal);
+    [mainNormal, mainCluster, studiNormal, studiCluster].forEach(function (layer) {
+        if (layer && map.hasLayer(layer)) {
+            map.removeLayer(layer);
+        }
+    });
+
+    map.addLayer(window.statusClusterAktif ? mainCluster : mainNormal);
+
+    const studiEnabled = !!window.__studiLanjutEnabled;
+    if (studiEnabled) {
+        map.addLayer(window.statusClusterAktif ? studiCluster : studiNormal);
     }
 };
 
@@ -936,6 +1020,9 @@ function bindTooltipDenganDelay(marker, tooltipHtml) {
 // ======================================================
 function filterDanTampilkanMarker() {
 
+    initMarkerGroups();
+    initMultiJobStorage();
+
     function normalisasiTeksWilayah(teks) {
         return (teks || '')
             .toString()
@@ -1009,28 +1096,11 @@ function filterDanTampilkanMarker() {
         document.getElementById('filter-angkatan')
             ?.value || 'semua';
 
-    window.wadahNormal.clearLayers();
-    window.wadahCluster.clearLayers();
-
-    if (!window.layerKerjaUtama) {
-        window.layerKerjaUtama = L.layerGroup();
-    }
-    if (!window.layerBelumBekerja) {
-        window.layerBelumBekerja = L.layerGroup();
-    }
-    if (!window.studiLanjutLayerGroup) {
-        window.studiLanjutLayerGroup = L.layerGroup().addTo(map);
-    }
-
-    // Backward compat untuk referensi lama (jika ada)
-    window.layerStudiLanjut = window.studiLanjutLayerGroup;
-
-    window.layerKerjaUtama.clearLayers();
-    window.layerBelumBekerja.clearLayers();
+    // Clear semua layer supaya tidak ada marker duplikat
+    window.mainAlumniLayerGroup.clearLayers();
+    window.mainAlumniClusterGroup.clearLayers();
     window.studiLanjutLayerGroup.clearLayers();
-
-    window.wadahNormal.addLayer(window.layerKerjaUtama);
-    window.wadahNormal.addLayer(window.layerBelumBekerja);
+    window.studiLanjutClusterGroup.clearLayers();
 
     arrayMarker = [];
     clearMultiJobLayers();
@@ -1043,6 +1113,10 @@ function filterDanTampilkanMarker() {
     const alumniIdsStudiLanjut = new Set();
     const alumniIdsStudiLanjutMatched = new Set();
     const multiJobAlumniIds = new Set();
+
+    const mainTarget = window.statusClusterAktif
+        ? window.mainAlumniClusterGroup
+        : window.mainAlumniLayerGroup;
 
     const isDefaultState =
         keyword === '' &&
@@ -1247,7 +1321,7 @@ function filterDanTampilkanMarker() {
 
                 <div class="popup-body">
 
-                    <h3 class="popup-name">${nama}</h3>
+                    <h3 class="popup-name clickable-profile" data-alumni-id="${alumniId}">${nama}</h3>
 
                     <span class="popup-year">
                         Lulusan Tahun ${tahunLulus}
@@ -1344,13 +1418,7 @@ function filterDanTampilkanMarker() {
             marker.closeTooltip();
         });
 
-        if (statusKerja === 'Belum Bekerja') {
-            window.layerBelumBekerja.addLayer(marker);
-        } else {
-            window.layerKerjaUtama.addLayer(marker);
-        }
-
-        window.wadahCluster.addLayer(marker);
+        mainTarget.addLayer(marker);
 
         arrayMarker[index] = marker;
 
@@ -1414,6 +1482,12 @@ function filterDanTampilkanMarker() {
 
     const tampilkanStudiLanjut =
         statusFilterIsSemua || statusFilters.includes('studi_lanjut');
+
+    window.__studiLanjutEnabled = !!tampilkanStudiLanjut;
+
+    const studiTarget = window.statusClusterAktif
+        ? window.studiLanjutClusterGroup
+        : window.studiLanjutLayerGroup;
 
     if (Array.isArray(studiLanjutData)) {
         studiLanjutData.forEach(function (row) {
@@ -1531,7 +1605,7 @@ function filterDanTampilkanMarker() {
                     </div>
 
                     <div class="popup-body">
-                        <h3 class="popup-name">${nama}</h3>
+                        <h3 class="popup-name clickable-profile" data-alumni-id="${alumniId}">${nama}</h3>
 
                         <span class="popup-year">
                             Lulusan Tahun ${tahunLulus}
@@ -1578,7 +1652,7 @@ function filterDanTampilkanMarker() {
                 <div>${jenjang} - ${programStudi}</div>
             `);
 
-            window.studiLanjutLayerGroup.addLayer(marker);
+            studiTarget.addLayer(marker);
 
             if (alumniId) {
                 alumniIdsDisplayed.add(alumniId);
@@ -1617,6 +1691,8 @@ function filterDanTampilkanMarker() {
              </div>`;
     }
 }
+
+window.filterDanTampilkanMarker = filterDanTampilkanMarker;
 
 function perbaruiLegendaStatus(jumlahTotalAlumni, jumlahBekerja, jumlahBelumBekerja, jumlahMultiJob, jumlahStudiLanjut) {
 

@@ -45,12 +45,21 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     
     if(tombolCluster) {
+        // Sinkronkan state awal dengan checkbox (tanpa merombak alur render).
+        const prev = !!window.statusClusterAktif;
+        window.statusClusterAktif = tombolCluster.checked;
+        if (prev !== window.statusClusterAktif && typeof window.filterDanTampilkanMarker === 'function') {
+            window.filterDanTampilkanMarker();
+        }
+
         tombolCluster.addEventListener('change', function() {
             // Ubah variabel global agar filter.js tahu statusnya
             window.statusClusterAktif = this.checked; 
             
-            // Perintahkan filter.js untuk merefresh peta
-            if (typeof window.perbaruiTampilanPeta === 'function') {
+            // Render ulang supaya marker pindah container (cluster vs non-cluster)
+            if (typeof window.filterDanTampilkanMarker === 'function') {
+                window.filterDanTampilkanMarker();
+            } else if (typeof window.perbaruiTampilanPeta === 'function') {
                 window.perbaruiTampilanPeta();
             }
         });

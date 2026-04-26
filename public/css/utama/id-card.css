@@ -82,6 +82,18 @@
     font-weight: 800;
     color: #0f172a;
 }
+
+.modal-nim {
+    font-size: 12px;
+    font-weight: 700;
+    color: #334155;
+    opacity: 0.9;
+    margin-bottom: 10px;
+}
+
+.modal-nim:empty {
+    display: none;
+}
 .badge-tahun {
     font-size: 12px;
     font-weight: 600;

@@ -17,6 +17,15 @@ body {
     filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35));
 }
 
+/* Cluster khusus studi lanjut (warna ungu) */
+#map .marker-cluster.studi-lanjut-cluster div {
+    background: rgba(124, 58, 237, 0.88);
+}
+
+#map .marker-cluster.studi-lanjut-cluster {
+    background: rgba(124, 58, 237, 0.3);
+}
+
 .is-hidden {
     display: none !important;
 }

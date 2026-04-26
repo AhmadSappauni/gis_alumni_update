@@ -64,6 +64,16 @@
         color: #1e293b;
     }
 
+    .clickable-profile {
+        cursor: pointer;
+        transition: opacity 0.2s ease, text-decoration-color 0.2s ease;
+    }
+
+    .clickable-profile:hover {
+        text-decoration: underline;
+        opacity: 0.85;
+    }
+
     .popup-year {
         font-size: 11px;
         color: #64748b;

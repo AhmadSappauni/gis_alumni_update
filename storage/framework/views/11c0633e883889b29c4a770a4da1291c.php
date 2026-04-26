@@ -8,6 +8,7 @@
                     alt="Avatar Alumni">
             </div>
             <h2 id="modal-nama">Nama Lengkap Alumni</h2>
+            <div id="modal-nim" class="modal-nim">NIM: -</div>
             <span id="modal-tahun" class="badge-tahun">Lulusan Tahun 202X</span>
         </div>
 
@@ -15,8 +16,16 @@
             <div class="info-group">
                 <span class="info-icon">🏢</span>
                 <div class="info-text">
-                    <label>Tempat Kerja </label>
+                    <label id="modal-lokasi-label">Tempat Kerja</label>
                     <p id="modal-perusahaan">Nama Instansi Tempat Bekerja</p>
+                </div>
+            </div>
+
+            <div class="info-group">
+                <span class="info-icon">📍</span>
+                <div class="info-text">
+                    <label id="modal-alamat-label">Alamat Kantor</label>
+                    <p id="modal-alamat">-</p>
                 </div>
             </div>
 
@@ -25,6 +34,14 @@
                 <div class="info-text">
                     <label>Posisi / Jabatan</label>
                     <p id="modal-jabatan">Posisi Jabatan Saat Ini</p>
+                </div>
+            </div>
+
+            <div class="info-group">
+                <span class="info-icon">🗂️</span>
+                <div class="info-text">
+                    <label>Bidang Pekerjaan</label>
+                    <p id="modal-bidang-pekerjaan">-</p>
                 </div>
             </div>
 
