@@ -10,17 +10,14 @@ class LokasiPerusahaan extends Model
 
     protected $fillable = [
         'perusahaan_id',
-        'nama_cabang',
         'alamat_lengkap',
         'kota',
         'provinsi',
         'latitude',
-        'longitude',
-        'is_head_office'
+        'longitude'
     ];
 
     protected $casts = [
-        'is_head_office' => 'boolean',
         'latitude' => 'float',
         'longitude' => 'float'
     ];

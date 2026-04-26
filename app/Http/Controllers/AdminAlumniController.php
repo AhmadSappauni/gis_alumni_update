@@ -9,12 +9,14 @@ use App\Models\AlumniAkademik;
 use App\Models\LokasiPerusahaan;
 use App\Models\Perusahaan;
 use App\Models\RiwayatPekerjaan;
+use App\Models\StudiLanjut;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
 
 class AdminAlumniController extends Controller
@@ -51,6 +53,36 @@ class AdminAlumniController extends Controller
         ]);
     }
 
+    private function validateStudiLanjutRequest(Request $request): array
+    {
+        $currentYear = now()->year;
+
+        $data = $request->validate([
+            'kampus'        => 'required|string|max:255',
+            'alamat_kampus' => 'nullable|string|max:500',
+            'kota_kampus'   => 'nullable|string|max:255',
+            'provinsi_kampus' => 'nullable|string|max:255',
+            'latitude'      => 'nullable|numeric|between:-90,90',
+            'longitude'     => 'nullable|numeric|between:-180,180',
+            'jenjang'       => 'required|string|max:255',
+            'program_studi' => 'nullable|string|max:255',
+            'tahun_masuk'   => 'nullable|integer|min:1900|max:' . $currentYear,
+            'tahun_lulus'   => 'nullable|integer|min:1900|max:' . ($currentYear + 10),
+            'status'        => 'required|string|max:255',
+        ]);
+
+        $tahunMasuk = $data['tahun_masuk'] ?? null;
+        $tahunLulus = $data['tahun_lulus'] ?? null;
+
+        if ($tahunMasuk !== null && $tahunLulus !== null && (int) $tahunLulus < (int) $tahunMasuk) {
+            throw ValidationException::withMessages([
+                'tahun_lulus' => 'Tahun lulus tidak boleh lebih kecil dari tahun masuk.',
+            ]);
+        }
+
+        return $data;
+    }
+
     private function parseMasaTunggu(Request $request, ?int $alumniId = null): ?int
     {
         if ($request->filled('masa_tunggu')) {
@@ -83,7 +115,11 @@ class AdminAlumniController extends Controller
         $dataAlumni = Alumni::with([
             'akademik',
             'alamat',
-            'pekerjaan.perusahaan'
+            'pekerjaan.perusahaan',
+            'studiLanjut' => function ($query) {
+                $query->orderByDesc('tahun_masuk')
+                    ->orderByDesc('id');
+            }
         ])
         ->latest()
         ->paginate(10);
@@ -131,9 +167,9 @@ class AdminAlumniController extends Controller
                 $query->with([
                     'perusahaan' => function ($q) {
                         $q->with([
+                            'lokasiAktif',
                             'lokasi' => function ($lokasi) {
-                                $lokasi->orderByDesc('is_head_office')
-                                    ->orderByDesc('id');
+                                $lokasi->orderByDesc('id');
                             }
                         ]);
                     }
@@ -144,7 +180,17 @@ class AdminAlumniController extends Controller
                         ELSE 3
                     END
                 ")->orderByDesc('id');
-            }
+            },
+
+            /*
+            |--------------------------------------------------------------------------
+            | Studi lanjut
+            |--------------------------------------------------------------------------
+            */
+            'studiLanjut' => function ($query) {
+                $query->orderByDesc('tahun_masuk')
+                    ->orderByDesc('id');
+            },
 
         ])->findOrFail($id);
 
@@ -313,13 +359,11 @@ class AdminAlumniController extends Controller
             */
             LokasiPerusahaan::create([
                 'perusahaan_id'   => $perusahaan->id,
-                'nama_cabang'     => $request->nama_perusahaan,
                 'alamat_lengkap'  => $request->alamat_lengkap,
                 'kota'            => $request->kota,
                 'provinsi'        => $request->provinsi,
                 'latitude'        => $request->latitude,
-                'longitude'       => $request->longitude,
-                'is_head_office'  => true
+                'longitude'       => $request->longitude
             ]);
 
             /*
@@ -458,13 +502,11 @@ class AdminAlumniController extends Controller
             */
             LokasiPerusahaan::create([
                 'perusahaan_id'  => $perusahaan->id,
-                'nama_cabang'    => $request->nama_perusahaan,
                 'alamat_lengkap' => $request->alamat_lengkap,
                 'kota'           => $request->kota,
                 'provinsi'       => $request->provinsi,
                 'latitude'       => $request->latitude,
-                'longitude'      => $request->longitude,
-                'is_head_office' => true
+                'longitude'      => $request->longitude
             ]);
 
             /*
@@ -651,13 +693,12 @@ class AdminAlumniController extends Controller
             |--------------------------------------------------------------------------
             */
             $lokasi = LokasiPerusahaan::where('perusahaan_id', $perusahaan->id)
-                ->where('is_head_office', false)
+                ->orderByDesc('id')
                 ->first();
 
             if ($lokasi) {
 
                 $lokasi->update([
-                    'nama_cabang'    => $request->nama_perusahaan,
                     'alamat_lengkap' => $request->alamat_lengkap,
                     'kota'           => $request->kota,
                     'provinsi'       => $request->provinsi,
@@ -669,13 +710,11 @@ class AdminAlumniController extends Controller
 
                 LokasiPerusahaan::create([
                     'perusahaan_id'  => $perusahaan->id,
-                    'nama_cabang'    => $request->nama_perusahaan,
                     'alamat_lengkap' => $request->alamat_lengkap,
                     'kota'           => $request->kota,
                     'provinsi'       => $request->provinsi,
                     'latitude'       => $request->latitude,
-                    'longitude'      => $request->longitude,
-                    'is_head_office' => true
+                    'longitude'      => $request->longitude
                 ]);
             }
 
@@ -735,13 +774,67 @@ class AdminAlumniController extends Controller
         return back()->with('success', 'Riwayat pekerjaan berhasil diperbarui');
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | STUDI LANJUT
+    |--------------------------------------------------------------------------
+    */
+
+    public function storeStudiLanjut(Request $request, $alumni)
+    {
+        $alumniModel = Alumni::findOrFail($alumni);
+
+        $data = $this->validateStudiLanjutRequest($request);
+        $data['alumni_id'] = $alumniModel->id;
+
+        StudiLanjut::create($data);
+
+        return redirect()
+            ->route('admin.alumni.edit', $alumniModel->id)
+            ->with('success', 'Studi lanjut berhasil ditambahkan.')
+            ->with('active_tab', 'tab-studi');
+    }
+
+    public function updateStudiLanjut(Request $request, $alumni, $studiLanjut)
+    {
+        $alumniModel = Alumni::findOrFail($alumni);
+
+        $studi = StudiLanjut::where('alumni_id', $alumniModel->id)
+            ->findOrFail($studiLanjut);
+
+        $data = $this->validateStudiLanjutRequest($request);
+
+        $studi->update($data);
+
+        return redirect()
+            ->route('admin.alumni.edit', $alumniModel->id)
+            ->with('success', 'Studi lanjut berhasil diperbarui.')
+            ->with('active_tab', 'tab-studi');
+    }
+
+    public function destroyStudiLanjut($alumni, $studiLanjut)
+    {
+        $alumniModel = Alumni::findOrFail($alumni);
+
+        $studi = StudiLanjut::where('alumni_id', $alumniModel->id)
+            ->findOrFail($studiLanjut);
+
+        $studi->delete();
+
+        return redirect()
+            ->route('admin.alumni.edit', $alumniModel->id)
+            ->with('success', 'Studi lanjut berhasil dihapus.')
+            ->with('active_tab', 'tab-studi');
+    }
+
     public function geocode(Request $r)
     {
         if ($r->type == 'reverse') {
             return Http::get('https://nominatim.openstreetmap.org/reverse', [
                 'format' => 'json',
                 'lat' => $r->lat,
-                'lon' => $r->lng
+                'lon' => $r->lng,
+                'addressdetails' => 1
             ])->json();
         }
 
@@ -756,7 +849,8 @@ class AdminAlumniController extends Controller
         return Http::get('https://nominatim.openstreetmap.org/search', [
             'format' => 'json',
             'q' => $q,
-            'limit' => 5
+            'limit' => 5,
+            'addressdetails' => 1
         ])->json();
     }
     
@@ -1017,12 +1111,10 @@ class AdminAlumniController extends Controller
                             'alamat_lengkap'=> $alamatText ?: '-'
                         ],
                         [
-                            'nama_cabang'    => 'Cabang Utama',
                             'kota'           => $kota,
                             'provinsi'       => $provinsi,
                             'latitude'       => $latitude,
-                            'longitude'      => $longitude,
-                            'is_head_office' => true
+                            'longitude'      => $longitude
                         ]
                     );
 

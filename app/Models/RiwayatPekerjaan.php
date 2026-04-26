@@ -22,7 +22,6 @@ class RiwayatPekerjaan extends Model
         'tanggal_selesai',
         'masa_tunggu',
         'status_karir',
-        'sumber_info',
         'gaji_nominal'
     ];
 

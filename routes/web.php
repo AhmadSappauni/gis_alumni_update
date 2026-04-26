@@ -98,6 +98,22 @@ Route::prefix('admin')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | STUDI LANJUT
+    |--------------------------------------------------------------------------
+    */
+
+    Route::post('/alumni/{alumni}/studi-lanjut', [AdminAlumniController::class, 'storeStudiLanjut'])
+        ->name('admin.studi-lanjut.store');
+
+    Route::put('/alumni/{alumni}/studi-lanjut/{studiLanjut}', [AdminAlumniController::class, 'updateStudiLanjut'])
+        ->name('admin.studi-lanjut.update');
+
+    Route::delete('/alumni/{alumni}/studi-lanjut/{studiLanjut}', [AdminAlumniController::class, 'destroyStudiLanjut'])
+        ->name('admin.studi-lanjut.destroy');
+
+
+    /*
+    |--------------------------------------------------------------------------
     | STATISTIK
     |--------------------------------------------------------------------------
     */

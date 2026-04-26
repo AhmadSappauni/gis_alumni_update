@@ -6,6 +6,47 @@ var map = L.map("map", {
     zoomControl: false
 }).setView(defaultCenter, defaultZoom);
 
+function getLeftUiOverlayOffsetX() {
+    if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
+        return 0;
+    }
+
+    const filterPanel = document.querySelector('.filter-panel');
+    if (!filterPanel) {
+        return 0;
+    }
+
+    const style = window.getComputedStyle(filterPanel);
+    if (style.display === 'none' || style.visibility === 'hidden') {
+        return 0;
+    }
+
+    const rect = filterPanel.getBoundingClientRect();
+    if (!rect.width || rect.width < 80) {
+        return 0;
+    }
+
+    return Math.round(Math.min(rect.width, window.innerWidth) / 2);
+}
+
+function applyDefaultViewOffset() {
+    const offsetX = getLeftUiOverlayOffsetX();
+    if (!offsetX) {
+        return;
+    }
+
+    map.panBy([offsetX, 0], { animate: false });
+}
+
+function resetMapView() {
+    map.setView(defaultCenter, defaultZoom, { animate: false });
+    applyDefaultViewOffset();
+}
+
+map.whenReady(function () {
+    applyDefaultViewOffset();
+});
+
 // Pindahkan tombol zoom ke pojok kanan bawah
 L.control.zoom({
     position: 'topright'
@@ -27,7 +68,7 @@ const ResetControl = L.Control.extend({
         L.DomEvent.disableClickPropagation(container);
         L.DomEvent.on(link, 'click', function (e) {
             L.DomEvent.preventDefault(e);
-            map.setView(defaultCenter, defaultZoom);
+            resetMapView();
         });
 
         return container;
@@ -99,6 +140,7 @@ window.highlightWilayah = null;
 window.tooltipWilayahAktif = null;
 window.statusPolygonAktif = true;
 window.statusPolygonWilayah = {};
+window.defaultStatusPolygonWilayah = true;
 
 function getStyleWilayah(feature) {
     var namaKab = getNamaWilayah(feature);
@@ -373,6 +415,31 @@ window.setStatusPolygonWilayah = function (namaWilayah, isVisible) {
         return;
     }
 
+    if (isVisible && !window.statusPolygonAktif) {
+        window.statusPolygonAktif = true;
+
+        const masterToggle = document.getElementById('toggle-polygon-map');
+        if (masterToggle) {
+            masterToggle.checked = true;
+        }
+
+        if (typeof window.perbaruiTampilanPolygon === 'function') {
+            window.perbaruiTampilanPolygon();
+            return;
+        }
+
+        if (!map.hasLayer(window.layerWilayahKalsel)) {
+            window.layerWilayahKalsel.addTo(map);
+        }
+
+        window.layerWilayahKalsel.eachLayer(function (layer) {
+            const namaLayer = getNamaWilayah(layer.feature);
+            const layerKey = getKeyWilayah(namaLayer);
+            const aktif = window.statusPolygonWilayah[layerKey] !== false;
+            aturTampilanPolygonWilayah(layer, aktif);
+        });
+    }
+
     window.layerWilayahKalsel.eachLayer(function (layer) {
         const namaLayer = getNamaWilayah(layer.feature);
 
@@ -385,6 +452,49 @@ window.setStatusPolygonWilayah = function (namaWilayah, isVisible) {
         }
 
         aturTampilanPolygonWilayah(layer, isVisible);
+    });
+
+    if (typeof window.sinkronkanKontrolPolygonWilayah === 'function') {
+        window.sinkronkanKontrolPolygonWilayah();
+    }
+};
+
+window.setSemuaStatusPolygonWilayah = function (isVisible) {
+    window.defaultStatusPolygonWilayah = !!isVisible;
+
+    const container = document.getElementById('polygon-wilayah-list');
+
+    if (container) {
+        container.querySelectorAll('.toggle-polygon-wilayah').forEach(function (input) {
+            input.checked = !!isVisible;
+        });
+    }
+
+    if (!window.layerWilayahKalsel) {
+        window.statusPolygonWilayah = {};
+
+        if (typeof window.sinkronkanKontrolPolygonWilayah === 'function') {
+            window.sinkronkanKontrolPolygonWilayah();
+        }
+
+        return;
+    }
+
+    if (!isVisible) {
+        window.resetHighlightWilayah();
+    }
+
+    window.layerWilayahKalsel.eachLayer(function (layer) {
+        const namaWilayah = getNamaWilayah(layer.feature);
+        const key = getKeyWilayah(namaWilayah);
+
+        window.statusPolygonWilayah[key] = !!isVisible;
+
+        if (!window.statusPolygonAktif) {
+            return;
+        }
+
+        aturTampilanPolygonWilayah(layer, !!isVisible);
     });
 
     if (typeof window.sinkronkanKontrolPolygonWilayah === 'function') {
@@ -414,7 +524,7 @@ window.renderKontrolPolygonWilayah = function () {
         };
 
         if (!(key in window.statusPolygonWilayah)) {
-            window.statusPolygonWilayah[key] = true;
+            window.statusPolygonWilayah[key] = window.defaultStatusPolygonWilayah !== false;
         }
 
         wilayahList.push({

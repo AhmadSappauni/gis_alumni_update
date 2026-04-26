@@ -68,13 +68,17 @@
         @endif
 
         <div class="tab-navigation">
-            <button type="button" class="tab-btn active" onclick="switchTab('tab-profil', this)">
+            <button type="button" class="tab-btn active" data-tab="tab-profil" onclick="switchTab('tab-profil', this)">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                 Profil & Tempat Tinggal
             </button>
-            <button type="button" class="tab-btn" onclick="switchTab('tab-karir', this)">
+            <button type="button" class="tab-btn" data-tab="tab-karir" onclick="switchTab('tab-karir', this)">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                 Riwayat Pekerjaan
+            </button>
+            <button type="button" class="tab-btn" data-tab="tab-studi" onclick="switchTab('tab-studi', this)">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422A12.083 12.083 0 0121 11.5c0 4.418-4.03 8-9 8s-9-3.582-9-8c0-.35.02-.696.06-1.038L12 14z"></path></svg>
+                Studi Lanjut
             </button>
         </div>
 
@@ -294,9 +298,102 @@
             @endif
         </div>
 
+        <div id="tab-studi" class="tab-pane glass-panel" style="padding: 30px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px solid rgba(0,0,0,0.05);">
+                <div>
+                    <h3 style="color: #004a87; margin: 0; font-size: 22px; font-weight: 800;">Manajemen Studi Lanjut</h3>
+                    <p style="margin: 5px 0 0; font-size: 13px; color: #64748b;">Data ini akan digunakan untuk melihat riwayat pendidikan lanjutan alumni.</p>
+                </div>
+                <button type="button" onclick="openModalStudi()" class="btn-tambah" style="width: auto; padding: 12px 24px; font-size: 14px; background: #004a87;">
+                    + Tambah Studi Lanjut
+                </button>
+            </div>
+
+            @if($alumni->studiLanjut->isEmpty())
+                <div style="text-align: center; padding: 40px; background: rgba(0,74,135,0.03); border-radius: 16px; border: 2px dashed rgba(0,74,135,0.2);">
+                    <svg width="40" height="40" fill="none" stroke="#94a3b8" viewBox="0 0 24 24" style="margin-bottom: 10px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422A12.083 12.083 0 0121 11.5c0 4.418-4.03 8-9 8s-9-3.582-9-8c0-.35.02-.696.06-1.038L12 14z"></path></svg>
+                    <h4 style="color: #475569; margin:0;">Belum ada data studi lanjut untuk alumni ini.</h4>
+                    <p style="color: #94a3b8; font-size: 13px; margin-top:5px;">Klik tombol + Tambah Studi Lanjut di atas untuk menambahkan data.</p>
+                </div>
+            @else
+                <div style="display: grid; gap: 12px;">
+                    @foreach($alumni->studiLanjut->sortByDesc('tahun_masuk') as $s)
+                        @php
+                            $periodeMulai = $s->tahun_masuk ?? '-';
+                            $periodeSelesai = $s->tahun_lulus ?? 'Sekarang';
+
+                            $badge = match($s->status) {
+                                'Sedang Berjalan' => ['#ecfdf5', '#10b981', '#10b981'],
+                                'Lulus' => ['#eff6ff', '#3b82f6', '#3b82f6'],
+                                'Cuti' => ['#fffbeb', '#f59e0b', '#f59e0b'],
+                                'Tidak Selesai' => ['#fef2f2', '#ef4444', '#ef4444'],
+                                default => ['#f8fafc', '#64748b', '#e2e8f0'],
+                            };
+
+                            $dataEditStudi = [
+                                'id' => $s->id,
+                                'kampus' => $s->kampus,
+                                'alamat_kampus' => $s->alamat_kampus,
+                                'kota_kampus' => $s->kota_kampus,
+                                'provinsi_kampus' => $s->provinsi_kampus,
+                                'latitude' => $s->latitude,
+                                'longitude' => $s->longitude,
+                                'jenjang' => $s->jenjang,
+                                'program_studi' => $s->program_studi,
+                                'tahun_masuk' => $s->tahun_masuk,
+                                'tahun_lulus' => $s->tahun_lulus,
+                                'status' => $s->status,
+                            ];
+                        @endphp
+
+                        <div style="background: #ffffff; border: 1px solid #f1f5f9; border-radius: 16px; padding: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); display: flex; justify-content: space-between; gap: 15px;">
+                            <div style="flex: 1;">
+                                <div style="display: flex; justify-content: space-between; gap: 10px; align-items: flex-start;">
+                                    <div>
+                                        <div style="font-weight: 800; color: #1e293b; font-size: 15px;">{{ $s->kampus }}</div>
+                                        <div style="color: #94a3b8; margin-top: 4px; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                            {{ collect([$s->kota_kampus, $s->provinsi_kampus])->filter()->implode(', ') ?: '-' }}
+                                        </div>
+                                        <div style="color: #475569; font-weight: 700; margin-top: 4px;">
+                                            {{ $s->jenjang }}
+                                            @if($s->program_studi)
+                                                - {{ $s->program_studi }}
+                                            @endif
+                                        </div>
+                                        <div style="color: #64748b; margin-top: 8px; font-size: 13px;">
+                                            Periode: {{ $periodeMulai }} - {{ $periodeSelesai }}
+                                        </div>
+                                    </div>
+                                    <span style="background: {{ $badge[0] }}; color: {{ $badge[1] }}; padding: 6px 12px; border-radius: 10px; font-size: 12px; font-weight: 800; border: 1px solid {{ $badge[2] }}; white-space: nowrap;">
+                                        {{ $s->status }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 8px; align-items: flex-start;">
+                                <button type="button" onclick='editStudiLanjut(@json($dataEditStudi))' title="Edit studi lanjut" style="background: #e0f2fe; color: #0284c7; border: none; padding: 10px; border-radius: 12px; cursor: pointer; transition: 0.2s;">
+                                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                </button>
+
+                                <form action="{{ route('admin.studi-lanjut.destroy', ['alumni' => $alumni->id, 'studiLanjut' => $s->id]) }}" method="POST" class="form-hapus-studi">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="button" class="btn-delete-studi-swal" title="Hapus studi lanjut" style="background: #fee2e2; color: #ef4444; border: none; padding: 10px; border-radius: 12px; cursor: pointer; transition: 0.2s;">
+                                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
     </div>
 
     @include('admin.komponen.riwayat-pekerjaan')
+    @include('admin.komponen.studi-lanjut')
 @endsection
 
 @push('scripts')
@@ -304,7 +401,9 @@
     window.editConfig = {
         oldLat: @json($alumni->alamat?->latitude ?? -3.316694),
         oldLng: @json($alumni->alamat?->longitude ?? 114.590111),
-        pekerjaanUrl: @json(url('/admin/pekerjaan'))
+        pekerjaanUrl: @json(url('/admin/pekerjaan')),
+        studiLanjutBaseUrl: @json(url('/admin/alumni/' . $alumni->id . '/studi-lanjut')),
+        initialTab: @json(session('active_tab') ?? request('tab'))
     };
     </script>
 

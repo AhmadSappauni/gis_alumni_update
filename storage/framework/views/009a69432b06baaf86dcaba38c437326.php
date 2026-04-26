@@ -48,6 +48,16 @@
             <span>Alumni Belum Bekerja</span>
             <b id="legend-belum-count">0</b>
         </div>
+        <div class="status-legend-item">
+            <img src="<?php echo e(asset('img/icon sampingan.png')); ?>" alt="Multi-Job">
+            <span>Multi-Job</span>
+            <b id="legend-multijob-count">0</b>
+        </div>
+        <div class="status-legend-item">
+            <img src="<?php echo e(asset('img/Icon studi lanjut.png')); ?>" alt="Studi Lanjut">
+            <span>Studi Lanjut</span>
+            <b id="legend-studi-count">0</b>
+        </div>
     </div>
 
     <?php echo $__env->make('utama.sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
@@ -60,7 +70,9 @@
     <script src="https://cdn.jsdelivr.net/npm/leaflet-betterscale@1.0.0/L.Control.BetterScale.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-minimap/3.6.1/Control.MiniMap.min.js"></script>
     <script>
-        var alumniData = <?php echo json_encode($dataPekerjaan, 15, 512) ?>;
+        window.mapPayload = <?php echo json_encode($mapPayload ?? [], 15, 512) ?>;
+        var alumniData = window.mapPayload.markers || [];
+        window.studiLanjutData = window.mapPayload.studi_lanjut_markers || [];
     </script>
     <script src="<?php echo e(asset('js/utama/map.js')); ?>"></script>
     <script src="<?php echo e(asset('js/utama/filter.js')); ?>"></script>

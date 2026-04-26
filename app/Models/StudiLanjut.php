@@ -14,11 +14,21 @@ class StudiLanjut extends Model
     protected $fillable = [
         'alumni_id',
         'kampus',
+        'alamat_kampus',
+        'kota_kampus',
+        'provinsi_kampus',
+        'latitude',
+        'longitude',
         'jenjang',
         'program_studi',
         'tahun_masuk',
         'tahun_lulus',
         'status'
+    ];
+
+    protected $casts = [
+        'latitude' => 'float',
+        'longitude' => 'float',
     ];
 
     public function alumni()

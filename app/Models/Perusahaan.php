@@ -27,11 +27,6 @@ class Perusahaan extends Model
         return $this->hasMany(LokasiPerusahaan::class, 'perusahaan_id');
     }
 
-    public function lokasiUtama()
-    {
-        return $this->hasOne(LokasiPerusahaan::class, 'perusahaan_id')
-                    ->where('is_head_office', true);
-    }
     public function lokasiAktif()
     {
         return $this->hasOne(LokasiPerusahaan::class, 'perusahaan_id')

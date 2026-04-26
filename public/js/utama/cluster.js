@@ -60,6 +60,10 @@ document.addEventListener("DOMContentLoaded", function() {
         tombolPolygon.addEventListener('change', function () {
             window.statusPolygonAktif = this.checked;
 
+            if (typeof window.setSemuaStatusPolygonWilayah === 'function') {
+                window.setSemuaStatusPolygonWilayah(this.checked);
+            }
+
             if (typeof window.perbaruiTampilanPolygon === 'function') {
                 window.perbaruiTampilanPolygon();
             }

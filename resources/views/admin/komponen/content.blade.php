@@ -22,13 +22,61 @@
 
                     @php
                         $jumlahPekerjaanAktif = $alumni->pekerjaan->whereIn('status_karir', ['Utama', 'Sampingan'])->count();
+                        $studiLanjut = $alumni->studiLanjut ?? collect();
+                        $jumlahStudiLanjut = $studiLanjut->count();
+
+                        $badgeStudi = $studiLanjut->take(2)->map(function ($item) {
+                            $jenjang = trim((string) ($item->jenjang ?? ''));
+                            $jenjangLower = strtolower($jenjang);
+
+                            if ($jenjang === 'S2') {
+                                return 'LANJUT S2';
+                            }
+
+                            if ($jenjang === 'S3') {
+                                return 'LANJUT S3';
+                            }
+
+                            if ($jenjangLower === 'profesi' || $jenjangLower === 'pendidikan profesi guru' || $jenjangLower === 'ppg') {
+                                return 'LANJUT PPG';
+                            }
+
+                            if ($jenjangLower === 'sertifikasi') {
+                                return 'SERTIFIKASI';
+                            }
+
+                            return 'LANJUT ' . strtoupper($jenjang ?: '-');
+                        });
+
+                        $sisaStudiLanjut = max(0, $jumlahStudiLanjut - $badgeStudi->count());
                     @endphp
 
-                    @if($jumlahPekerjaanAktif > 1)
-                        <div title="Memiliki {{ $jumlahPekerjaanAktif }} Pekerjaan Aktif" 
-                            style="position: absolute; top: 15px; right: 15px; background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800; border: 1px solid #f59e0b; display: flex; align-items: center; gap: 4px; z-index: 10;">
-                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                            MULTI-JOB
+                    @if($jumlahPekerjaanAktif > 1 || $jumlahStudiLanjut > 0)
+                        <div style="position: absolute; top: 15px; right: 15px; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; z-index: 10; max-width: 55%;">
+                            @if($jumlahPekerjaanAktif > 1)
+                                <div title="Memiliki {{ $jumlahPekerjaanAktif }} Pekerjaan Aktif"
+                                    style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800; border: 1px solid #f59e0b; display: flex; align-items: center; gap: 4px;">
+                                    <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                                    MULTI-JOB
+                                </div>
+                            @endif
+
+                            @if($jumlahStudiLanjut > 0)
+                                @foreach($badgeStudi as $teksBadge)
+                                    <div title="Memiliki studi lanjut"
+                                        style="background: #ede9fe; color: #5b21b6; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800; border: 1px solid #c4b5fd; display: inline-flex; align-items: center; gap: 4px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422A12.083 12.083 0 0121 11.5c0 4.418-4.03 8-9 8s-9-3.582-9-8c0-.35.02-.696.06-1.038L12 14z"></path></svg>
+                                        {{ $teksBadge }}
+                                    </div>
+                                @endforeach
+
+                                @if($sisaStudiLanjut > 0)
+                                    <div title="{{ $sisaStudiLanjut }} studi lanjut lainnya"
+                                        style="background: #f1f5f9; color: #334155; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800; border: 1px solid #e2e8f0; display: inline-flex; align-items: center;">
+                                        +{{ $sisaStudiLanjut }}
+                                    </div>
+                                @endif
+                            @endif
                         </div>
                     @endif
 

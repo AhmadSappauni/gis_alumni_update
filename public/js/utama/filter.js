@@ -13,6 +13,58 @@
 
 let arrayMarker = [];
 
+function showToastKecil(message) {
+    const text = (message || '').toString().trim();
+    if (!text) {
+        return;
+    }
+
+    const el = document.createElement('div');
+    el.className = 'toast-kecil';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    el.textContent = text;
+
+    document.body.appendChild(el);
+
+    // Trigger transition
+    requestAnimationFrame(() => el.classList.add('is-show'));
+
+    const ttl = 2200;
+    setTimeout(() => el.classList.remove('is-show'), ttl);
+    setTimeout(() => el.remove(), ttl + 450);
+}
+
+function initMultiJobStorage() {
+    if (!window.multiJobLayerGroup) {
+        window.multiJobLayerGroup = L.layerGroup().addTo(map);
+    }
+
+    if (!window.activeMultiJobLayers) {
+        window.activeMultiJobLayers = {};
+    }
+
+    if (!window.mainAlumniMarkersById) {
+        window.mainAlumniMarkersById = {};
+    }
+
+    if (!window.alumniDataById) {
+        window.alumniDataById = {};
+    }
+}
+
+function clearMultiJobLayers() {
+    initMultiJobStorage();
+
+    if (window.multiJobLayerGroup) {
+        window.multiJobLayerGroup.clearLayers();
+    }
+
+    window.activeMultiJobLayers = {};
+    window.mainAlumniMarkersById = {};
+    window.alumniDataById = {};
+}
+
 // ======================================================
 // WADAH MARKER
 // ======================================================
@@ -49,10 +101,171 @@ document.addEventListener("DOMContentLoaded", function () {
         cariBerdasarkanSelect.multiple = true;
     }
 
+    // Status Kerja dibuat multi-select (konsisten dengan Bidang Kerja)
+    const statusKerjaSelect = document.getElementById('filter-status-kerja');
+    if (statusKerjaSelect) {
+        statusKerjaSelect.multiple = true;
+    }
+
     initCustomSelect();
+
+    initMultiJobStorage();
+    initMultiJobToggleHandler();
 
     filterDanTampilkanMarker();
 });
+
+function initMultiJobToggleHandler() {
+    if (window.__multiJobToggleHandlerInstalled) {
+        return;
+    }
+
+    window.__multiJobToggleHandlerInstalled = true;
+
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('.multi-job-toggle');
+        if (!btn) {
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const alumniId = btn.dataset.alumniId || '';
+        toggleMultiJobLayers(alumniId);
+
+        btn.classList.toggle('is-active', !!(window.activeMultiJobLayers && window.activeMultiJobLayers[alumniId]));
+    });
+}
+
+function toggleMultiJobLayers(alumniId) {
+    const id = (alumniId || '').toString();
+    if (!id) {
+        return;
+    }
+
+    initMultiJobStorage();
+
+    const active = window.activeMultiJobLayers || {};
+
+    if (active[id]) {
+        (active[id].markers || []).forEach(m => window.multiJobLayerGroup.removeLayer(m));
+        (active[id].lines || []).forEach(l => window.multiJobLayerGroup.removeLayer(l));
+        delete active[id];
+        window.activeMultiJobLayers = active;
+        return;
+    }
+
+    const item = (window.alumniDataById && window.alumniDataById[id]) ||
+        (Array.isArray(alumniData) ? alumniData.find(x => (x && ((x.alumni_id ?? x.id) + '') === id)) : null);
+
+    if (!item) {
+        return;
+    }
+
+    const jobs = Array.isArray(item.pekerjaan_lainnya) ? item.pekerjaan_lainnya : [];
+    if (!jobs.length) {
+        return;
+    }
+
+    const mainMarker = window.mainAlumniMarkersById ? window.mainAlumniMarkersById[id] : null;
+    if (!mainMarker) {
+        return;
+    }
+
+    const mainLatLng = mainMarker.getLatLng();
+
+    const sideIcon = L.icon({
+        iconUrl: '/img/icon sampingan.png',
+        iconSize: [34, 48],
+        iconAnchor: [17, 48],
+        popupAnchor: [0, -42]
+    });
+
+    const markers = [];
+    const lines = [];
+
+    jobs.forEach(function (job) {
+        const lat = parseFloat(job.latitude);
+        const lng = parseFloat(job.longitude);
+
+        if (!lat || !lng) {
+            return;
+        }
+
+        if (Math.abs(lat - mainLatLng.lat) < 1e-10 && Math.abs(lng - mainLatLng.lng) < 1e-10) {
+            return;
+        }
+
+        const perusahaan = job.perusahaan || '-';
+        const jabatan = job.jabatan || '-';
+        const statusKarir = job.status_karir || 'Sampingan';
+
+        const perusahaanTooltip =
+            perusahaan && perusahaan.trim() ? perusahaan : 'Instansi tidak diketahui';
+        const jabatanTooltip =
+            jabatan && jabatan.trim() ? jabatan : 'Jabatan tidak diketahui';
+
+        const popup = `
+            <div class="premium-popup">
+                <div class="popup-cover"></div>
+                <div class="popup-body" style="padding-top: 18px;">
+                    <h3 class="popup-name">${item.nama || '-'}</h3>
+                    <span class="popup-year">Pekerjaan Sampingan</span>
+                    <div class="popup-info">
+                        <div class="info-row">
+                            <span class="icon">🏢</span>
+                            <span><b>${perusahaan}</b></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="icon">💼</span>
+                            <span>${jabatan}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="icon">🏷️</span>
+                            <span>${statusKarir}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const marker = L.marker([lat, lng], { icon: sideIcon }).bindPopup(popup);
+
+        bindTooltipDenganDelay(
+            marker,
+            `
+                <strong>${item.nama || '-'}</strong><br>
+                <span>Pekerjaan Sampingan</span><br>
+                ${perusahaanTooltip}<br>
+                ${jabatanTooltip}
+            `
+        );
+
+        const line = L.polyline(
+            [mainLatLng, [lat, lng]],
+            {
+                color: '#6366f1',
+                weight: 2,
+                opacity: 0.85,
+                dashArray: '6 6'
+            }
+        );
+
+        window.multiJobLayerGroup.addLayer(line);
+        window.multiJobLayerGroup.addLayer(marker);
+
+        markers.push(marker);
+        lines.push(line);
+    });
+
+    if (markers.length === 0 && lines.length === 0) {
+        return;
+    }
+
+    active[id] = { markers, lines };
+    window.activeMultiJobLayers = active;
+}
 
 function getCariBerdasarkanScopes() {
     const select = document.getElementById('search-category');
@@ -108,8 +321,26 @@ function bindFilterEvents() {
     document.getElementById('filter-bidang')
         ?.addEventListener('change', filterDanTampilkanMarker);
 
-    document.getElementById('filter-status-kerja')
-        ?.addEventListener('change', filterDanTampilkanMarker);
+    const statusSelect = document.getElementById('filter-status-kerja');
+    if (statusSelect) {
+        const getSelectedStatusValues = () => Array.from(statusSelect.selectedOptions || [])
+            .map(o => o.value)
+            .filter(Boolean);
+
+        let prevHasStudiLanjut = getSelectedStatusValues().includes('studi_lanjut');
+
+        statusSelect.addEventListener('change', function () {
+            const values = getSelectedStatusValues();
+            const hasStudiLanjut = values.includes('studi_lanjut');
+
+            if (hasStudiLanjut && !prevHasStudiLanjut) {
+                showToastKecil('Marker studi lanjut berhasil ditampilkan');
+            }
+
+            prevHasStudiLanjut = hasStudiLanjut;
+            filterDanTampilkanMarker();
+        });
+    }
 
     document.getElementById('filter-tahun')
         ?.addEventListener('change', filterDanTampilkanMarker);
@@ -246,6 +477,28 @@ function initCustomSelect() {
 
     const selects = document.querySelectorAll('.custom-select');
 
+    function getStatusKerjaTriggerText(select) {
+        const selectedValues = Array.from(select.selectedOptions || [])
+            .map(o => o.value)
+            .filter(Boolean);
+
+        const isSemua = selectedValues.length === 0 || selectedValues.includes('semua');
+        if (isSemua) {
+            return 'Semua Status Kerja';
+        }
+
+        const selectedTexts = Array.from(select.selectedOptions || [])
+            .filter(o => o.value !== 'semua')
+            .map(o => o.text)
+            .filter(Boolean);
+
+        if (selectedTexts.length === 1) {
+            return selectedTexts[0];
+        }
+
+        return `${selectedTexts.length} Status Dipilih`;
+    }
+
     function getMultiSelectTriggerText(select) {
         const selectedValues = Array.from(select.selectedOptions || [])
             .map(o => o.value)
@@ -280,9 +533,13 @@ function initCustomSelect() {
         const options = wrapper?.querySelectorAll('.custom-option') || [];
 
         if (triggerTextEl) {
+            if (select.multiple && select.id === 'filter-status-kerja') {
+                triggerTextEl.textContent = getStatusKerjaTriggerText(select);
+            } else {
             triggerTextEl.textContent = select.multiple
                 ? getMultiSelectTriggerText(select)
                 : (select.options[select.selectedIndex]?.text || '');
+            }
         }
 
         options.forEach(optionEl => {
@@ -311,7 +568,9 @@ function initCustomSelect() {
         trigger.className = 'custom-dropdown-trigger';
 
         const triggerLabel = select.multiple
-            ? getMultiSelectTriggerText(select)
+            ? (select.id === 'filter-status-kerja'
+                ? getStatusKerjaTriggerText(select)
+                : getMultiSelectTriggerText(select))
             : select.options[select.selectedIndex].text;
 
         trigger.innerHTML =
@@ -332,7 +591,25 @@ function initCustomSelect() {
                 'custom-option' + (option.selected ? ' selected' : '');
 
             item.dataset.value = option.value;
-            item.textContent = option.text;
+            const left = document.createElement('span');
+            left.className = 'custom-option-left';
+
+            const iconUrl = option.dataset.icon || '';
+            if (iconUrl) {
+                const img = document.createElement('img');
+                img.className = 'custom-option-icon';
+                img.src = iconUrl;
+                img.alt = '';
+                img.setAttribute('aria-hidden', 'true');
+                left.appendChild(img);
+            }
+
+            const text = document.createElement('span');
+            text.className = 'custom-option-text';
+            text.textContent = option.text;
+            left.appendChild(text);
+
+            item.appendChild(left);
 
             item.addEventListener('click', function () {
 
@@ -467,7 +744,7 @@ window.resetSemuaFilter = function () {
         window.syncCustomSelectValue('search-category', 'semua');
         window.syncCustomSelectValue('filter-linearitas', 'semua');
         window.syncCustomSelectValue('filter-bidang', 'semua');
-        window.syncCustomSelectValue('filter-status-kerja', 'semua');
+        window.syncCustomSelectValue('filter-status-kerja', ['bekerja', 'belum_bekerja']);
         window.syncCustomSelectValue('filter-tahun', 'semua');
         window.syncCustomSelectValue('filter-angkatan', 'semua');
     } else {
@@ -483,7 +760,13 @@ window.resetSemuaFilter = function () {
         ids.forEach(id => {
             const element = document.getElementById(id);
             if (element) {
-                element.value = 'semua';
+                if (id === 'filter-status-kerja') {
+                    Array.from(element.options || []).forEach(function (opt) {
+                        opt.selected = (opt.value === 'bekerja' || opt.value === 'belum_bekerja');
+                    });
+                } else {
+                    element.value = 'semua';
+                }
             }
         });
     }
@@ -574,6 +857,80 @@ function getStatusClass(linearitas) {
     }
 }
 
+function bindTooltipDenganDelay(marker, tooltipHtml) {
+    if (!marker) {
+        return;
+    }
+
+    marker.bindTooltip(
+        tooltipHtml,
+        {
+            direction: 'right',
+            sticky: true,
+            opacity: 0.95,
+            offset: [12, 10],
+            className: 'alumni-tooltip'
+        }
+    );
+
+    // Delay tooltip supaya tidak langsung muncul saat kursor lewat marker
+    const TOOLTIP_DELAY_MS = 650;
+    let tooltipTimer = null;
+    let lastMouseLatLng = null;
+    let lastOriginalEvent = null;
+
+    // Matikan open/close tooltip bawaan Leaflet agar bisa pakai delay,
+    // tapi tetap biarkan mekanisme follow-mouse (sticky) Leaflet berjalan setelah tooltip terbuka.
+    if (typeof marker._openTooltip === 'function') {
+        marker.off('mouseover', marker._openTooltip, marker);
+    }
+    if (typeof marker._closeTooltip === 'function') {
+        marker.off('mouseout', marker._closeTooltip, marker);
+    }
+
+    marker.on('mousemove', function (e) {
+        if (!e || !e.originalEvent || typeof map === 'undefined' || !map) {
+            return;
+        }
+
+        lastOriginalEvent = e.originalEvent;
+
+        if (typeof map.mouseEventToLatLng === 'function') {
+            lastMouseLatLng = map.mouseEventToLatLng(lastOriginalEvent);
+        }
+    });
+
+    marker.on('mouseover', function (e) {
+        clearTimeout(tooltipTimer);
+
+        if (e && e.originalEvent && typeof map !== 'undefined' && map && typeof map.mouseEventToLatLng === 'function') {
+            lastOriginalEvent = e.originalEvent;
+            lastMouseLatLng = map.mouseEventToLatLng(lastOriginalEvent);
+        }
+
+        tooltipTimer = setTimeout(function () {
+            if (lastMouseLatLng) {
+                marker.openTooltip(lastMouseLatLng);
+            } else if (e && e.originalEvent && typeof map !== 'undefined' && map && typeof map.mouseEventToLatLng === 'function') {
+                marker.openTooltip(map.mouseEventToLatLng(e.originalEvent));
+            } else {
+                marker.openTooltip();
+            }
+
+            // Paksa posisi tooltip langsung di lokasi kursor (tanpa harus menunggu mousemove berikutnya)
+            const tooltip = marker.getTooltip && marker.getTooltip();
+            if (tooltip && typeof tooltip._move === 'function' && lastOriginalEvent) {
+                tooltip._move({ originalEvent: lastOriginalEvent });
+            }
+        }, TOOLTIP_DELAY_MS);
+    });
+
+    marker.on('mouseout', function () {
+        clearTimeout(tooltipTimer);
+        marker.closeTooltip();
+    });
+}
+
 // ======================================================
 // FILTER UTAMA
 // ======================================================
@@ -627,9 +984,22 @@ function filterDanTampilkanMarker() {
     const bidangFilterIsSemua =
         bidangFilters.length === 0 || bidangFilters.includes('semua');
 
-    const statusKerjaFilter =
-        document.getElementById('filter-status-kerja')
-            ?.value || 'semua';
+    const statusSelect =
+        document.getElementById('filter-status-kerja');
+
+    const statusFilters = statusSelect
+        ? Array.from(statusSelect.selectedOptions || []).map(o => o.value)
+        : ['semua'];
+
+    const statusFilterIsSemua =
+        statusFilters.length === 0 || statusFilters.includes('semua');
+
+    const statusFilterIsDefault =
+        !statusFilterIsSemua &&
+        statusFilters.includes('bekerja') &&
+        statusFilters.includes('belum_bekerja') &&
+        !statusFilters.includes('studi_lanjut') &&
+        statusFilters.filter(v => v !== 'semua').length === 2;
 
     const tahunFilter =
         document.getElementById('filter-tahun')
@@ -642,23 +1012,53 @@ function filterDanTampilkanMarker() {
     window.wadahNormal.clearLayers();
     window.wadahCluster.clearLayers();
 
+    if (!window.layerKerjaUtama) {
+        window.layerKerjaUtama = L.layerGroup();
+    }
+    if (!window.layerBelumBekerja) {
+        window.layerBelumBekerja = L.layerGroup();
+    }
+    if (!window.studiLanjutLayerGroup) {
+        window.studiLanjutLayerGroup = L.layerGroup().addTo(map);
+    }
+
+    // Backward compat untuk referensi lama (jika ada)
+    window.layerStudiLanjut = window.studiLanjutLayerGroup;
+
+    window.layerKerjaUtama.clearLayers();
+    window.layerBelumBekerja.clearLayers();
+    window.studiLanjutLayerGroup.clearLayers();
+
+    window.wadahNormal.addLayer(window.layerKerjaUtama);
+    window.wadahNormal.addLayer(window.layerBelumBekerja);
+
     arrayMarker = [];
+    clearMultiJobLayers();
 
     let hasilHTML = '';
     let jumlah = 0;
-    let jumlahBekerja = 0;
-    let jumlahBelumBekerja = 0;
+    const alumniIdsDisplayed = new Set();
+    const alumniIdsBekerja = new Set();
+    const alumniIdsBelumBekerja = new Set();
+    const alumniIdsStudiLanjut = new Set();
+    const alumniIdsStudiLanjutMatched = new Set();
+    const multiJobAlumniIds = new Set();
 
     const isDefaultState =
         keyword === '' &&
         linearitasFilter === 'semua' &&
         bidangFilterIsSemua &&
-        statusKerjaFilter === 'semua' &&
+        statusFilterIsDefault &&
         tahunFilter === 'semua' &&
         angkatanFilter === 'semua' &&
         scopes.isSemua;
 
     alumniData.forEach(function (item, index) {
+
+        const alumniId = (item.alumni_id ?? item.id ?? '').toString();
+        if (alumniId) {
+            window.alumniDataById[alumniId] = item;
+        }
 
         const nama = item.nama || '';
         const perusahaan = item.perusahaan || '-';
@@ -733,9 +1133,14 @@ function filterDanTampilkanMarker() {
             bidangFilterIsSemua ||
             bidangFilters.includes(bidang);
 
+        const statusKey =
+            statusKerja === 'Belum Bekerja'
+                ? 'belum_bekerja'
+                : 'bekerja';
+
         const cocokStatusKerja =
-            statusKerjaFilter === 'semua' ||
-            statusKerja === statusKerjaFilter;
+            statusFilterIsSemua ||
+            statusFilters.includes(statusKey);
 
         let cocokTahun = true;
         const cocokAngkatan =
@@ -774,6 +1179,10 @@ function filterDanTampilkanMarker() {
         const marker =
             L.marker([latitude, longitude], { icon });
 
+        if (alumniId) {
+            window.mainAlumniMarkersById[alumniId] = marker;
+        }
+
         const avatar =
             'https://ui-avatars.com/api/?name=' +
             encodeURIComponent(nama) +
@@ -806,6 +1215,27 @@ function filterDanTampilkanMarker() {
                 </div>
                 `;
 
+        const pekerjaanLainnya = Array.isArray(item.pekerjaan_lainnya) ? item.pekerjaan_lainnya : [];
+        const multiJobCount = statusKerja === 'Belum Bekerja' ? 0 : pekerjaanLainnya.length;
+        if (multiJobCount > 0 && alumniId) {
+            multiJobAlumniIds.add(alumniId);
+        }
+
+        const multiJobButton =
+            multiJobCount > 0 && alumniId
+                ? `
+                    <button
+                        type="button"
+                        class="multi-job-toggle"
+                        data-alumni-id="${alumniId}"
+                        title="Tampilkan pekerjaan sampingan"
+                        style="border:none;background:#ede9fe;color:#5b21b6;border:1px solid #c4b5fd;border-radius:10px;padding:6px 10px;font-size:11px;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;gap:6px;"
+                    >
+                        MULTI-JOB ${multiJobCount}
+                    </button>
+                `
+                : '';
+
         const popup = `
             <div class="premium-popup">
 
@@ -833,6 +1263,7 @@ function filterDanTampilkanMarker() {
                                 ? 'Belum Bekerja'
                                 : linearitas}
                         </span>
+                        ${multiJobButton}
                     </div>
 
                 </div>
@@ -913,15 +1344,24 @@ function filterDanTampilkanMarker() {
             marker.closeTooltip();
         });
 
-        window.wadahNormal.addLayer(marker);
+        if (statusKerja === 'Belum Bekerja') {
+            window.layerBelumBekerja.addLayer(marker);
+        } else {
+            window.layerKerjaUtama.addLayer(marker);
+        }
+
         window.wadahCluster.addLayer(marker);
 
         arrayMarker[index] = marker;
 
+        if (alumniId) {
+            alumniIdsDisplayed.add(alumniId);
+        }
+
         if (statusKerja === 'Belum Bekerja') {
-            jumlahBelumBekerja++;
+            if (alumniId) alumniIdsBelumBekerja.add(alumniId);
         } else {
-            jumlahBekerja++;
+            if (alumniId) alumniIdsBekerja.add(alumniId);
         }
 
         // =====================================
@@ -967,7 +1407,193 @@ function filterDanTampilkanMarker() {
 
     });
 
-    perbaruiLegendaStatus(jumlahBekerja, jumlahBelumBekerja);
+    const studiLanjutData =
+        (window.mapPayload && Array.isArray(window.mapPayload.studi_lanjut_markers) && window.mapPayload.studi_lanjut_markers) ||
+        (Array.isArray(window.studiLanjutData) && window.studiLanjutData) ||
+        [];
+
+    const tampilkanStudiLanjut =
+        statusFilterIsSemua || statusFilters.includes('studi_lanjut');
+
+    if (Array.isArray(studiLanjutData)) {
+        studiLanjutData.forEach(function (row) {
+            const alumniId = (row.alumni_id ?? '').toString();
+            const nama = row.nama_lengkap || row.nama || '';
+
+            const tahunLulus = row.tahun_lulus_alumni ?? row.tahun_lulus ?? '-';
+            const angkatan = String(row.angkatan || '').trim();
+
+            const kampusRaw = (row.kampus || '').trim();
+            const kampus = kampusRaw ? kampusRaw : 'Kampus tidak diketahui';
+
+            const jenjangRaw = (row.jenjang || '').trim();
+            const jenjang = jenjangRaw ? jenjangRaw : 'Jenjang tidak diketahui';
+
+            const prodiRaw = (row.program_studi || '').trim();
+            const programStudi = prodiRaw ? prodiRaw : 'Program studi tidak diketahui';
+
+            const statusStudiRaw = (row.status || '').trim();
+            const statusStudi = statusStudiRaw ? statusStudiRaw : 'Status tidak diketahui';
+
+            const tahunMasuk = row.tahun_masuk ?? null;
+            const tahunLulusStudi = row.tahun_lulus_studi ?? row.tahun_lulus ?? null;
+
+            const latitude = parseFloat(row.latitude);
+            const longitude = parseFloat(row.longitude);
+
+            if (!latitude || !longitude) {
+                return;
+            }
+
+            let cocokKeyword = true;
+            if (keyword !== '') {
+                const n = (nama || '').toLowerCase();
+
+                const teksInstansi = [
+                    kampus || '',
+                    jenjang || '',
+                    programStudi || ''
+                ].join(' ').toLowerCase();
+
+                const teksWilayah = [
+                    row.kota_kampus || '',
+                    row.provinsi_kampus || '',
+                    row.alamat_kampus || ''
+                ].join(' ').toLowerCase();
+
+                const cocokNama = scopes.nama && n.includes(keyword);
+                const cocokInstansi = scopes.perusahaan && teksInstansi.includes(keyword);
+
+                let cocokWilayah = false;
+                if (scopes.wilayah) {
+                    cocokWilayah =
+                        cocokFrasaWilayah(row.kota_kampus || '', keyword) ||
+                        cocokFrasaWilayah(row.provinsi_kampus || '', keyword) ||
+                        cocokFrasaWilayah(teksWilayah, keyword);
+                }
+
+                cocokKeyword = cocokNama || cocokInstansi || cocokWilayah;
+            }
+
+            let cocokTahun = true;
+            if (tahunFilter !== 'semua') {
+                const selisih =
+                    new Date().getFullYear() -
+                    parseInt(tahunLulus);
+
+                cocokTahun =
+                    selisih >= 0 &&
+                    selisih <= parseInt(tahunFilter);
+            }
+
+            const cocokAngkatan =
+                angkatanFilter === 'semua' ||
+                angkatan === angkatanFilter;
+
+            if (!cocokKeyword || !cocokTahun || !cocokAngkatan) {
+                return;
+            }
+
+            if (alumniId) {
+                alumniIdsStudiLanjutMatched.add(alumniId);
+            }
+
+            if (!tampilkanStudiLanjut) {
+                return;
+            }
+
+            const icon = L.icon({
+                iconUrl: '/img/Icon studi lanjut.png',
+                iconSize: [34, 48],
+                iconAnchor: [17, 48],
+                popupAnchor: [0, -42]
+            });
+
+            const marker = L.marker([latitude, longitude], { icon });
+
+            const avatar =
+                'https://ui-avatars.com/api/?name=' +
+                encodeURIComponent(nama) +
+                '&background=004a87&color=fff&size=60&rounded=true';
+
+            const lokasiKampus = [row.kota_kampus, row.provinsi_kampus]
+                .filter(x => (x || '').toString().trim() !== '')
+                .join(', ');
+
+            const periode = `${tahunMasuk ?? '-'} - ${tahunLulusStudi ? tahunLulusStudi : 'Sekarang'}`;
+
+            const popup = `
+                <div class="premium-popup">
+                    <div class="popup-cover"></div>
+
+                    <div class="popup-avatar">
+                        <img src="${avatar}">
+                    </div>
+
+                    <div class="popup-body">
+                        <h3 class="popup-name">${nama}</h3>
+
+                        <span class="popup-year">
+                            Lulusan Tahun ${tahunLulus}
+                        </span>
+
+                        <div class="popup-info">
+                            <div class="info-row">
+                                <span class="icon">🎓</span>
+                                <span><b>${kampus}</b></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="icon">📚</span>
+                                <span>${jenjang} - ${programStudi}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="icon">ℹ️</span>
+                                <span>Status: ${statusStudi}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="icon">🗓️</span>
+                                <span>Periode: ${periode}</span>
+                            </div>
+                            ${lokasiKampus ? `
+                                <div class="info-row">
+                                    <span class="icon">📍</span>
+                                    <span>${lokasiKampus}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <div class="popup-footer">
+                            <span class="popup-badge">Studi Lanjut</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            marker.bindPopup(popup);
+
+            bindTooltipDenganDelay(marker, `
+                <div><b>${nama}</b></div>
+                <div>Studi Lanjut</div>
+                <div>${kampus}</div>
+                <div>${jenjang} - ${programStudi}</div>
+            `);
+
+            window.studiLanjutLayerGroup.addLayer(marker);
+
+            if (alumniId) {
+                alumniIdsDisplayed.add(alumniId);
+                alumniIdsStudiLanjut.add(alumniId);
+            }
+        });
+    }
+
+    perbaruiLegendaStatus(
+        alumniIdsDisplayed.size,
+        alumniIdsBekerja.size,
+        alumniIdsBelumBekerja.size,
+        multiJobAlumniIds.size,
+        alumniIdsStudiLanjutMatched.size
+    );
     window.perbaruiTampilanPeta();
 
     const container =
@@ -992,15 +1618,19 @@ function filterDanTampilkanMarker() {
     }
 }
 
-function perbaruiLegendaStatus(jumlahBekerja, jumlahBelumBekerja) {
+function perbaruiLegendaStatus(jumlahTotalAlumni, jumlahBekerja, jumlahBelumBekerja, jumlahMultiJob, jumlahStudiLanjut) {
 
     const bekerjaEl = document.getElementById('legend-bekerja-count');
     const belumEl = document.getElementById('legend-belum-count');
     const totalEl = document.getElementById('legend-total-count');
+    const multiJobEl = document.getElementById('legend-multijob-count');
+    const studiEl = document.getElementById('legend-studi-count');
 
     if (bekerjaEl) bekerjaEl.textContent = `(${jumlahBekerja} orang)`;
     if (belumEl) belumEl.textContent = `(${jumlahBelumBekerja} orang)`;
-    if (totalEl) totalEl.textContent = `${jumlahBekerja + jumlahBelumBekerja} orang`;
+    if (totalEl) totalEl.textContent = `${jumlahTotalAlumni} orang`;
+    if (multiJobEl) multiJobEl.textContent = `(${jumlahMultiJob ?? 0} orang)`;
+    if (studiEl) studiEl.textContent = `(${jumlahStudiLanjut ?? 0} orang)`;
 }
 
 // ======================================================

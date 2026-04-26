@@ -82,10 +82,11 @@
 
                             <div class="filter-section">
                                 <label class="filter-label">Status Kerja:</label>
-                                <select id="filter-status-kerja" class="custom-select">
-                                    <option value="semua">Semua Status Kerja</option>
-                                    <option value="Bekerja">Sedang Bekerja</option>
-                                    <option value="Belum Bekerja">Belum Bekerja</option>
+                                <select id="filter-status-kerja" class="custom-select" multiple>
+                                    <option value="semua">Semua Status</option>
+                                    <option value="bekerja" selected data-icon="{{ asset('img/icon alumni kerja.png') }}">Sedang Bekerja</option>
+                                    <option value="belum_bekerja" selected data-icon="{{ asset('img/icon alumni nganggur.png') }}">Belum Bekerja</option>
+                                    <option value="studi_lanjut" data-icon="{{ asset('img/Icon studi lanjut.png') }}">Studi Lanjut</option>
                                 </select>
                             </div>
 

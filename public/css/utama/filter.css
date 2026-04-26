@@ -338,6 +338,22 @@
     border-bottom: 1px solid rgba(226, 232, 240, 0.5);
 }
 
+.custom-option .custom-option-left {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.custom-option .custom-option-icon {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    flex: 0 0 auto;
+    -webkit-filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.22));
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.22));
+}
+
 .custom-option:last-child {
     border-bottom: none;
 }

@@ -339,7 +339,7 @@
 
                         @foreach ($alumni->pekerjaan->sortByDesc('is_current') as $job)
                             @php
-                                $lokasi = $job->perusahaan?->lokasiUtama ?? $job->perusahaan?->lokasi->first();
+                                $lokasi = $job->perusahaan?->lokasiAktif ?? $job->perusahaan?->lokasi->sortByDesc('id')->first();
 
                                 $warna = match ($job->status_karir) {
                                     'Utama' => 'utama',
