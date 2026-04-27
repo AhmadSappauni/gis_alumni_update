@@ -16,7 +16,8 @@ document.addEventListener("DOMContentLoaded", function() {
     const panahListWilayah = document.getElementById('polygon-wilayah-arrow');
 
     const kompasEl = document.querySelector('.kompas-ui');
-    const legendaEl = document.querySelector('.status-legend');
+    const legendaMarkerEl = document.querySelector('.status-legend');
+    const legendaChoroplethEl = document.querySelector('.choropleth-legend');
 
     const scaleBarEl =
         (window.scaleBarControl && window.scaleBarControl.getContainer && window.scaleBarControl.getContainer()) ||
@@ -67,6 +68,14 @@ document.addEventListener("DOMContentLoaded", function() {
 
     if (tombolPolygon) {
         tombolPolygon.addEventListener('change', function () {
+            if ((window.visualizationMode || 'marker').toString() === 'choropleth' && !this.checked) {
+                this.checked = true;
+                if (typeof window.showToastKecil === 'function') {
+                    window.showToastKecil('Mode choropleth membutuhkan polygon aktif');
+                }
+                return;
+            }
+
             window.statusPolygonAktif = this.checked;
 
             if (typeof window.setSemuaStatusPolygonWilayah === 'function') {
@@ -88,10 +97,12 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     if (tombolLegenda) {
-        setVisible(legendaEl, tombolLegenda.checked);
+        setVisible(legendaMarkerEl, tombolLegenda.checked);
+        setVisible(legendaChoroplethEl, tombolLegenda.checked);
 
         tombolLegenda.addEventListener('change', function () {
-            setVisible(legendaEl, this.checked);
+            setVisible(legendaMarkerEl, this.checked);
+            setVisible(legendaChoroplethEl, this.checked);
         });
     }
 

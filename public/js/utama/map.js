@@ -144,16 +144,49 @@ window.defaultStatusPolygonWilayah = true;
 
 function getStyleWilayah(feature) {
     var namaKab = getNamaWilayah(feature);
+    const key = getKeyWilayah(namaKab);
+
+    const mode = (window.visualizationMode || 'marker').toString();
+    const choroplethTotal =
+        (window.__choroplethStats && window.__choroplethStats[key] && Number.isFinite(window.__choroplethStats[key].total))
+            ? window.__choroplethStats[key].total
+            : 0;
+
+    const choroplethMax =
+        Number.isFinite(window.__choroplethMaxValue)
+            ? window.__choroplethMaxValue
+            : 0;
+
+    const fillColor = mode === 'choropleth'
+        ? getChoroplethColor(choroplethTotal, choroplethMax)
+        : getColor(namaKab);
 
     return {
-        fillColor: getColor(namaKab),
+        fillColor,
         weight: 1,
         opacity: 1,
         color: '#475569',
         dashArray: '3',
-        fillOpacity: 0.5
+        fillOpacity: mode === 'choropleth' ? 0.65 : 0.5
     };
 }
+
+function getChoroplethColor(value, maxValue) {
+    const v = Number(value) || 0;
+    const max = Number(maxValue) || 0;
+
+    if (!v || v === 0) return '#f1f5f9'; // abu sangat muda
+    if (!max || max === 0) return '#f1f5f9';
+
+    const ratio = v / max;
+
+    if (ratio <= 0.25) return '#FEF3C7'; // kuning muda
+    if (ratio <= 0.50) return '#FDBA74'; // orange muda
+    if (ratio <= 0.75) return '#FB923C'; // orange
+    return '#EF4444'; // merah
+}
+
+window.getChoroplethColor = getChoroplethColor;
 
 // 1. Fungsi untuk menentukan warna berdasarkan nama kabupaten
 // Kamu bisa menyesuaikan list warna ini agar estetik
@@ -177,6 +210,56 @@ const WILAYAH_CONFIG = {
 window.wilayahConfig = WILAYAH_CONFIG;
 window.wilayahRegistry = window.wilayahRegistry || {};
 
+function hitungChoroplethMaxVisible() {
+    if (!window.layerWilayahKalsel) {
+        return 0;
+    }
+
+    const stats = window.__choroplethStats || {};
+    let max = 0;
+
+    window.layerWilayahKalsel.eachLayer(function (layer) {
+        const namaWilayah = getNamaWilayah(layer.feature);
+        const key = getKeyWilayah(namaWilayah);
+
+        const visible =
+            window.statusPolygonAktif &&
+            window.statusPolygonWilayah[key] !== false;
+
+        if (!visible) {
+            return;
+        }
+
+        const total = Number(stats?.[key]?.total) || 0;
+        if (total > max) {
+            max = total;
+        }
+    });
+
+    return max;
+}
+
+window.refreshWilayahStyle = function () {
+    if (!window.layerWilayahKalsel) {
+        return;
+    }
+
+    if ((window.visualizationMode || 'marker').toString() === 'choropleth') {
+        window.__choroplethMaxValue = hitungChoroplethMaxVisible();
+        if (typeof window.updateChoroplethLegend === 'function') {
+            window.updateChoroplethLegend();
+        }
+    } else {
+        window.__choroplethMaxValue = 0;
+    }
+
+    window.layerWilayahKalsel.setStyle(getStyleWilayah);
+};
+
+if (typeof window.__DEBUG_CHOROPLETH === 'undefined') {
+    window.__DEBUG_CHOROPLETH = false;
+}
+
 function getWarnaWilayahByKey(key) {
     return WILAYAH_CONFIG[key]?.color || '#94a3b8';
 }
@@ -190,24 +273,47 @@ function getColor(namaWilayah) {
 }
 
 function getNamaWilayah(feature) {
-    return feature?.properties?.nama ||
-        feature?.properties?.NAMOBJ ||
-        feature?.properties?.KAB_KOTA ||
-        '';
+    return getPolygonRegionName(feature);
 }
 
-function normalisasiTeksWilayah(teks) {
-    return (teks || '')
+function normalizeRegionName(name) {
+    if (!name) return '';
+
+    return (name || '')
         .toString()
         .toLowerCase()
-        .replace(/kabupaten/g, '')
-        .replace(/kota/g, '')
+        .trim()
+        .replace(/^kabupaten\s+/i, '')
+        .replace(/^kab\.\s*/i, '')
+        .replace(/^kab\s+/i, '')
+        .replace(/^kota\s+/i, '')
         .replace(/\s+/g, ' ')
         .trim();
 }
 
+function normalisasiTeksWilayah(teks) {
+    return normalizeRegionName(teks);
+}
+
 function getKeyWilayah(teks) {
     return normalisasiTeksWilayah(teks);
+}
+
+window.getKeyWilayah = getKeyWilayah;
+
+function getPolygonRegionName(feature) {
+    const props = feature?.properties || {};
+
+    return props.WADMKK ||
+        props.NAMOBJ ||
+        props.NAME_2 ||
+        props.name ||
+        props.nama ||
+        props.kabupaten ||
+        props.kota ||
+        props.wilayah ||
+        props.KAB_KOTA ||
+        '';
 }
 
 function sinkronkanInteraktivitasPolygon(layer, visible) {
@@ -647,9 +753,22 @@ document.addEventListener('wilayah-panel-hover', function (e) {
 fetch('/data/data_kalsel.geojson')
     .then(response => response.json())
     .then(geojsonData => {
+        const __loggedPolygonKeys = new Set();
         window.layerWilayahKalsel = L.geoJSON(geojsonData, {
             style: getStyleWilayah,
             onEachFeature: function (feature, layer) {
+                if (window.__DEBUG_CHOROPLETH) {
+                    const raw = getPolygonRegionName(feature);
+                    const normalized = getKeyWilayah(raw);
+                    const key = normalized;
+                    if (key && !__loggedPolygonKeys.has(key)) {
+                        __loggedPolygonKeys.add(key);
+                        try {
+                            console.log('Polygon region:', raw, '=>', normalized);
+                        } catch (_) { }
+                    }
+                }
+
                 // Efek hover: warna sedikit lebih terang saat mouse di atas wilayah
                 layer.on({
                     mouseover: function (e) {
@@ -684,10 +803,47 @@ fetch('/data/data_kalsel.geojson')
                         }
 
                         window.layerWilayahKalsel.resetStyle(layer);
+                    },
+                    click: function (e) {
+                        const mode = (window.visualizationMode || 'marker').toString();
+                        if (mode !== 'choropleth') {
+                            return;
+                        }
+
+                        const namaWilayah = getNamaWilayah(feature);
+                        const key = getKeyWilayah(namaWilayah);
+                        const stats = (window.__choroplethStats && window.__choroplethStats[key]) ? window.__choroplethStats[key] : null;
+
+                        const total = stats?.total ?? 0;
+                        const bekerja = stats?.bekerja ?? 0;
+                        const belum = stats?.belum_bekerja ?? 0;
+                        const studi = stats?.studi_lanjut ?? 0;
+
+                        const html = `
+                            <div style="font-family: Inter, sans-serif; min-width: 200px;">
+                                <div style="font-weight: 900; font-size: 14px; margin-bottom: 8px; color:#0f172a;">
+                                    ${namaWilayah || '-'}
+                                </div>
+                                <div style="display:grid; gap:4px; font-size: 13px; color:#0f172a;">
+                                    <div><b>Total Alumni:</b> ${total}</div>
+                                    <div><b>Bekerja:</b> ${bekerja}</div>
+                                    <div><b>Belum Bekerja:</b> ${belum}</div>
+                                    <div><b>Studi Lanjut:</b> ${studi}</div>
+                                </div>
+                            </div>
+                        `;
+
+                        L.popup({ autoPan: true })
+                            .setLatLng(e.latlng)
+                            .setContent(html)
+                            .openOn(map);
                     }
                 });
             }
         });
+
+        // Alias agar mudah dipakai sebagai choropleth layer (menggunakan polygon yang sama).
+        window.choroplethLayer = window.layerWilayahKalsel;
 
         window.renderKontrolPolygonWilayah();
         window.perbaruiTampilanPolygon();

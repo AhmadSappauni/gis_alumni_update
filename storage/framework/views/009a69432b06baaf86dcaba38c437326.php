@@ -60,6 +60,14 @@
         </div>
     </div>
 
+    <div class="choropleth-legend is-mode-hidden" role="status" aria-live="polite">
+        <div class="choropleth-legend-title">Choropleth</div>
+        <div id="choropleth-legend-items"></div>
+        <div class="choropleth-legend-foot">
+            Max: <span id="choropleth-legend-max">0</span>
+        </div>
+    </div>
+
     <?php echo $__env->make('utama.sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     <?php echo $__env->make('utama.daftar-alumni', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     <?php echo $__env->make('utama.id-card', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
@@ -67,6 +75,7 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/leaflet-betterscale@1.0.0/L.Control.BetterScale.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-minimap/3.6.1/Control.MiniMap.min.js"></script>
     <script>

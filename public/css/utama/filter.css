@@ -20,6 +20,39 @@
     display: flex;
     flex-direction: column;
     max-height: 85vh;
+
+    transition: width 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* Mode Collapse: panel disimpan (tidak menutupi peta) */
+.filter-panel.is-collapsed {
+    width: 56px;
+}
+
+.filter-panel.is-collapsed .header-left {
+    display: none !important;
+}
+
+.filter-panel.is-collapsed .search-container,
+.filter-panel.is-collapsed .scrollable-content {
+    display: none !important;
+}
+
+.filter-panel.is-collapsed .panel-header {
+    justify-content: center;
+    padding: 12px;
+}
+
+.filter-panel.is-collapsed #toggle-filter {
+    display: none !important;
+}
+
+.filter-panel:not(.is-collapsed) .collapse-panel-btn .icon-expand {
+    display: none;
+}
+
+.filter-panel.is-collapsed .collapse-panel-btn .icon-collapse {
+    display: none;
 }
 
 /* Area Konten yang Bisa Digulir */
@@ -44,6 +77,31 @@
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.panel-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.collapse-panel-btn {
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 8px;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.collapse-panel-btn:hover {
+    background: rgba(255, 255, 255, 0.28);
+    transform: scale(1.05);
 }
 
 .header-text h3 {

@@ -1,0 +1,389 @@
+<?php $__env->startPush('styles'); ?>
+    <link rel="stylesheet" href="<?php echo e(asset('css/admin-create.css')); ?>">
+    <style>
+        /* Status Helper (Fix Kembang Kempis) */
+        #nim-status, #kota-status {
+            display: block;
+            height: 18px;
+            margin-top: 4px;
+            font-size: 11px;
+        }
+
+        /* FIX TOMBOL NAVIGASI: Kiri & Kanan */
+        .btn-navigation {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            margin-top: 40px !important;
+            padding-top: 25px !important;
+            border-top: 1px solid rgba(0,0,0,0.08) !important;
+            width: 100% !important;
+        }
+
+        #nextBtn {
+            margin-left: auto;
+            background: #004a87 !important;
+            color: white !important;
+            padding: 12px 30px !important;
+            border-radius: 12px !important;
+            font-weight: 700 !important;
+            border: none !important;
+        }
+
+        #prevBtn {
+            background: #94a3b8 !important;
+            color: white !important;
+            padding: 12px 30px !important;
+            border-radius: 12px !important;
+            font-weight: 700 !important;
+            border: none !important;
+        }
+
+        /* Step Wizard active state */
+        .step.active {
+            background: #004a87 !important;
+            border-color: #fff !important;
+            box-shadow: 0 0 0 4px rgba(0, 74, 135, 0.2) !important;
+        }
+
+        .btn-batal {
+            background: #fdb813; padding: 10px 18px; border-radius: 12px;
+            text-decoration: none; color: #004a87; font-weight: 700; font-size: 13px;
+        }
+
+        .foto-upload-preview {
+            display: none;
+            margin-top: 14px;
+            padding: 14px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0, 74, 135, 0.08);
+            align-items: center;
+            gap: 14px;
+        }
+
+        .foto-upload-preview.active {
+            display: flex;
+        }
+
+        .foto-upload-meta {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .foto-upload-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #0f172a;
+            word-break: break-word;
+        }
+
+        .foto-upload-note {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .btn-reset-foto {
+            border: none;
+            border-radius: 10px;
+            background: #fee2e2;
+            color: #b91c1c;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 10px 14px;
+            cursor: pointer;
+        }
+    </style>
+<?php $__env->stopPush(); ?>
+
+<?php $__env->startSection('content'); ?>
+<header class="top-header glass-panel">
+    <h1>Tambah Alumni Baru</h1>
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <a href="<?php echo e(route('admin.alumni.index')); ?>" class="btn-batal">← Batal</a>
+    </div>
+</header>
+
+<div class="glass-panel" style="padding: 40px; max-width: 1000px; margin: 0 auto;">
+    <div class="progress-container">
+        <div id="progress-bar"></div>
+    </div>
+    <div class="step-wizard">
+        <div class="step active" id="s1">1</div>
+        <div class="step" id="s2">2</div>
+        <div class="step" id="s3">3</div>
+    </div>
+
+    <?php if(session('error')): ?>
+    <div style="background:#fee2e2;color:#991b1b;padding:10px;margin-bottom:20px;border-radius:8px;">
+        <?php echo e(session('error')); ?>
+
+    </div>
+    <?php endif; ?>
+
+    <form action="<?php echo e(route('admin.alumni.store')); ?>" method="POST" enctype="multipart/form-data" id="wizardForm">
+        <?php echo csrf_field(); ?>
+        
+        <div class="form-step active" id="step1">
+            <h3 style="color: var(--pilkom-blue-dark); margin-bottom: 25px;">Data Pribadi & Akademik</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <label class="label-admin">NIM</label>
+                    <input type="text" name="nim" id="nim" class="custom-input-admin" placeholder="211013..." value="<?php echo e(old('nim')); ?>">
+                    <small id="nim-status"></small>
+                </div>
+                <div>
+                    <label class="label-admin">Nama Lengkap</label>
+                    <input type="text" name="nama_lengkap" class="custom-input-admin" value="<?php echo e(old('nama_lengkap')); ?>" required>
+                </div>
+                <div>
+                    <label class="label-admin">Jenis Kelamin</label>
+                    <select name="jenis_kelamin" class="custom-input-admin" required>
+                        <option value="">Pilih Jenis Kelamin</option>
+                        <option value="L" <?php echo e(old('jenis_kelamin') == 'L' ? 'selected' : ''); ?>>Laki-laki</option>
+                        <option value="P" <?php echo e(old('jenis_kelamin') == 'P' ? 'selected' : ''); ?>>Perempuan</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="label-admin">IPK</label>
+                    <input type="number" name="ipk" class="custom-input-admin" value="<?php echo e(old('ipk')); ?>" min="0" max="4" step="0.01" placeholder="Contoh: 3.75">
+                </div>
+                <div>
+                    <label class="label-admin">Angkatan</label>
+                    <input type="number" name="angkatan" class="custom-input-admin" value="<?php echo e(old('angkatan', 2021)); ?>">
+                </div>
+                <div>
+                    <label class="label-admin">Tahun Lulus</label>
+                    <input type="number" name="tahun_lulus" class="custom-input-admin" value="<?php echo e(old('tahun_lulus', 2026)); ?>">
+                </div>
+            </div>
+            <div style="margin-top: 20px;">
+                <label class="label-admin">Judul Skripsi</label>
+                <textarea name="judul_skripsi" class="custom-input-admin" rows="2"><?php echo e(old('judul_skripsi')); ?></textarea>
+            </div>
+            <div style="margin-top: 20px; background: rgba(0,74,135,0.03); padding: 20px; border-radius: 15px;">
+                <label class="label-admin">Foto Profil</label>
+                <input type="file" name="foto" id="foto" class="custom-input-admin" accept="image/*">
+                <div id="foto-preview-wrapper" class="foto-upload-preview">
+                    <img id="preview-foto" alt="Preview foto profil" style="width:80px; height:80px; object-fit:cover; border-radius:15px; border:2px solid white; box-shadow:0 5px 10px rgba(0,0,0,0.1);">
+                    <div class="foto-upload-meta">
+                        <div id="foto-file-name" class="foto-upload-name">Belum ada file dipilih</div>
+                        <div class="foto-upload-note">Preview akan tampil setelah gambar dipilih.</div>
+                    </div>
+                    <button type="button" id="btn-reset-foto" class="btn-reset-foto">Batalkan Foto</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-step" id="step2">
+            <h3 style="color: var(--pilkom-blue-dark); margin-bottom: 25px;">Informasi Karir</h3>
+            <div style="margin-bottom: 25px; background: #fff4e5; padding: 15px; border-radius: 12px; border: 1px dashed #f59e0b;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" name="is_unemployed" id="is_unemployed" style="width: 20px; height: 20px;">
+                    <span style="font-weight: 700; color: #92400e;">Alumni ini belum bekerja / Sedang mencari kerja</span>
+                </label>
+            </div>
+
+            <div id="section-pekerjaan" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <label class="label-admin">Pekerjaan / Jabatan</label>
+                    <input type="text" name="jabatan" class="custom-input-admin" value="<?php echo e(old('jabatan')); ?>" placeholder="Software Engineer">
+                </div>
+                <div>
+                    <label class="label-admin">Kategori Bidang</label>
+                    <select name="bidang_pekerjaan" class="custom-input-admin">
+                        <option>IT & Software</option>
+                        <option>Pendidikan / Guru</option>
+                        <option>Pemerintahan</option>
+                        <option>Wiraswasta</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="label-admin">Linearitas</label>
+                    <select name="linearitas" class="custom-input-admin">
+                        <option value="Sangat Erat">Sangat Erat</option>
+                        <option value="Erat">Erat</option>
+                        <option value="Cukup Erat">Cukup Erat</option>
+                        <option value="Kurang Erat">Kurang Erat</option>
+                        <option value="Tidak Erat">Tidak Erat</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="label-admin">Nama Perusahaan</label>
+                    <input type="text" name="nama_perusahaan" class="custom-input-admin" value="<?php echo e(old('nama_perusahaan')); ?>">
+                </div>
+                <div>
+                    <label class="label-admin">Estimasi Gaji (Opsional)</label>
+                    <input type="text" name="gaji_nominal" id="gaji_nominal" class="custom-input-admin" value="<?php echo e(old('gaji_nominal')); ?>" placeholder="Contoh: 5.000.000" inputmode="numeric" autocomplete="off">
+                </div>
+                <div >
+                    <label class="label-admin">Link LinkedIn</label>
+                    <input type="url" name="link_linkedin" class="custom-input-admin" value="<?php echo e(old('link_linkedin')); ?>" placeholder="https://linkedin.com/in/username">
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+                <div>
+                    <label class="label-admin">Email</label>
+                    <input type="email" name="email" class="custom-input-admin" placeholder="alumni@example.com">
+                </div>
+                <div>
+                    <label class="label-admin">No. WhatsApp</label>
+                    <input type="text" name="no_hp" class="custom-input-admin" placeholder="0812...">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-step" id="step3">
+
+            <h3 id="judul-step3"
+                style="color: var(--pilkom-blue-dark); margin-bottom: 25px;">
+                Lokasi Kerja (Pemetaan)
+            </h3>
+
+            <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:25px;">
+
+                <div>
+                    <div id="map-tambah"
+                        style="height:400px;border-radius:20px;border:4px solid white;box-shadow:0 10px 30px rgba(0,0,0,.1);">
+                    </div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:15px;">
+
+                    <div>
+                        <label class="label-admin" id="label-kota">
+                            Kota / Kabupaten Kerja
+                        </label>
+
+                        <input type="text"
+                            name="kota"
+                            id="kota"
+                            class="custom-input-admin"
+                            placeholder="Ketik nama kota..."
+                            value="<?php echo e(old('kota')); ?>">
+                            
+                        <small id="kota-status"
+                            style="
+                            display:block;
+                            margin-top:6px;
+                            font-size:12px;
+                            color:#64748b;
+                            min-height:18px;">
+                            Ketik minimal 3 huruf nama kota
+                        </small>
+                    </div>
+
+                    <div>
+                        <label class="label-admin" id="label-alamat">
+                            Alamat Kantor
+                        </label>
+
+                        <textarea name="alamat_lengkap"
+                                id="alamat_lengkap"
+                                class="custom-input-admin"
+                                rows="3"
+                                readonly
+                                placeholder="Pinpoint lokasi kantor"></textarea>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <input type="text" name="latitude" id="lat"
+                            class="custom-input-admin"
+                            placeholder="Latitude" readonly>
+
+                        <input type="text" name="longitude" id="lng"
+                            class="custom-input-admin"
+                            placeholder="Longitude" readonly>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="review-box" style="display:none; margin-top:35px; padding:25px; border-radius:20px; background: rgba(255,255,255,0.6); border: 1px solid white;">
+            <h4 style="margin-bottom:20px; color:#004a87; display:flex; align-items:center; gap:10px; font-weight: 800;">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Konfirmasi Data Alumni
+            </h4>
+            <div class="review-grid">
+                <div class="review-item"><b>Identitas</b><span id="review_nama">-</span><br><small id="review_nim" style="color:#64748b"></small><br><small id="review_jenis_kelamin" style="color:#64748b"></small></div>
+                <div class="review-item"><b>Akademik</b><span id="review_angkatan_lulus">-</span><br><small id="review_ipk" style="color:#64748b"></small></div>
+                <div class="review-item"><b>Karir</b><span id="review_jabatan">-</span><br><small id="review_perusahaan" style="color:#64748b"></small></div>
+                <div class="review-item"><b>Lokasi</b><span id="review_kota">-</span></div>
+            </div>
+        </div>
+
+        <div class="btn-navigation">
+            <button type="button" class="btn-tambah" id="prevBtn" onclick="nextPrev(-1)">Sebelumnya</button>
+            <button type="button" class="btn-tambah" id="nextBtn" onclick="nextPrev(1)">Lanjut</button>
+        </div>
+    </form>
+</div>
+<?php $__env->stopSection(); ?>
+
+<?php $__env->startPush('scripts'); ?>
+<script src="<?php echo e(asset('js/admin/create.js')); ?>"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+    const cek = document.getElementById('is_unemployed');
+
+    const judul = document.getElementById('judul-step3');
+    const labelKota = document.getElementById('label-kota');
+    const labelAlamat = document.getElementById('label-alamat');
+
+    const jabatan = document.querySelector('[name="jabatan"]');
+    const bidang = document.querySelector('[name="bidang_pekerjaan"]');
+    const linearitas = document.querySelector('[name="linearitas"]');
+    const perusahaan = document.querySelector('[name="nama_perusahaan"]');
+
+    function updateStatusForm(){
+
+        if(cek.checked){
+
+            // Ubah step 3 jadi domisili
+            judul.innerText = 'Domisili Alumni Saat Ini';
+            labelKota.innerText = 'Kota / Kabupaten Domisili';
+            labelAlamat.innerText = 'Alamat Tempat Tinggal';
+
+            document.getElementById('alamat_lengkap')
+                .placeholder = 'Pinpoint lokasi domisili';
+
+            // Disable data kerja
+            jabatan.value = '-';
+            perusahaan.value = '-';
+
+            jabatan.readOnly = true;
+            perusahaan.readOnly = true;
+
+            bidang.disabled = true;
+            linearitas.disabled = true;
+        }
+        else{
+
+            judul.innerText = 'Lokasi Kerja (Pemetaan)';
+            labelKota.innerText = 'Kota / Kabupaten Kerja';
+            labelAlamat.innerText = 'Alamat Kantor';
+
+            document.getElementById('alamat_lengkap')
+                .placeholder = 'Pinpoint lokasi kantor';
+
+            jabatan.readOnly = false;
+            perusahaan.readOnly = false;
+
+            bidang.disabled = false;
+            linearitas.disabled = false;
+        }
+    }
+
+    cek.addEventListener('change', updateStatusForm);
+
+    updateStatusForm();
+
+});
+</script>
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('admin.layout', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_3\resources\views/admin/create.blade.php ENDPATH**/ ?>

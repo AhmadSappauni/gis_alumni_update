@@ -13,6 +13,282 @@
 
 let arrayMarker = [];
 
+function normalisasiModeVisualisasi(mode) {
+    const value = (mode || '').toString().trim().toLowerCase();
+
+    if (value === 'choropleth') return 'choropleth';
+    if (value === 'heatmap') return 'heatmap';
+    return 'marker';
+}
+
+function sinkronkanLegendaModeVisualisasi() {
+    const mode = normalisasiModeVisualisasi(window.visualizationMode || 'marker');
+
+    const legendaMarkerEl = document.querySelector('.status-legend');
+    const legendaChoroplethEl = document.querySelector('.choropleth-legend');
+
+    if (legendaMarkerEl) {
+        legendaMarkerEl.classList.toggle('is-mode-hidden', mode !== 'marker');
+    }
+
+    if (legendaChoroplethEl) {
+        legendaChoroplethEl.classList.toggle('is-mode-hidden', mode !== 'choropleth');
+    }
+}
+
+function sinkronkanSelectModeVisualisasi(mode) {
+    const candidates = [
+        document.getElementById('visualization-mode-ui'),
+        document.getElementById('filter-visualization-mode')
+    ].filter(Boolean);
+
+    if (!candidates.length) {
+        return;
+    }
+
+    const next = normalisasiModeVisualisasi(mode);
+
+    candidates.forEach(function (el) {
+        if (el.value !== next) {
+            el.value = next;
+        }
+    });
+
+    if (typeof window.syncCustomSelectValue === 'function') {
+        window.syncCustomSelectValue('visualization-mode-ui', next);
+        window.syncCustomSelectValue('filter-visualization-mode', next);
+    }
+}
+
+function updateChoroplethLegend() {
+    const maxEl = document.getElementById('choropleth-legend-max');
+    const itemsEl = document.getElementById('choropleth-legend-items');
+    const footEl = document.querySelector('.choropleth-legend-foot');
+
+    if (!maxEl || !itemsEl) {
+        return;
+    }
+
+    const maxValue =
+        Number.isFinite(window.__choroplethMaxValue)
+            ? window.__choroplethMaxValue
+            : 0;
+
+    const max = Math.max(0, Math.floor(Number(maxValue) || 0));
+    maxEl.textContent = String(max);
+
+    if (footEl) {
+        footEl.classList.toggle('is-hidden', max <= 0);
+    }
+
+    const colorFn =
+        (typeof window.getChoroplethColor === 'function' && window.getChoroplethColor) ||
+        (typeof getChoroplethColor === 'function' && getChoroplethColor) ||
+        function (value, maxValue) {
+            const v = Number(value) || 0;
+            const m = Number(maxValue) || 0;
+            if (!v || v === 0) return '#f1f5f9';
+            if (!m || m === 0) return '#f1f5f9';
+            const ratio = v / m;
+            if (ratio <= 0.25) return '#FEF3C7';
+            if (ratio <= 0.50) return '#FDBA74';
+            if (ratio <= 0.75) return '#FB923C';
+            return '#EF4444';
+        };
+
+    const legendItems = [];
+
+    legendItems.push({
+        color: '#f1f5f9',
+        label: 'Tidak ada data (0)'
+    });
+
+    if (max <= 0) {
+        itemsEl.innerHTML = legendItems.map(renderLegendItem).join('');
+        return;
+    }
+
+    if (max === 1) {
+        legendItems.push({
+            color: colorFn(1, 1),
+            label: 'Tertinggi (1 alumni)'
+        });
+
+        itemsEl.innerHTML = legendItems.map(renderLegendItem).join('');
+        return;
+    }
+
+    if (max <= 5) {
+        for (let i = 1; i <= max; i++) {
+            legendItems.push({
+                color: colorFn(i, max),
+                label: `${i} alumni`
+            });
+        }
+
+        itemsEl.innerHTML = legendItems.map(renderLegendItem).join('');
+        return;
+    }
+
+    const bins = [
+        { name: 'Rendah', from: 0, to: 0.25, percent: '≤25%' },
+        { name: 'Sedang', from: 0.25, to: 0.50, percent: '26–50%' },
+        { name: 'Tinggi', from: 0.50, to: 0.75, percent: '51–75%' },
+        { name: 'Tertinggi', from: 0.75, to: 1.00, percent: '76–100%' }
+    ];
+
+    bins.forEach(function (bin, index) {
+        const min = Math.floor(bin.from * max) + 1;
+        const maxBin = index === bins.length - 1 ? max : Math.floor(bin.to * max);
+
+        if (maxBin < min) {
+            return;
+        }
+
+        const rangeText = min === maxBin ? `${min}` : `${min}–${maxBin}`;
+        const sampleValue = maxBin;
+
+        legendItems.push({
+            color: colorFn(sampleValue, max),
+            label: `${bin.name} (${rangeText} alumni • ${bin.percent})`
+        });
+    });
+
+    itemsEl.innerHTML = legendItems.map(renderLegendItem).join('');
+
+    function renderLegendItem(item) {
+        const safeColor = item?.color || '#f1f5f9';
+        const safeLabel = (item?.label || '').toString();
+
+        return `
+            <div class="choropleth-legend-item">
+                <span class="choropleth-swatch" style="--choropleth-color:${safeColor};" aria-hidden="true"></span>
+                <span>${safeLabel}</span>
+            </div>
+        `;
+    }
+}
+
+window.updateChoroplethLegend = updateChoroplethLegend;
+
+window.clearHeatmapLayer = function () {
+    if (typeof map === 'undefined' || !map) {
+        return;
+    }
+
+    if (window.heatmapLayer && map.hasLayer(window.heatmapLayer)) {
+        map.removeLayer(window.heatmapLayer);
+    }
+};
+
+window.updateHeatmapLayer = function (points) {
+    if (typeof map === 'undefined' || !map) {
+        return;
+    }
+
+    const mode = normalisasiModeVisualisasi(window.visualizationMode || 'marker');
+    if (mode !== 'heatmap') {
+        window.clearHeatmapLayer();
+        return;
+    }
+
+    if (typeof L === 'undefined' || typeof L.heatLayer !== 'function') {
+        return;
+    }
+
+    const safePoints = Array.isArray(points) ? points : [];
+
+    if (!safePoints.length) {
+        window.clearHeatmapLayer();
+        return;
+    }
+
+    const maxDensity = Math.max.apply(null, safePoints.map(p => Number(p?.[2]) || 1));
+
+    const config = {
+        radius: 28,
+        blur: 22,
+        maxZoom: 17,
+        max: Number.isFinite(maxDensity) ? maxDensity : 1,
+        minOpacity: 0.35,
+        gradient: {
+            0.2: '#87CEFA',
+            0.4: '#00FF00',
+            0.6: '#FFFF00',
+            0.8: '#FFA500',
+            1.0: '#FF0000'
+        }
+    };
+
+    if (window.heatmapLayer && map.hasLayer(window.heatmapLayer)) {
+        map.removeLayer(window.heatmapLayer);
+    }
+
+    window.heatmapLayer = L.heatLayer(safePoints, config);
+    window.heatmapLayer.addTo(map);
+};
+
+window.setVisualizationMode = function (mode, options) {
+    const next = normalisasiModeVisualisasi(mode);
+    const rebuildMarkers =
+        options && typeof options.rebuildMarkers === 'boolean'
+            ? options.rebuildMarkers
+            : (next === 'marker');
+
+    window.visualizationMode = next;
+
+    sinkronkanSelectModeVisualisasi(next);
+    sinkronkanLegendaModeVisualisasi();
+
+    // Pastikan polygon choropleth terlihat saat mode choropleth.
+    if (next === 'choropleth') {
+        window.statusPolygonAktif = true;
+        const togglePolygon = document.getElementById('toggle-polygon-map');
+        if (togglePolygon) {
+            togglePolygon.checked = true;
+        }
+
+        if (typeof window.perbaruiTampilanPolygon === 'function') {
+            window.perbaruiTampilanPolygon();
+        }
+    }
+
+    // Kelola heatmap layer
+    if (next !== 'heatmap') {
+        window.clearHeatmapLayer();
+    } else {
+        window.updateHeatmapLayer(window.__heatmapPoints || []);
+    }
+
+    // Refresh style polygon (default vs choropleth)
+    if (typeof window.refreshWilayahStyle === 'function') {
+        window.refreshWilayahStyle();
+    }
+
+    // Sembunyikan seluruh marker saat bukan marker view
+    if (next !== 'marker') {
+        initMarkerGroups();
+        initMultiJobStorage();
+
+        try {
+            window.mainAlumniLayerGroup && window.mainAlumniLayerGroup.clearLayers();
+            window.mainAlumniClusterGroup && window.mainAlumniClusterGroup.clearLayers();
+            window.studiLanjutLayerGroup && window.studiLanjutLayerGroup.clearLayers();
+            window.studiLanjutClusterGroup && window.studiLanjutClusterGroup.clearLayers();
+        } catch (_) { }
+
+        clearMultiJobLayers();
+    }
+
+    if (typeof window.perbaruiTampilanPeta === 'function') {
+        window.perbaruiTampilanPeta();
+    }
+
+    if (next === 'marker' && rebuildMarkers && typeof window.filterDanTampilkanMarker === 'function') {
+        window.filterDanTampilkanMarker();
+    }
+};
+
 function showToastKecil(message) {
     const text = (message || '').toString().trim();
     if (!text) {
@@ -34,6 +310,8 @@ function showToastKecil(message) {
     setTimeout(() => el.classList.remove('is-show'), ttl);
     setTimeout(() => el.remove(), ttl + 450);
 }
+
+window.showToastKecil = showToastKecil;
 
 function initMultiJobStorage() {
     if (!window.multiJobLayerGroup) {
@@ -129,6 +407,10 @@ window.statusClusterAktif = true;
 document.addEventListener("DOMContentLoaded", function () {
 
     initMarkerGroups();
+
+    window.visualizationMode = normalisasiModeVisualisasi(window.visualizationMode || 'marker');
+    sinkronkanSelectModeVisualisasi(window.visualizationMode);
+    sinkronkanLegendaModeVisualisasi();
 
     bindFilterEvents();
 
@@ -375,6 +657,30 @@ function getCariBerdasarkanScopes() {
 // ======================================================
 function bindFilterEvents() {
 
+    const filterPanel = document.querySelector('.filter-panel');
+    const collapsePanelBtn = document.getElementById('collapse-filter-panel');
+
+    const setPanelCollapsed = (collapsed) => {
+        if (!filterPanel) {
+            return;
+        }
+
+        const isCollapsed = !!collapsed;
+        filterPanel.classList.toggle('is-collapsed', isCollapsed);
+
+        if (collapsePanelBtn) {
+            collapsePanelBtn.setAttribute('aria-expanded', (!isCollapsed).toString());
+        }
+    };
+
+    collapsePanelBtn?.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const isCollapsed = !!filterPanel?.classList.contains('is-collapsed');
+        setPanelCollapsed(!isCollapsed);
+    });
+
     document.getElementById('search-category')
         ?.addEventListener('change', function () {
             const keyword =
@@ -425,6 +731,15 @@ function bindFilterEvents() {
 
     document.getElementById('filter-angkatan')
         ?.addEventListener('change', filterDanTampilkanMarker);
+
+    ['visualization-mode-ui', 'filter-visualization-mode'].forEach(function (id) {
+        document.getElementById(id)
+            ?.addEventListener('change', function () {
+                if (typeof window.setVisualizationMode === 'function') {
+                    window.setVisualizationMode(this.value);
+                }
+            });
+    });
 
     document.getElementById('btn-search')
         ?.addEventListener('click', handleSearchSubmit);
@@ -825,6 +1140,8 @@ window.resetSemuaFilter = function () {
         window.syncCustomSelectValue('filter-status-kerja', ['bekerja', 'belum_bekerja']);
         window.syncCustomSelectValue('filter-tahun', 'semua');
         window.syncCustomSelectValue('filter-angkatan', 'semua');
+        window.syncCustomSelectValue('visualization-mode-ui', 'marker');
+        window.syncCustomSelectValue('filter-visualization-mode', 'marker');
     } else {
         const ids = [
             'search-category',
@@ -832,7 +1149,9 @@ window.resetSemuaFilter = function () {
             'filter-bidang',
             'filter-status-kerja',
             'filter-tahun',
-            'filter-angkatan'
+            'filter-angkatan',
+            'visualization-mode-ui',
+            'filter-visualization-mode'
         ];
 
         ids.forEach(id => {
@@ -842,11 +1161,20 @@ window.resetSemuaFilter = function () {
                     Array.from(element.options || []).forEach(function (opt) {
                         opt.selected = (opt.value === 'bekerja' || opt.value === 'belum_bekerja');
                     });
+                } else if (id === 'visualization-mode-ui' || id === 'filter-visualization-mode') {
+                    element.value = 'marker';
                 } else {
                     element.value = 'semua';
                 }
             }
         });
+    }
+
+    if (typeof window.setVisualizationMode === 'function') {
+        window.setVisualizationMode('marker', { rebuildMarkers: false });
+    } else {
+        window.visualizationMode = 'marker';
+        sinkronkanLegendaModeVisualisasi();
     }
 
     const searchInput = document.getElementById('search-input');
@@ -878,6 +1206,11 @@ window.perbaruiTampilanPeta = function () {
             map.removeLayer(layer);
         }
     });
+
+    const mode = normalisasiModeVisualisasi(window.visualizationMode || 'marker');
+    if (mode !== 'marker') {
+        return;
+    }
 
     map.addLayer(window.statusClusterAktif ? mainCluster : mainNormal);
 
@@ -1023,13 +1356,304 @@ function filterDanTampilkanMarker() {
     initMarkerGroups();
     initMultiJobStorage();
 
+    const visualizationMode = normalisasiModeVisualisasi(window.visualizationMode || 'marker');
+    const markerMode = visualizationMode === 'marker';
+
+    const choroplethStats = {};
+    const heatBuckets = new Map();
+    const heatSeenMain = new Set();
+    const heatSeenStudi = new Set();
+    const seenRegionTotal = new Set();
+    const seenRegionCategory = new Set();
+
+    function ensureRegionStats(key) {
+        if (!key) {
+            return null;
+        }
+
+        if (!choroplethStats[key]) {
+            choroplethStats[key] = {
+                total: 0,
+                bekerja: 0,
+                belum_bekerja: 0,
+                studi_lanjut: 0
+            };
+        }
+
+        return choroplethStats[key];
+    }
+
+    function getWilayahKeyDariRow(row) {
+        const fromPayload = (row && row.wilayah_key) ? row.wilayah_key.toString().trim() : '';
+
+        const getKey = (value) => {
+            if (typeof window.getKeyWilayah === 'function') {
+                return window.getKeyWilayah(value);
+            }
+
+            if (typeof getKeyWilayah === 'function') {
+                return getKeyWilayah(value);
+            }
+
+            return (value || '').toString().trim().toLowerCase();
+        };
+
+        const knownKeys = Object.keys(window.wilayahRegistry || {});
+        const knownFallback = Object.keys(window.wilayahConfig || {});
+        const allKeys = knownKeys.length ? knownKeys : knownFallback;
+        const knownKeySet = new Set(allKeys);
+
+        const tryExactKey = (raw) => {
+            const key = getKey(raw);
+            if (key && knownKeySet.has(key)) {
+                return key;
+            }
+            return '';
+        };
+
+        const resolveFromText = (text) => {
+            const t = (text || '').toString();
+            if (!t || !allKeys.length) {
+                return '';
+            }
+
+            let best = '';
+            let bestLen = 0;
+
+            allKeys.forEach(function (k) {
+                if (!k) return;
+
+                // Cek frasa utuh agar "banjar" tidak match ke "banjarbaru"
+                if (cocokFrasaWilayah(t, k)) {
+                    const len = k.length;
+                    if (len > bestLen) {
+                        best = k;
+                        bestLen = len;
+                    }
+                }
+            });
+
+            return best;
+        };
+
+        if (fromPayload) {
+            const exact = tryExactKey(fromPayload);
+            if (exact) {
+                return exact;
+            }
+        }
+
+        const kota = (row && (row.kota || row.kota_kampus || '')) ? (row.kota || row.kota_kampus || '') : '';
+        if (kota) {
+            const exact = tryExactKey(kota);
+            if (exact) {
+                return exact;
+            }
+        }
+
+        const alamat = (row && (row.alamat || row.alamat_kampus || row.alamat_lengkap || ''))
+            ? (row.alamat || row.alamat_kampus || row.alamat_lengkap || '')
+            : '';
+
+        const provinsi = (row && (row.provinsi || row.provinsi_kampus || ''))
+            ? (row.provinsi || row.provinsi_kampus || '')
+            : '';
+
+        const teks = [kota, alamat, provinsi, fromPayload].filter(Boolean).join(' ');
+        const match = resolveFromText(teks);
+        if (match) {
+            if (window.__DEBUG_CHOROPLETH) {
+                try {
+                    console.log('Choropleth region resolved:', { kota, alamat, provinsi, fromPayload, match });
+                } catch (_) { }
+            }
+            return match;
+        }
+
+        // Fallback: tetap kembalikan key hasil normalisasi agar tidak blank.
+        return getKey(kota || fromPayload || provinsi);
+    }
+
+    function getWilayahKeyDariKoordinat(lat, lng) {
+        const a = Number(lat);
+        const b = Number(lng);
+        if (!Number.isFinite(a) || !Number.isFinite(b)) {
+            return '';
+        }
+
+        const registry = window.wilayahRegistry || {};
+        const keys = Object.keys(registry);
+        if (!keys.length) {
+            return '';
+        }
+
+        const extractPolygons = (geometry) => {
+            const type = geometry?.type || '';
+            const coords = geometry?.coordinates;
+            if (!Array.isArray(coords)) {
+                return [];
+            }
+
+            if (type === 'Polygon') {
+                return [coords];
+            }
+
+            if (type === 'MultiPolygon') {
+                return coords;
+            }
+
+            return [];
+        };
+
+        const pointInRing = (x, y, ring) => {
+            if (!Array.isArray(ring) || ring.length < 3) {
+                return false;
+            }
+
+            let inside = false;
+            for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+                const xi = Number(ring[i]?.[0]);
+                const yi = Number(ring[i]?.[1]);
+                const xj = Number(ring[j]?.[0]);
+                const yj = Number(ring[j]?.[1]);
+
+                if (!Number.isFinite(xi) || !Number.isFinite(yi) || !Number.isFinite(xj) || !Number.isFinite(yj)) {
+                    continue;
+                }
+
+                const intersect =
+                    ((yi > y) !== (yj > y)) &&
+                    (x < ((xj - xi) * (y - yi)) / (yj - yi) + xi);
+
+                if (intersect) {
+                    inside = !inside;
+                }
+            }
+            return inside;
+        };
+
+        const pointInPolygonRings = (x, y, rings) => {
+            if (!Array.isArray(rings) || rings.length === 0) {
+                return false;
+            }
+
+            if (!pointInRing(x, y, rings[0])) {
+                return false;
+            }
+
+            for (let i = 1; i < rings.length; i++) {
+                if (pointInRing(x, y, rings[i])) {
+                    return false;
+                }
+            }
+
+            return true;
+        };
+
+        const x = b;
+        const y = a;
+
+        for (let idx = 0; idx < keys.length; idx++) {
+            const key = keys[idx];
+            const layer = registry[key]?.layer;
+            if (layer && typeof layer.getBounds === 'function') {
+                try {
+                    const leafletBounds = layer.getBounds();
+                    if (leafletBounds && typeof leafletBounds.contains === 'function') {
+                        if (!leafletBounds.contains([y, x])) {
+                            continue;
+                        }
+                    }
+                } catch (_) { }
+            }
+            const geom = layer?.feature?.geometry;
+            const polygons = extractPolygons(geom);
+            if (!polygons.length) {
+                continue;
+            }
+
+            // Quick bounds check jika tersedia (lebih cepat sebelum point-in-polygon).
+            const bounds = registry[key]?.bounds;
+            if (bounds && Number.isFinite(bounds.minLat)) {
+                if (y < bounds.minLat || y > bounds.maxLat || x < bounds.minLng || x > bounds.maxLng) {
+                    continue;
+                }
+            }
+
+            for (let p = 0; p < polygons.length; p++) {
+                if (pointInPolygonRings(x, y, polygons[p])) {
+                    return key;
+                }
+            }
+        }
+
+        return '';
+    }
+
+    function tambahStatsChoropleth(wilayahKey, alumniUniqueId, kategoriKey) {
+        const stats = ensureRegionStats(wilayahKey);
+        if (!stats) {
+            return;
+        }
+
+        const unique = (alumniUniqueId || '').toString();
+        if (!unique) {
+            return;
+        }
+
+        const totalKey = wilayahKey + '|' + unique;
+        if (!seenRegionTotal.has(totalKey)) {
+            seenRegionTotal.add(totalKey);
+            stats.total += 1;
+        }
+
+        const cat = (kategoriKey || '').toString();
+        if (!cat || !(cat in stats)) {
+            return;
+        }
+
+        const catKey = wilayahKey + '|' + cat + '|' + unique;
+        if (!seenRegionCategory.has(catKey)) {
+            seenRegionCategory.add(catKey);
+            stats[cat] += 1;
+        }
+    }
+
+    function heatBucketKey(lat, lng) {
+        const a = Number(lat);
+        const b = Number(lng);
+        if (!Number.isFinite(a) || !Number.isFinite(b)) {
+            return '';
+        }
+
+        return a.toFixed(5) + ',' + b.toFixed(5);
+    }
+
+    function tambahHeatPoint(lat, lng, increment) {
+        const key = heatBucketKey(lat, lng);
+        if (!key) {
+            return;
+        }
+
+        const inc = Number(increment) || 1;
+
+        if (!heatBuckets.has(key)) {
+            heatBuckets.set(key, { lat: Number(lat), lng: Number(lng), count: 0 });
+        }
+
+        const current = heatBuckets.get(key);
+        current.count += inc;
+        heatBuckets.set(key, current);
+    }
+
     function normalisasiTeksWilayah(teks) {
         return (teks || '')
             .toString()
             .toLowerCase()
-            .replace(/kab\.?/g, '')
-            .replace(/kabupaten/g, '')
-            .replace(/kota/g, '')
+            .replace(/^kabupaten\s+/i, '')
+            .replace(/^kab\.\s*/i, '')
+            .replace(/^kab\s+/i, '')
+            .replace(/^kota\s+/i, '')
             .replace(/\s+/g, ' ')
             .trim();
     }
@@ -1241,6 +1865,21 @@ function filterDanTampilkanMarker() {
             !cocokAngkatan
         ) return;
 
+        const alumniUniqueId = alumniId
+            ? ('alumni:' + alumniId)
+            : ('point:' + latitude + ',' + longitude);
+
+        const wilayahKey = getWilayahKeyDariRow(item);
+        tambahStatsChoropleth(wilayahKey, alumniUniqueId, statusKey);
+
+        if (!heatSeenMain.has(alumniUniqueId)) {
+            heatSeenMain.add(alumniUniqueId);
+            tambahHeatPoint(latitude, longitude, 1);
+        }
+
+        if (!markerMode) {
+            arrayMarker[index] = { latitude, longitude };
+        } else {
         const icon = L.icon({
             iconUrl: statusKerja === 'Belum Bekerja'
                 ? '/img/icon alumni nganggur.png'
@@ -1421,6 +2060,7 @@ function filterDanTampilkanMarker() {
         mainTarget.addLayer(marker);
 
         arrayMarker[index] = marker;
+        }
 
         if (alumniId) {
             alumniIdsDisplayed.add(alumniId);
@@ -1576,6 +2216,29 @@ function filterDanTampilkanMarker() {
                 return;
             }
 
+            const studiUniqueId = alumniId
+                ? ('alumni:' + alumniId)
+                : ('studi:' + latitude + ',' + longitude);
+
+            const wilayahKeyFromCoord = getWilayahKeyDariKoordinat(latitude, longitude);
+            const wilayahKeyFromRow = getWilayahKeyDariRow(row);
+            const wilayahKey = wilayahKeyFromCoord || wilayahKeyFromRow;
+
+            if (window.__DEBUG_CHOROPLETH && wilayahKeyFromCoord && wilayahKeyFromRow && wilayahKeyFromCoord !== wilayahKeyFromRow) {
+                try {
+                    console.log('Studi lanjut wilayah mismatch:', { alumniId, wilayahKeyFromCoord, wilayahKeyFromRow, row });
+                } catch (_) { }
+            }
+            tambahStatsChoropleth(wilayahKey, studiUniqueId, 'studi_lanjut');
+
+            if (!heatSeenStudi.has(studiUniqueId)) {
+                heatSeenStudi.add(studiUniqueId);
+                tambahHeatPoint(latitude, longitude, 1);
+            }
+
+            if (!markerMode) {
+                // Mode selain marker: tidak membuat marker Leaflet (tetap hitung choropleth/heatmap).
+            } else {
             const icon = L.icon({
                 iconUrl: '/img/Icon studi lanjut.png',
                 iconSize: [34, 48],
@@ -1653,12 +2316,38 @@ function filterDanTampilkanMarker() {
             `);
 
             studiTarget.addLayer(marker);
+            }
 
             if (alumniId) {
                 alumniIdsDisplayed.add(alumniId);
                 alumniIdsStudiLanjut.add(alumniId);
             }
         });
+    }
+
+    const heatmapPoints = Array.from(heatBuckets.values()).map(function (item) {
+        return [item.lat, item.lng, item.count || 1];
+    });
+
+    window.__choroplethStats = choroplethStats;
+    window.__heatmapPoints = heatmapPoints;
+
+    if (window.__DEBUG_CHOROPLETH) {
+        try {
+            console.log('Choropleth counts:', choroplethStats);
+        } catch (_) { }
+    }
+
+    if (typeof window.refreshWilayahStyle === 'function') {
+        window.refreshWilayahStyle();
+    }
+
+    if (visualizationMode === 'heatmap' && typeof window.updateHeatmapLayer === 'function') {
+        window.updateHeatmapLayer(heatmapPoints);
+    }
+
+    if (typeof window.updateChoroplethLegend === 'function') {
+        window.updateChoroplethLegend();
     }
 
     perbaruiLegendaStatus(
@@ -1714,18 +2403,34 @@ function perbaruiLegendaStatus(jumlahTotalAlumni, jumlahBekerja, jumlahBelumBeke
 // ======================================================
 function terbangKeLokasi(index) {
 
-    const marker = arrayMarker[index];
+    const item = arrayMarker[index];
 
-    if (!marker) return;
+    if (!item) return;
 
-    const posisi = marker.getLatLng();
+    if (typeof item.getLatLng === 'function') {
+        const posisi = item.getLatLng();
 
-    map.flyTo(posisi, 16, {
+        map.flyTo(posisi, 16, {
+            animate: true,
+            duration: 1.5
+        });
+
+        setTimeout(function () {
+            item.openPopup();
+        }, 350);
+
+        return;
+    }
+
+    const latitude = parseFloat(item.latitude);
+    const longitude = parseFloat(item.longitude);
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        return;
+    }
+
+    map.flyTo([latitude, longitude], 16, {
         animate: true,
         duration: 1.5
     });
-
-    setTimeout(function () {
-        marker.openPopup();
-    }, 350);
 }

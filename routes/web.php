@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MapController;
 use App\Http\Controllers\AdminAlumniController;
+use App\Http\Controllers\StatistikController;
+use App\Http\Controllers\PublicStatistikController;
 
 /*
 |--------------------------------------------------------------------------
@@ -11,6 +13,15 @@ use App\Http\Controllers\AdminAlumniController;
 */
 
 Route::get('/', [MapController::class, 'index'])->name('map.index');
+
+/*
+|--------------------------------------------------------------------------
+| PUBLIC STATISTIK
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/statistik', [PublicStatistikController::class, 'index'])->name('statistik.index');
+Route::get('/statistik/data', [PublicStatistikController::class, 'data'])->name('statistik.data');
 
 
 /*
@@ -118,7 +129,10 @@ Route::prefix('admin')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/statistik', [AdminAlumniController::class, 'statistikPeta'])
-        ->name('admin.statistik.peta');
+    Route::get('/statistik', [StatistikController::class, 'index'])
+        ->name('admin.statistik');
+
+    Route::get('/statistik/data', [StatistikController::class, 'data'])
+        ->name('admin.statistik.data');
 
 });

@@ -60,6 +60,21 @@
     padding: 8px 2px;
 }
 
+.layer-control-item.is-column {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 8px;
+}
+
+.layer-control-item.is-column .layer-label {
+    width: 100%;
+}
+
+.layer-control-item.is-column .custom-dropdown-wrapper {
+    margin-bottom: 0;
+}
+
 .layer-label {
     font-size: 13px;
     font-weight: 700;

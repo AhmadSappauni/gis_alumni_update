@@ -9,6 +9,16 @@ use Illuminate\Support\Collection;
 
 class MapController extends Controller
 {
+    private function normalisasiWilayahKey(?string $value): string
+    {
+        $text = strtolower(trim((string) $value));
+
+        $text = preg_replace('/\b(kab\.?|kabupaten|kota)\b/u', '', $text) ?? $text;
+        $text = preg_replace('/\s+/u', ' ', $text) ?? $text;
+
+        return trim($text);
+    }
+
     private function getLokasiPerusahaan(?\App\Models\RiwayatPekerjaan $job): ?object
     {
         if (!$job) {
@@ -155,6 +165,7 @@ class MapController extends Controller
 
                 'kota'          => $lokasi->kota,
                 'provinsi'      => $lokasi->provinsi,
+                'wilayah_key'   => $this->normalisasiWilayahKey($lokasi->kota ?? $lokasi->provinsi),
                 'alamat'        => $lokasi->alamat_lengkap,
 
                 'perusahaan'    => $job->perusahaan?->nama_perusahaan,
@@ -213,6 +224,7 @@ class MapController extends Controller
 
                 'kota'          => $alamat->kota,
                 'provinsi'      => $alamat->provinsi,
+                'wilayah_key'   => $this->normalisasiWilayahKey($alamat->kota ?? $alamat->provinsi),
                 'alamat'        => $alamat->alamat_lengkap,
 
                 'perusahaan'    => null,
@@ -276,6 +288,7 @@ class MapController extends Controller
                 'alamat_kampus' => $row->alamat_kampus,
                 'kota_kampus' => $row->kota_kampus,
                 'provinsi_kampus' => $row->provinsi_kampus,
+                'wilayah_key' => $this->normalisasiWilayahKey($row->kota_kampus ?? $row->provinsi_kampus),
                 'latitude' => (float) $row->latitude,
                 'longitude' => (float) $row->longitude,
                 'jenjang' => $row->jenjang,

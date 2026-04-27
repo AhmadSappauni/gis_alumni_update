@@ -10,6 +10,17 @@
 
         <div id="layer-control-menu" class="layer-control-menu hidden">
             <div class="layer-control-section">
+                <div class="layer-control-item is-column">
+                    <span class="layer-label">Mode Visualisasi</span>
+                    <select id="visualization-mode-ui" class="custom-select">
+                        <option value="marker" selected>Marker</option>
+                        <option value="choropleth">Choropleth</option>
+                        <option value="heatmap">Heatmap</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="layer-control-section">
                 <div class="layer-control-item">
                     <span class="layer-label">Polygon Wilayah</span>
                     <label class="switch-kustom">
