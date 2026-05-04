@@ -1,4 +1,4 @@
-// ======================================================
+﻿// ======================================================
 // FILTER.JS FINAL PROFESSIONAL
 // Support:
 // ✔ Search alumni / perusahaan
@@ -69,88 +69,48 @@ function updateChoroplethLegend() {
         return;
     }
 
-    const maxValue =
-        Number.isFinite(window.__choroplethMaxValue)
-            ? window.__choroplethMaxValue
+    const breaks = Array.isArray(window.__choroplethBreaks) ? window.__choroplethBreaks : [];
+    const max =
+        breaks.length
+            ? Math.max(0, ...breaks.map(b => Number(b?.max) || 0))
             : 0;
 
-    const max = Math.max(0, Math.floor(Number(maxValue) || 0));
-    maxEl.textContent = String(max);
+    maxEl.textContent = String(Math.max(0, Math.floor(max || 0)));
 
     if (footEl) {
         footEl.classList.toggle('is-hidden', max <= 0);
     }
 
-    const colorFn =
-        (typeof window.getChoroplethColor === 'function' && window.getChoroplethColor) ||
-        (typeof getChoroplethColor === 'function' && getChoroplethColor) ||
-        function (value, maxValue) {
-            const v = Number(value) || 0;
-            const m = Number(maxValue) || 0;
-            if (!v || v === 0) return '#f1f5f9';
-            if (!m || m === 0) return '#f1f5f9';
-            const ratio = v / m;
-            if (ratio <= 0.25) return '#FEF3C7';
-            if (ratio <= 0.50) return '#FDBA74';
-            if (ratio <= 0.75) return '#FB923C';
-            return '#EF4444';
-        };
+    const colorsByLabel = {
+        'Rendah': '#FEF3C7',
+        'Sedang': '#FDBA74',
+        'Tinggi': '#FB923C',
+        'Tertinggi': '#EF4444',
+    };
 
-    const legendItems = [];
-
-    legendItems.push({
-        color: '#f1f5f9',
-        label: 'Tidak ada data (0)'
-    });
-
-    if (max <= 0) {
-        itemsEl.innerHTML = legendItems.map(renderLegendItem).join('');
-        return;
-    }
-
-    if (max === 1) {
-        legendItems.push({
-            color: colorFn(1, 1),
-            label: 'Tertinggi (1 alumni)'
-        });
-
-        itemsEl.innerHTML = legendItems.map(renderLegendItem).join('');
-        return;
-    }
-
-    if (max <= 5) {
-        for (let i = 1; i <= max; i++) {
-            legendItems.push({
-                color: colorFn(i, max),
-                label: `${i} alumni`
-            });
-        }
-
-        itemsEl.innerHTML = legendItems.map(renderLegendItem).join('');
-        return;
-    }
-
-    const bins = [
-        { name: 'Rendah', from: 0, to: 0.25, percent: '≤25%' },
-        { name: 'Sedang', from: 0.25, to: 0.50, percent: '26–50%' },
-        { name: 'Tinggi', from: 0.50, to: 0.75, percent: '51–75%' },
-        { name: 'Tertinggi', from: 0.75, to: 1.00, percent: '76–100%' }
+    const legendItems = [
+        { color: '#f1f5f9', label: 'Tidak ada data (0)' }
     ];
 
-    bins.forEach(function (bin, index) {
-        const min = Math.floor(bin.from * max) + 1;
-        const maxBin = index === bins.length - 1 ? max : Math.floor(bin.to * max);
+    if (!breaks.length) {
+        itemsEl.innerHTML = legendItems.map(renderLegendItem).join('');
+        return;
+    }
 
-        if (maxBin < min) {
+    breaks.forEach(function (b, index) {
+        const min = Number(b?.min);
+        const maxB = Number(b?.max);
+
+        if (!Number.isFinite(min) || !Number.isFinite(maxB)) {
             return;
         }
 
-        const rangeText = min === maxBin ? `${min}` : `${min}–${maxBin}`;
-        const sampleValue = maxBin;
+        const rangeText = min === maxB ? `${min}` : `${min}-${maxB}`;
+        const label = (b?.label || '').toString() || `Kelas ${index + 1}`;
 
         legendItems.push({
-            color: colorFn(sampleValue, max),
-            label: `${bin.name} (${rangeText} alumni • ${bin.percent})`
+            color: colorsByLabel[label] || '#EF4444',
+            label: `${label} (${rangeText} alumni)`
         });
     });
 
@@ -574,15 +534,15 @@ function toggleMultiJobLayers(alumniId) {
                     <span class="popup-year">Pekerjaan Sampingan</span>
                     <div class="popup-info">
                         <div class="info-row">
-                            <span class="icon">🏢</span>
+                            <span class="icon">\u{1F3E2}</span>
                             <span><b>${perusahaan}</b></span>
                         </div>
                         <div class="info-row">
-                            <span class="icon">💼</span>
+                            <span class="icon">\u{1F4BC}</span>
                             <span>${jabatan}</span>
                         </div>
                         <div class="info-row">
-                            <span class="icon">🏷️</span>
+                            <span class="icon">\u{1F3F7}\u{FE0F}</span>
                             <span>${statusKarir}</span>
                         </div>
                     </div>
@@ -767,6 +727,37 @@ function bindFilterEvents() {
 
     document.getElementById('btn-reset-filter')
         ?.addEventListener('click', resetSemuaFilter);
+
+    // Buat panel tetap compact jika filter & hasil masih kosong.
+    const sinkronkanKontenPanel = () => {
+        const scrollable = document.querySelector('.filter-panel .scrollable-content');
+        if (!scrollable) return;
+
+        const filterBody = document.getElementById('filter-body');
+        const results = document.getElementById('search-results');
+
+        const filterTerbuka = !!filterBody && !filterBody.classList.contains('hidden');
+        const adaHasil = !!results && (results.textContent || '').trim() !== '';
+
+        scrollable.classList.toggle('is-empty', !filterTerbuka && !adaHasil);
+    };
+
+    const resultsEl = document.getElementById('search-results');
+    const filterBodyEl = document.getElementById('filter-body');
+
+    if (typeof MutationObserver !== 'undefined') {
+        if (resultsEl) {
+            new MutationObserver(sinkronkanKontenPanel)
+                .observe(resultsEl, { childList: true, subtree: true, characterData: true });
+        }
+
+        if (filterBodyEl) {
+            new MutationObserver(sinkronkanKontenPanel)
+                .observe(filterBodyEl, { attributes: true, attributeFilter: ['class'] });
+        }
+    }
+
+    sinkronkanKontenPanel();
 }
 
 function handleSearchSubmit() {
@@ -1647,15 +1638,26 @@ function filterDanTampilkanMarker() {
     }
 
     function normalisasiTeksWilayah(teks) {
-        return (teks || '')
+        let text = (teks || '')
             .toString()
             .toLowerCase()
+            .trim();
+
+        // Buang tanda baca agar "Banjar, KalSel" tetap match ke "banjar".
+        text = text.replace(/[^a-z0-9]+/gi, ' ');
+        text = text.replace(/\s+/g, ' ').trim();
+
+        // Alias umum yang sering muncul sebelum prefix stripping
+        if (text === 'kota baru') return 'kotabaru';
+        if (text === 'banjar baru') return 'banjarbaru';
+
+        text = text
             .replace(/^kabupaten\s+/i, '')
-            .replace(/^kab\.\s*/i, '')
             .replace(/^kab\s+/i, '')
             .replace(/^kota\s+/i, '')
-            .replace(/\s+/g, ' ')
             .trim();
+
+        return text;
     }
 
     function escapeRegex(teks) {
@@ -1906,24 +1908,24 @@ function filterDanTampilkanMarker() {
                 ?
                 `
                 <div class="info-row">
-                    <span class="icon">🏠</span>
+                    <span class="icon">\u{1F3E0}</span>
                     <span>Domisili Saat Ini</span>
                 </div>
 
                 <div class="info-row">
-                    <span class="icon">📌</span>
+                    <span class="icon">\u{1F4CC}</span>
                     <span>${alamatLengkap}</span>
                 </div>
                 `
                 :
                 `
                 <div class="info-row">
-                    <span class="icon">🏢</span>
+                    <span class="icon">\u{1F3E2}</span>
                     <span><b>${perusahaan}</b></span>
                 </div>
 
                 <div class="info-row">
-                    <span class="icon">💼</span>
+                    <span class="icon">\u{1F4BC}</span>
                     <span>${jabatan}</span>
                 </div>
                 `;
@@ -2094,8 +2096,8 @@ function filterDanTampilkanMarker() {
                     <div class="result-job">
                         ${
                             statusKerja === 'Belum Bekerja'
-                            ? '🏠 Belum Bekerja'
-                            : '🏢 ' + perusahaan
+                            ? '\u{1F3E0} Belum Bekerja'
+                            : '\u{1F3E2} ' + perusahaan
                         }
                     </div>
 
@@ -2276,24 +2278,24 @@ function filterDanTampilkanMarker() {
 
                         <div class="popup-info">
                             <div class="info-row">
-                                <span class="icon">🎓</span>
+                                <span class="icon">\u{1F393}</span>
                                 <span><b>${kampus}</b></span>
                             </div>
                             <div class="info-row">
-                                <span class="icon">📚</span>
+                                <span class="icon">\u{1F4DA}</span>
                                 <span>${jenjang} - ${programStudi}</span>
                             </div>
                             <div class="info-row">
-                                <span class="icon">ℹ️</span>
+                                <span class="icon">\u{2139}\u{FE0F}</span>
                                 <span>Status: ${statusStudi}</span>
                             </div>
                             <div class="info-row">
-                                <span class="icon">🗓️</span>
+                                <span class="icon">\u{1F5D3}\u{FE0F}</span>
                                 <span>Periode: ${periode}</span>
                             </div>
                             ${lokasiKampus ? `
                                 <div class="info-row">
-                                    <span class="icon">📍</span>
+                                    <span class="icon">\u{1F4CD}</span>
                                     <span>${lokasiKampus}</span>
                                 </div>
                             ` : ''}
@@ -2434,3 +2436,4 @@ function terbangKeLokasi(index) {
         duration: 1.5
     });
 }
+

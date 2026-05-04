@@ -19,29 +19,23 @@
                 <p style="font-weight: 600; color: #1e293b;">Tarik & Lepas file Excel di sini</p>
                 <p style="font-size: 12px;">Atau klik untuk memilih file dari komputer</p>
                 <input type="file" id="file-input" accept=".xlsx, .xls" style="display:none;">
-                <span class="custom-file-label" id="file-name-display">Pilih File Alumni</span>
+                <div style="display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;">
+                    <span class="custom-file-label" id="file-name-display">Pilih File Alumni</span>
+                    <button
+                        type="button"
+                        id="btn-cancel-import"
+                        style="display:none; border:none; border-radius:12px; padding:10px 14px; font-weight:800; cursor:pointer; background:#e2e8f0; color:#0f172a;"
+                        title="Batalkan file yang dipilih"
+                    >
+                        Cancel
+                    </button>
+                </div>
             </div>
 
             <div class="table-container" id="table-wrapper" style="display: none; overflow-x: auto; max-width: 100%; border-radius: 8px;">
                 <table id="preview-table" style="min-width: 1300px;"> <!-- Min-width supaya kolom tidak berdempetan -->
                     <thead>
-                        <tr>
-                            <th>NIM</th>
-                            <th>Nama</th>
-                            <th>Tahun Lulus</th>
-                            <th>Perusahaan</th>
-                            <th>Jabatan</th>
-                            <th>Alamat instansi</th>
-                            <th>Status</th>
-                            <th>Email</th>
-                            <th>No HP</th>
-                            <th>Yudisium</th>
-                            <th>TOEFL</th>
-                            <th>Masa Tunggu (Hari)</th>
-                            <th>Gaji</th>
-                            <th>Linearitas</th>
-                            <th>Studi Lanjut</th>
-                        </tr>
+                        <tr id="preview-head-row"></tr>
                     </thead>
                     <tbody></tbody>
                 </table>
@@ -50,6 +44,17 @@
             <button id="btn-import" class="btn-tambah" style="display:none; width: 100%; margin-top: 25px; justify-content: center; padding: 15px;">
                 Mulai Import Data
             </button>
+
+            <div id="import-progress" class="glass-panel" style="display:none; margin-top: 20px; padding: 16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px;">
+                    <div style="font-weight:600; color:#0f172a;">Memproses import...</div>
+                    <div id="import-progress-text" style="font-size:12px; color:#64748b;">0/0</div>
+                </div>
+                <div style="width:100%; height:10px; background:#e2e8f0; border-radius:999px; overflow:hidden;">
+                    <div id="import-progress-bar" style="width:0%; height:100%; background:var(--pilkom-blue-dark); border-radius:999px;"></div>
+                </div>
+                <div id="import-progress-subtext" style="margin-top:10px; font-size:12px; color:#64748b;">Menyiapkan data...</div>
+            </div>
 
             <div id="import-result" class="result-success" style="display:none;">
                 <h4 style="margin-bottom: 5px;">Import Selesai!</h4>
@@ -63,4 +68,4 @@
     </script>
 <?php $__env->stopPush(); ?>
 
-<?php echo $__env->make('admin.layout', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_3\resources\views/admin/import/import-excel.blade.php ENDPATH**/ ?>
+<?php echo $__env->make('admin.layout', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_4\resources\views/admin/import/import-excel.blade.php ENDPATH**/ ?>

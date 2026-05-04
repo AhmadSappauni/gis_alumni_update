@@ -152,13 +152,8 @@ function getStyleWilayah(feature) {
             ? window.__choroplethStats[key].total
             : 0;
 
-    const choroplethMax =
-        Number.isFinite(window.__choroplethMaxValue)
-            ? window.__choroplethMaxValue
-            : 0;
-
     const fillColor = mode === 'choropleth'
-        ? getChoroplethColor(choroplethTotal, choroplethMax)
+        ? getChoroplethColor(choroplethTotal)
         : getColor(namaKab);
 
     return {
@@ -171,22 +166,118 @@ function getStyleWilayah(feature) {
     };
 }
 
-function getChoroplethColor(value, maxValue) {
+function calculateQuantileBreaks(values, numberOfClasses = 4) {
+    const clean = (Array.isArray(values) ? values : [])
+        .map(v => Number(v))
+        .filter(v => Number.isFinite(v) && v > 0)
+        .sort((a, b) => a - b);
+
+    const unique = Array.from(new Set(clean));
+
+    if (unique.length === 0) {
+        return [];
+    }
+
+    const labels = ['Rendah', 'Sedang', 'Tinggi', 'Tertinggi'];
+
+    // Jika nilai unik sedikit, jangan paksa jadi 4 kelas.
+    if (unique.length <= numberOfClasses) {
+        return unique.map((value, index) => {
+            let label = labels[index] || `Kelas ${index + 1}`;
+            if (unique.length === 1) {
+                label = 'Tertinggi';
+            } else if (index === unique.length - 1) {
+                label = 'Tertinggi';
+            }
+
+            return { label, min: value, max: value };
+        });
+    }
+
+    const breaks = [];
+    for (let i = 0; i < numberOfClasses; i++) {
+        const startIndex = Math.floor((i * clean.length) / numberOfClasses);
+        const endIndex = Math.floor(((i + 1) * clean.length) / numberOfClasses) - 1;
+
+        const min = clean[startIndex];
+        const max = clean[Math.max(startIndex, endIndex)];
+
+        if (min === undefined || max === undefined) {
+            continue;
+        }
+
+        breaks.push({
+            label: labels[i] || `Kelas ${i + 1}`,
+            min,
+            max
+        });
+    }
+
+    // Normalisasi agar tidak ada kelas kosong/duplikat rentang.
+    const normalized = [];
+    breaks.forEach(function (b) {
+        const last = normalized.length ? normalized[normalized.length - 1] : null;
+        if (!last) {
+            normalized.push({ ...b });
+            return;
+        }
+
+        // Jika rentang identik, gabungkan.
+        if (last.min === b.min && last.max === b.max) {
+            return;
+        }
+
+        // Jika rentang overlap dan max sama, gabungkan ke last.
+        if (b.min <= last.max && b.max <= last.max) {
+            return;
+        }
+
+        // Jika ada gap kecil karena pembulatan indeks, tetap terima.
+        normalized.push({ ...b });
+    });
+
+    if (normalized.length) {
+        // Pastikan kelas terakhir selalu "Tertinggi"
+        normalized[normalized.length - 1].label = 'Tertinggi';
+    }
+
+    return normalized;
+}
+
+function getChoroplethColorByQuantile(value, breaks) {
     const v = Number(value) || 0;
-    const max = Number(maxValue) || 0;
+    if (!v || v <= 0) return '#f1f5f9';
 
-    if (!v || v === 0) return '#f1f5f9'; // abu sangat muda
-    if (!max || max === 0) return '#f1f5f9';
+    const safeBreaks = Array.isArray(breaks) ? breaks : [];
+    if (!safeBreaks.length) {
+        return '#f1f5f9';
+    }
 
-    const ratio = v / max;
+    const colorsByLabel = {
+        'Rendah': '#FEF3C7',
+        'Sedang': '#FDBA74',
+        'Tinggi': '#FB923C',
+        'Tertinggi': '#EF4444',
+    };
+    for (let i = 0; i < safeBreaks.length; i++) {
+        const b = safeBreaks[i];
+        if (v >= b.min && v <= b.max) {
+            const label = (b?.label || '').toString();
+            return colorsByLabel[label] || '#EF4444';
+        }
+    }
 
-    if (ratio <= 0.25) return '#FEF3C7'; // kuning muda
-    if (ratio <= 0.50) return '#FDBA74'; // orange muda
-    if (ratio <= 0.75) return '#FB923C'; // orange
-    return '#EF4444'; // merah
+    return '#EF4444';
+}
+
+function getChoroplethColor(value) {
+    const breaks = window.__choroplethBreaks || [];
+    return getChoroplethColorByQuantile(value, breaks);
 }
 
 window.getChoroplethColor = getChoroplethColor;
+window.calculateQuantileBreaks = calculateQuantileBreaks;
+window.getChoroplethColorByQuantile = getChoroplethColorByQuantile;
 
 // 1. Fungsi untuk menentukan warna berdasarkan nama kabupaten
 // Kamu bisa menyesuaikan list warna ini agar estetik
@@ -239,17 +330,59 @@ function hitungChoroplethMaxVisible() {
     return max;
 }
 
+function hitungChoroplethValuesVisible() {
+    if (!window.layerWilayahKalsel) {
+        return [];
+    }
+
+    const stats = window.__choroplethStats || {};
+    const values = [];
+
+    window.layerWilayahKalsel.eachLayer(function (layer) {
+        const namaWilayah = getNamaWilayah(layer.feature);
+        const key = getKeyWilayah(namaWilayah);
+
+        const visible =
+            window.statusPolygonAktif &&
+            window.statusPolygonWilayah[key] !== false;
+
+        if (!visible) {
+            return;
+        }
+
+        const total = Number(stats?.[key]?.total);
+        if (Number.isFinite(total) && total > 0) {
+            values.push(total);
+        }
+    });
+
+    return values;
+}
+
 window.refreshWilayahStyle = function () {
     if (!window.layerWilayahKalsel) {
         return;
     }
 
     if ((window.visualizationMode || 'marker').toString() === 'choropleth') {
+        const values = hitungChoroplethValuesVisible();
+        const breaks = calculateQuantileBreaks(values, 4);
+
+        window.__choroplethBreaks = breaks;
         window.__choroplethMaxValue = hitungChoroplethMaxVisible();
+
+        if (window.__DEBUG_CHOROPLETH) {
+            try {
+                console.log('Choropleth values:', values);
+                console.log('Quantile breaks:', breaks);
+            } catch (_) { }
+        }
+
         if (typeof window.updateChoroplethLegend === 'function') {
             window.updateChoroplethLegend();
         }
     } else {
+        window.__choroplethBreaks = [];
         window.__choroplethMaxValue = 0;
     }
 
@@ -279,16 +412,27 @@ function getNamaWilayah(feature) {
 function normalizeRegionName(name) {
     if (!name) return '';
 
-    return (name || '')
+    let text = (name || '')
         .toString()
         .toLowerCase()
-        .trim()
+        .trim();
+
+    // Hilangkan tanda baca agar "Banjar, KalSel" tetap match ke "banjar".
+    // Juga menyamakan variasi seperti "Kab. Banjar" / "Kota Banjarbaru".
+    text = text.replace(/[^a-z0-9]+/gi, ' ');
+    text = text.replace(/\s+/g, ' ').trim();
+
+    // Alias umum yang sering muncul sebelum prefix stripping
+    if (text === 'kota baru') return 'kotabaru';
+    if (text === 'banjar baru') return 'banjarbaru';
+
+    text = text
         .replace(/^kabupaten\s+/i, '')
-        .replace(/^kab\.\s*/i, '')
         .replace(/^kab\s+/i, '')
         .replace(/^kota\s+/i, '')
-        .replace(/\s+/g, ' ')
         .trim();
+
+    return text;
 }
 
 function normalisasiTeksWilayah(teks) {
@@ -806,32 +950,41 @@ fetch('/data/data_kalsel.geojson')
                     },
                     click: function (e) {
                         const mode = (window.visualizationMode || 'marker').toString();
-                        if (mode !== 'choropleth') {
-                            return;
-                        }
-
                         const namaWilayah = getNamaWilayah(feature);
                         const key = getKeyWilayah(namaWilayah);
-                        const stats = (window.__choroplethStats && window.__choroplethStats[key]) ? window.__choroplethStats[key] : null;
 
-                        const total = stats?.total ?? 0;
-                        const bekerja = stats?.bekerja ?? 0;
-                        const belum = stats?.belum_bekerja ?? 0;
-                        const studi = stats?.studi_lanjut ?? 0;
+                        let html = '';
 
-                        const html = `
-                            <div style="font-family: Inter, sans-serif; min-width: 200px;">
-                                <div style="font-weight: 900; font-size: 14px; margin-bottom: 8px; color:#0f172a;">
-                                    ${namaWilayah || '-'}
+                        if (mode === 'choropleth') {
+                            const stats = (window.__choroplethStats && window.__choroplethStats[key]) ? window.__choroplethStats[key] : null;
+
+                            const total = stats?.total ?? 0;
+                            const bekerja = stats?.bekerja ?? 0;
+                            const belum = stats?.belum_bekerja ?? 0;
+                            const studi = stats?.studi_lanjut ?? 0;
+
+                            html = `
+                                <div style="font-family: Inter, sans-serif; min-width: 200px;">
+                                    <div style="font-weight: 900; font-size: 14px; margin-bottom: 8px; color:#0f172a;">
+                                        ${namaWilayah || '-'}
+                                    </div>
+                                    <div style="display:grid; gap:4px; font-size: 13px; color:#0f172a;">
+                                        <div><b>Total Alumni:</b> ${total}</div>
+                                        <div><b>Bekerja:</b> ${bekerja}</div>
+                                        <div><b>Belum Bekerja:</b> ${belum}</div>
+                                        <div><b>Studi Lanjut:</b> ${studi}</div>
+                                    </div>
                                 </div>
-                                <div style="display:grid; gap:4px; font-size: 13px; color:#0f172a;">
-                                    <div><b>Total Alumni:</b> ${total}</div>
-                                    <div><b>Bekerja:</b> ${bekerja}</div>
-                                    <div><b>Belum Bekerja:</b> ${belum}</div>
-                                    <div><b>Studi Lanjut:</b> ${studi}</div>
+                            `;
+                        } else {
+                            html = `
+                                <div style="font-family: Inter, sans-serif; min-width: 160px;">
+                                    <div style="font-weight: 900; font-size: 14px; color:#0f172a;">
+                                        ${namaWilayah || '-'}
+                                    </div>
                                 </div>
-                            </div>
-                        `;
+                            `;
+                        }
 
                         L.popup({ autoPan: true })
                             .setLatLng(e.latlng)

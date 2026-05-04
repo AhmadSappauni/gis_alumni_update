@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="<?php echo e(asset('css/style.css')); ?>">
     
 </head>
-<body>
+<body class="map-page">
     <?php echo $__env->make('utama.filter-panel', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     <div id="map"></div>
 
@@ -92,4 +92,4 @@
     
 </body>
 </html>
-<?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_3\resources\views/index.blade.php ENDPATH**/ ?>
+<?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_4\resources\views/index.blade.php ENDPATH**/ ?>

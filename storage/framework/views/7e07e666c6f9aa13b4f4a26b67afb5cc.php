@@ -22,4 +22,4 @@
     </div>
 </div>
 
-<?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_3\resources\views/utama/daftar-alumni.blade.php ENDPATH**/ ?>
+<?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_4\resources\views/utama/daftar-alumni.blade.php ENDPATH**/ ?>

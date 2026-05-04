@@ -445,4 +445,4 @@
         document.getElementById('modal-profil-' + id).style.display = 'none';
     }
 </script>
-<?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_3\resources\views/admin/komponen/modal-profil.blade.php ENDPATH**/ ?>
+<?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_4\resources\views/admin/komponen/modal-profil.blade.php ENDPATH**/ ?>

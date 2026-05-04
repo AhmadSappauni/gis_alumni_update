@@ -185,27 +185,19 @@
         </div>
     </div>
 
-    <div id="list-view" class="glass-panel" style="display: none; padding: 0; overflow: visible; margin-top: 10px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:15px; padding:15px 20px; border-bottom:1px solid rgba(0,0,0,0.05); background:rgba(255,255,255,0.35);">
-            <button type="button" id="btn-toggle-bulk-delete"
-                style="border:none; border-radius:10px; background:#fee2e2; color:#991b1b; font-size:12px; font-weight:800; padding:10px 14px; cursor:pointer;">
-                Hapus Banyak
-            </button>
+        <div id="list-view" class="glass-panel" style="display: none; padding: 0; overflow: visible; margin-top: 10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:15px; padding:15px 20px; border-bottom:1px solid rgba(0,0,0,0.05); background:rgba(255,255,255,0.35);">
 
-            <label id="bulk-select-label" style="display:none; align-items:center; gap:10px; font-size:13px; font-weight:700; color:#334155; cursor:pointer;">
+            <label id="bulk-select-label" style="display:flex; align-items:center; gap:10px; font-size:13px; font-weight:700; color:#334155; cursor:pointer;">
                 <input type="checkbox" id="select-all-alumni" style="width:16px; height:16px;">
-                Pilih semua data di halaman ini
+                Pilih semua data (semua halaman)
             </label>
 
-            <div id="bulk-action-bar" style="display:none; align-items:center; gap:12px;">
+            <div id="bulk-action-bar" data-total="{{ $totalAlumni ?? '' }}" style="display:flex; align-items:center; gap:12px;">
                 <span id="selected-alumni-count" style="font-size:12px; color:#64748b;">0 dipilih</span>
                 <button type="button" id="btn-delete-selected" disabled
                     style="border:none; border-radius:10px; background:#fecaca; color:#991b1b; font-size:12px; font-weight:800; padding:10px 14px; cursor:not-allowed; opacity:.6;">
                     Hapus Terpilih
-                </button>
-                <button type="button" id="btn-cancel-bulk-delete"
-                    style="border:none; border-radius:10px; background:#e2e8f0; color:#334155; font-size:12px; font-weight:800; padding:10px 14px; cursor:pointer;">
-                    Batal
                 </button>
             </div>
         </div>
@@ -215,9 +207,7 @@
                 <thead
                     style="position: sticky; top: 0; z-index: 10; background: #f8fafc; box-shadow: 0 1px 0 rgba(0,0,0,0.05);">
                     <tr>
-                        <th id="bulk-checkbox-header" style="width:42px; text-align:center; display:none;">
-                            <input type="checkbox" id="select-all-alumni-table" style="width:16px; height:16px;">
-                        </th>
+                        <th id="bulk-checkbox-header" style="width:42px; text-align:center;"></th>
                         <th>Alumni</th>
                         <th>NIM</th>
                         <th>Kontak</th>
@@ -235,7 +225,7 @@
                             data-tahun="{{ $alumni->akademik?->tahun_lulus ?? '' }}"
                             data-linearitas="{{ $pekerjaanAktif?->perusahaan?->linearitas ?? '' }}"
                             data-bidang="{{ $pekerjaanAktif?->bidang_pekerjaan ?? '' }}">
-                            <td class="bulk-checkbox-cell" style="text-align:center; display:none;">
+                            <td class="bulk-checkbox-cell" style="text-align:center;">
                                 <input type="checkbox" class="alumni-bulk-checkbox" value="{{ $alumni->id }}" style="width:16px; height:16px;">
                             </td>
                             <td>

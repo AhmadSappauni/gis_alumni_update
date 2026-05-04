@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
     
 </head>
-<body>
+<body class="map-page">
     @include('utama.filter-panel')
     <div id="map"></div>
 

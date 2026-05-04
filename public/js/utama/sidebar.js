@@ -14,6 +14,7 @@ function bukaSidebar() {
 
     mainSidebar.classList.add("active");
     sidebarOverlay.classList.add("active");
+    btnOpenSidebar?.classList.add("active");
 }
 
 // Fungsi menutup sidebar
@@ -24,6 +25,7 @@ function tutupSidebar() {
 
     mainSidebar.classList.remove("active");
     sidebarOverlay.classList.remove("active");
+    btnOpenSidebar?.classList.remove("active");
 }
 
 // Pemicu tombol

@@ -359,4 +359,4 @@
     <script src="<?php echo e(asset('js/utama/statistik.js')); ?>"></script>
 </body>
 </html>
-<?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_3\resources\views/statistik/index.blade.php ENDPATH**/ ?>
+<?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_4\resources\views/statistik/index.blade.php ENDPATH**/ ?>

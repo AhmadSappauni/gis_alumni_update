@@ -355,4 +355,4 @@
     <script src="<?php echo e(asset('js/admin/statistik.js')); ?>"></script>
 <?php $__env->stopPush(); ?>
 
-<?php echo $__env->make('admin.layout', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_3\resources\views/admin/statistik/index.blade.php ENDPATH**/ ?>
+<?php echo $__env->make('admin.layout', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_4\resources\views/admin/statistik/index.blade.php ENDPATH**/ ?>

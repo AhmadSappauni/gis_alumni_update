@@ -5,6 +5,7 @@ use App\Http\Controllers\MapController;
 use App\Http\Controllers\AdminAlumniController;
 use App\Http\Controllers\StatistikController;
 use App\Http\Controllers\PublicStatistikController;
+use App\Http\Controllers\NominatimController;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,6 +23,15 @@ Route::get('/', [MapController::class, 'index'])->name('map.index');
 
 Route::get('/statistik', [PublicStatistikController::class, 'index'])->name('statistik.index');
 Route::get('/statistik/data', [PublicStatistikController::class, 'data'])->name('statistik.data');
+
+/*
+|--------------------------------------------------------------------------
+| NOMINATIM TEST (ADMIN TOOL)
+|--------------------------------------------------------------------------
+*/
+
+Route::view('/nominatim', 'nominatim')->name('nominatim');
+Route::get('/nominatim/reverse', [NominatimController::class, 'reverse'])->name('nominatim.reverse');
 
 
 /*

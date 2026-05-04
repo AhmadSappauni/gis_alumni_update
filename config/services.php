@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'nominatim' => [
+        'base_url' => env('NOMINATIM_BASE_URL', 'https://nominatim.openstreetmap.org'),
+        'email' => env('NOMINATIM_EMAIL'),
+        'user_agent' => env('NOMINATIM_USER_AGENT', 'gis_alumni_4/1.0 (Laravel; Nominatim proxy)'),
+    ],
+
 ];

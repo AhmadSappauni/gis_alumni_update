@@ -43,7 +43,7 @@
             </span>
         </a>
 
-        <a href="#" class="menu-item" id="btn-daftar-mhs">
+        <button type="button" class="menu-item" id="btn-daftar-mhs">
             <span class="menu-icon" aria-hidden="true">
                 <span class="menu-icon-circle">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -60,7 +60,7 @@
                 <span class="menu-text">Buku Direktori Alumni</span>
                 <span class="menu-subtitle">Lihat daftar lengkap alumni</span>
             </span>
-        </a>
+        </button>
     </div>
 
     <div class="sidebar-footer" aria-label="Footer">
@@ -68,4 +68,4 @@
         <div class="sidebar-footer-meta">Copyrigth © 2026 Ahmad Sappauni.</div>
     </div>
 </div>
-<?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_3\resources\views/utama/sidebar.blade.php ENDPATH**/ ?>
+<?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_4\resources\views/utama/sidebar.blade.php ENDPATH**/ ?>

@@ -34,7 +34,7 @@
 .main-sidebar {
     position: fixed;
     top: 0; left: 0;
-    width: 360px;
+    width: 270px;
     max-width: 90vw;
     height: 100vh;
     background: rgba(255, 255, 255, 0.92); /* Off-white / glass ringan */
@@ -134,6 +134,8 @@
     gap: 12px;
 }
 .menu-item {
+    appearance: none;
+    -webkit-appearance: none;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -147,6 +149,9 @@
     border: 1px solid rgba(226, 232, 240, 0.95);
     box-shadow: 0 10px 22px rgba(0, 74, 135, 0.08);
     transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, border-color 0.22s ease, color 0.22s ease;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
 }
 .menu-item .menu-icon {
     display: inline-flex;

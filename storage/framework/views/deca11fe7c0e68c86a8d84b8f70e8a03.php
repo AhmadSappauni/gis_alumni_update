@@ -141,9 +141,6 @@ function confirmDelete(id, nim,nama,) {
 function initBulkDeleteAlumni() {
     const checkboxes = Array.from(document.querySelectorAll('.alumni-bulk-checkbox'));
     const selectAllTop = document.getElementById('select-all-alumni');
-    const selectAllTable = document.getElementById('select-all-alumni-table');
-    const toggleBtn = document.getElementById('btn-toggle-bulk-delete');
-    const cancelBtn = document.getElementById('btn-cancel-bulk-delete');
     const actionBar = document.getElementById('bulk-action-bar');
     const selectLabel = document.getElementById('bulk-select-label');
     const headerCell = document.getElementById('bulk-checkbox-header');
@@ -153,36 +150,17 @@ function initBulkDeleteAlumni() {
     const form = document.getElementById('bulk-delete-form');
     const inputs = document.getElementById('bulk-delete-inputs');
 
-    if (!checkboxes.length || !selectAllTop || !selectAllTable || !toggleBtn || !cancelBtn || !actionBar || !selectLabel || !headerCell || !countLabel || !deleteBtn || !form || !inputs) {
+    if (!checkboxes.length || !selectAllTop || !actionBar || !selectLabel || !headerCell || !countLabel || !deleteBtn || !form || !inputs) {
         return;
     }
 
-    let bulkModeActive = false;
-
-    function setBulkMode(active) {
-        bulkModeActive = active;
-        actionBar.style.display = active ? 'flex' : 'none';
-        selectLabel.style.display = active ? 'flex' : 'none';
-        headerCell.style.display = active ? 'table-cell' : 'none';
-        rowCells.forEach(cell => {
-            cell.style.display = active ? 'table-cell' : 'none';
-        });
-        toggleBtn.style.display = active ? 'none' : 'inline-flex';
-
-        if (!active) {
-            checkboxes.forEach(cb => {
-                cb.checked = false;
-            });
-            inputs.innerHTML = '';
-        }
-
-        updateBulkDeleteState();
-    }
+    const totalAll = Number(actionBar.dataset.total || 0);
+    let selectAllGlobal = false;
 
     function updateBulkDeleteState() {
         const selected = checkboxes.filter(cb => cb.checked);
-        const selectedCount = selected.length;
-        const allChecked = selectedCount > 0 && selectedCount === checkboxes.length;
+        const selectedCount = selectAllGlobal ? (totalAll || selected.length) : selected.length;
+        const allChecked = selectAllGlobal || (selected.length > 0 && selected.length === checkboxes.length);
 
         countLabel.textContent = `${selectedCount} dipilih`;
         deleteBtn.disabled = selectedCount === 0;
@@ -190,9 +168,12 @@ function initBulkDeleteAlumni() {
         deleteBtn.style.opacity = selectedCount === 0 ? '.6' : '1';
 
         selectAllTop.checked = allChecked;
-        selectAllTable.checked = allChecked;
-        selectAllTop.indeterminate = selectedCount > 0 && selectedCount < checkboxes.length;
-        selectAllTable.indeterminate = selectedCount > 0 && selectedCount < checkboxes.length;
+
+        if (selectAllGlobal) {
+            selectAllTop.indeterminate = false;
+        } else {
+            selectAllTop.indeterminate = selected.length > 0 && selected.length < checkboxes.length;
+        }
     }
 
     function setAllChecked(checked) {
@@ -203,36 +184,64 @@ function initBulkDeleteAlumni() {
         updateBulkDeleteState();
     }
 
+    async function enableSelectAllGlobal() {
+        const countText = totalAll ? `${totalAll}` : 'semua';
+        const result = await Swal.fire({
+            title: 'Pilih semua data?',
+            text: `Ini akan memilih ${countText} data alumni di semua halaman.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#004a87',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Ya, Pilih Semua',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
+        });
+
+        if (!result.isConfirmed) {
+            selectAllTop.checked = false;
+            return;
+        }
+
+        selectAllGlobal = true;
+        setAllChecked(true);
+    }
+
+    function disableSelectAllGlobal() {
+        selectAllGlobal = false;
+        setAllChecked(false);
+    }
+
     selectAllTop.addEventListener('change', function () {
-        setAllChecked(this.checked);
-    });
-
-    selectAllTable.addEventListener('change', function () {
-        setAllChecked(this.checked);
-    });
-
-    toggleBtn.addEventListener('click', function () {
-        setBulkMode(true);
-    });
-
-    cancelBtn.addEventListener('click', function () {
-        setBulkMode(false);
+        if (this.checked) {
+            enableSelectAllGlobal();
+        } else {
+            disableSelectAllGlobal();
+        }
     });
 
     checkboxes.forEach(cb => {
-        cb.addEventListener('change', updateBulkDeleteState);
+        cb.addEventListener('change', function () {
+            if (selectAllGlobal && !this.checked) {
+                // jika user mulai uncheck saat mode global aktif, kembalikan ke mode biasa
+                selectAllGlobal = false;
+            }
+            updateBulkDeleteState();
+        });
     });
 
     deleteBtn.addEventListener('click', function () {
         const selected = checkboxes.filter(cb => cb.checked);
 
-        if (!selected.length) {
+        if (!selectAllGlobal && !selected.length) {
             return;
         }
 
+        const deleteCount = selectAllGlobal ? (totalAll || selected.length) : selected.length;
+
         Swal.fire({
             title: 'Hapus data terpilih?',
-            text: `${selected.length} data alumni akan dihapus permanen.`,
+            text: `${deleteCount} data alumni akan dihapus permanen.`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
@@ -245,15 +254,27 @@ function initBulkDeleteAlumni() {
                 return;
             }
 
-            inputs.innerHTML = selected
-                .map(cb => `<input type="hidden" name="ids[]" value="${cb.value}">`)
-                .join('');
+            if (selectAllGlobal) {
+                inputs.innerHTML = `<input type="hidden" name="select_all" value="1">`;
+            } else {
+                inputs.innerHTML = selected
+                    .map(cb => `<input type="hidden" name="ids[]" value="${cb.value}">`)
+                    .join('');
+            }
 
             form.submit();
         });
     });
 
-    setBulkMode(false);
+    // default state: checkboxes always visible
+    actionBar.style.display = 'flex';
+    selectLabel.style.display = 'flex';
+    headerCell.style.display = 'table-cell';
+    rowCells.forEach(cell => {
+        cell.style.display = 'table-cell';
+    });
+
+    updateBulkDeleteState();
 }
 
 document.addEventListener('DOMContentLoaded', initBulkDeleteAlumni);
@@ -261,4 +282,4 @@ document.addEventListener('DOMContentLoaded', initBulkDeleteAlumni);
 </script>
 <?php $__env->stopPush(); ?>
 
-<?php echo $__env->make('admin.layout', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_3\resources\views/admin/index.blade.php ENDPATH**/ ?>
+<?php echo $__env->make('admin.layout', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\Aplikasi_Skripsi\gis_alumni_4\resources\views/admin/index.blade.php ENDPATH**/ ?>

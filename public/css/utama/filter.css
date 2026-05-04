@@ -1,143 +1,238 @@
-/* Panel Pembungkus Utama (Glassmorphism Effect) */
-.filter-panel {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    z-index: 9999;
-    
-    /* Efek Transparansi Kaca */
-    background: rgba(255, 255, 255, 0.85); /* Putih transparan 85% */
-    backdrop-filter: blur(12px); /* Efek buram pada peta di belakangnya */
-    -webkit-backdrop-filter: blur(12px); /* Dukungan untuk browser Safari */
-    
-    border: 1px solid rgba(255, 255, 255, 0.6); /* Pantulan cahaya di pinggiran */
-    border-radius: 12px;
-    box-shadow: 0 15px 35px rgba(0, 74, 135, 0.15); /* Bayangan biru super lembut */
-    width: 320px;
-    overflow: hidden;
-    font-family: 'Inter', sans-serif;
+/* Navigation rail kiri + search panel (gaya Google Maps, tetap identitas biru Pilkom) */
+:root {
+    --rail-left: 12px;
+    --rail-width: 60px; /* background hanya seukuran stack ikon */
+    --rail-gap: 22px; /* beri jarak dengan search bar */
+    --ui-top: 16px;
+    --search-width: clamp(260px, 30vw, 420px);
+    --search-max: 420px;
+    --search-height: 56px;
+    --search-radius: 28px;
+    --btn-size: 48px;
+    --rail-btn-size: 44px;
+    --rail-btn-gap: 12px;
+}
 
+.map-navigation-rail {
+    position: fixed;
+    top: var(--ui-top);
+    left: var(--rail-left);
+    width: var(--rail-width);
+    z-index: 11000;
+    background: linear-gradient(180deg, rgba(0, 74, 135, 0.98) 0%, rgba(2, 132, 199, 0.92) 100%);
+    border-radius: 18px;
+    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.18);
+    padding: 2px 1px;
     display: flex;
     flex-direction: column;
-    max-height: 85vh;
-
-    transition: width 0.25s ease, box-shadow 0.25s ease;
+    align-items: center;
+    gap: var(--rail-btn-gap);
 }
 
-/* Mode Collapse: panel disimpan (tidak menutupi peta) */
+.rail-btn {
+    width: var(--rail-btn-size);
+    height: var(--rail-btn-size);
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: transparent;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.rail-btn:hover {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.22);
+    transform: translateY(-1px);
+}
+
+.rail-btn.active {
+    background: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 255, 255, 0.28);
+    color: #ffffff;
+    box-shadow: none;
+}
+
+.rail-btn svg {
+    width: 22px;
+    height: 22px;
+}
+
+/* Panel pencarian + konten filter/hasil (tanpa branding) */
+.filter-panel {
+    position: fixed;
+    top: var(--ui-top);
+    left: calc(var(--rail-left) + var(--rail-width) + var(--rail-gap));
+    z-index: 10500;
+    width: var(--search-width);
+    max-width: var(--search-max);
+    max-height: calc(100vh - (var(--ui-top) * 2));
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: transparent;
+}
+
+/* Mode Collapse: sembunyikan input+filter & konten, sisakan tombol collapse */
 .filter-panel.is-collapsed {
-    width: 56px;
+    width: var(--btn-size);
 }
 
-.filter-panel.is-collapsed .header-left {
-    display: none !important;
-}
-
-.filter-panel.is-collapsed .search-container,
+.filter-panel.is-collapsed .map-search-input-wrap input,
+.filter-panel.is-collapsed #btn-search,
+.filter-panel.is-collapsed #toggle-filter,
 .filter-panel.is-collapsed .scrollable-content {
     display: none !important;
 }
 
-.filter-panel.is-collapsed .panel-header {
+.filter-panel.is-collapsed .map-search-panel {
     justify-content: center;
-    padding: 12px;
 }
 
-.filter-panel.is-collapsed #toggle-filter {
-    display: none !important;
+.filter-panel.is-collapsed .map-search-input-wrap {
+    min-width: 0;
+    width: var(--btn-size);
 }
 
-.filter-panel:not(.is-collapsed) .collapse-panel-btn .icon-expand {
+.filter-panel:not(.is-collapsed) .map-collapse-btn .icon-expand {
     display: none;
 }
 
-.filter-panel.is-collapsed .collapse-panel-btn .icon-collapse {
+.filter-panel.is-collapsed .map-collapse-btn .icon-collapse {
     display: none;
 }
 
-/* Area Konten yang Bisa Digulir */
-.scrollable-content {
-    overflow-y: auto; /* Memunculkan scroll otomatis jika konten melebihi batas */
-    flex: 1; /* Area ini akan melar mengisi sisa ruang di bawah pencarian */
+/* Search panel (container putih menyatu) */
+.map-search-panel {
+    display: flex;
+    align-items: center;
+}
+
+.map-search-input-wrap {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.96);
+    border-radius: var(--search-radius);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+    overflow: hidden;
+    width: 100%;
+    min-width: 0;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.map-search-input-wrap input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 0 16px;
+    height: var(--search-height);
+    font-size: 15px;
+    background: transparent;
+    color: #0f172a;
+    min-width: 0;
+}
+
+.map-search-btn,
+.map-filter-btn,
+.map-collapse-btn {
+    width: var(--btn-size);
+    height: var(--search-height);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.map-search-btn,
+.map-filter-btn,
+.map-collapse-btn {
+    border-left: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.filter-panel.is-collapsed .map-collapse-btn {
+    border-left: none;
+}
+
+.map-search-btn {
+    background: #005A9C;
+    color: #ffffff;
+}
+
+.map-search-btn:hover {
+    background: #004a87;
+}
+
+.map-filter-btn {
+    background: #FDBA12;
+    color: #005A9C;
+}
+
+.map-filter-btn:hover {
+    background: #fdb813;
+}
+
+.map-collapse-btn {
+    background: rgba(224, 242, 254, 0.92);
+    color: #005A9C;
+}
+
+.map-collapse-btn:hover {
+    background: #ffffff;
 }
 
 /* Mempercantik Scrollbar agar tipis dan elegan */
 .scrollable-content::-webkit-scrollbar { width: 5px; }
 .scrollable-content::-webkit-scrollbar-thumb { 
-    background: rgba(0, 74, 135, 0.3); /* Scrollbar biru transparan */
+    background: rgba(0, 74, 135, 0.3);
     border-radius: 10px; 
 }
 
-/* Header Biru Pilkom (Gradasi Mewah) */
-.panel-header {
-    /* Gradasi dari biru tua ke biru muda cerah */
-    background: linear-gradient(135deg, #004a87 0%, #0284c7 100%);
-    padding: 15px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+@media (max-width: 768px) {
+    :root {
+        --rail-left: 10px;
+        --rail-width: 60px;
+        --rail-gap: 16px;
+        --ui-top: 12px;
+        --search-height: 54px;
+        --btn-size: 48px;
+        --rail-btn-size: 44px;
+        --rail-btn-gap: 12px;
+    }
+
+    .filter-panel {
+        left: calc(var(--rail-left) + var(--rail-width) + var(--rail-gap));
+        width: calc(100vw - 130px);
+        max-width: var(--search-max);
+        max-height: calc(100vh - (var(--ui-top) * 2));
+    }
+
+    .map-search-input-wrap {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .map-search-input-wrap input {
+        height: var(--search-height);
+        font-size: 14px;
+        padding: 0 14px;
+    }
 }
 
-.panel-actions {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
+/* Hindari kontrol Leaflet tertutup rail/search */
+.map-page .leaflet-top.leaflet-left {
+    left: calc(var(--rail-left) + var(--rail-width) + 10px) !important;
+    top: calc(var(--ui-top) + var(--search-height) + 14px) !important;
 }
 
-.collapse-panel-btn {
-    background: rgba(255, 255, 255, 0.18);
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    border-radius: 8px;
-    width: 38px;
-    height: 38px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: #ffffff;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.collapse-panel-btn:hover {
-    background: rgba(255, 255, 255, 0.28);
-    transform: scale(1.05);
-}
-
-.header-text h3 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 800;
-    color: #ffffff; /* Teks Putih */
-    letter-spacing: 1px;
-}
-
-.header-text p {
-    margin: 3px 0 0 0;
-    font-size: 10px;
-    color: rgba(255, 255, 255, 0.75);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-/* Tombol Toggle (Kuning Pilkom) */
-.toggle-btn {
-    background: #fdb813;
-    border: none;
-    border-radius: 8px;
-    width: 38px;
-    height: 38px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: #004a87; /* Warna ikon biru */
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.toggle-btn:hover {
-    background: #ffc93d;
-    transform: scale(1.05);
+.map-page .leaflet-bottom.leaflet-left {
+    left: calc(var(--rail-left) + var(--rail-width) + 10px) !important;
 }
 
 /* --- CSS ANIMASI FILTER YANG BENAR --- */
@@ -169,59 +264,20 @@
     border: none;
 }
 
-/* Container Pencarian */
-.search-container {
-    padding: 15px 20px 5px 20px;
-    background: transparent; /* Biarkan efek kaca dari panel utama terlihat */
-}
-/* Kolom Pencarian & Flexbox */
-.search-box { 
-    margin-bottom: 0; 
-    display: flex; /* Membuat input dan tombol sejajar */
-    gap: 8px; /* Jarak antara input dan tombol */
-}
-
-/* Kolom Input Pencarian */
-.search-box input {
+/* Area konten filter + hasil (kartu mengambang di bawah search) */
+.scrollable-content {
+    overflow-y: auto;
     flex: 1;
-    width: 100%;
-    padding: 12px 16px;
-    border-radius: 50px;
-    background: rgba(241, 245, 249, 0.6); /* Transparan keabu-abuan */
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(203, 213, 225, 0.5);
-    color: #1e293b;
-    font-family: 'Inter', sans-serif;
-    font-size: 13px;
-    outline: none;
-    transition: all 0.3s ease;
-    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 16px;
+    box-shadow: 0 15px 35px rgba(0, 74, 135, 0.12);
 }
 
-.search-box input:focus {
-    border-color: #004a87;
-    background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(0, 74, 135, 0.1);
-}
-
-/* Desain Tombol Cari (Biru Pilkom) */
-.search-action-btn {
-    background: #004a87;
-    color: #ffffff;
-    border: none;
-    border-radius: 50px;
-    width: 45px; /* Lebar tombol */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.search-action-btn:hover {
-    background: #fdb813; /* Berubah jadi kuning pilkom saat disorot */
-    color: #004a87;
-    box-shadow: 0 4px 10px rgba(0, 74, 135, 0.2);
+.scrollable-content.is-empty {
+    display: none;
 }
 
 /* Label & Tombol Pill */

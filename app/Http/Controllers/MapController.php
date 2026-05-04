@@ -54,7 +54,11 @@ class MapController extends Controller
             'perusahaan.lokasi'
         ])
         ->where('is_current', true)
-        ->where('status_kerja', 'Bekerja')
+        ->where(function ($q) {
+            $q->whereNull('status_kerja')
+                // Hindari false-positive: "Belum Bekerja" mengandung kata "kerja"
+                ->orWhereRaw('LOWER(status_kerja) IN (?, ?)', ['bekerja', 'kerja']);
+        })
         ->get();
 
         $pekerjaGrouped = $pekerja->groupBy('alumni_id');
@@ -91,19 +95,40 @@ class MapController extends Controller
             })
             ->values();
 
-        $workingAlumniIds = $pekerjaPerAlumni
-            ->pluck('alumni_id')
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
+        // Alumni dianggap "punya marker bekerja" hanya jika lokasi perusahaan valid.
+        // Jika lokasi perusahaan tidak ada, alumni tetap boleh muncul di peta sebagai "belum bekerja"
+        // (menggunakan domisili alumni) agar tidak hilang sama sekali.
+        $workingAlumniIds = [];
 
         foreach ($pekerjaPerAlumni as $job) {
 
             $lokasi = $this->getLokasiPerusahaan($job);
 
-            if (!$lokasi || !$lokasi->latitude || !$lokasi->longitude) {
+            $markerLat = $lokasi?->latitude;
+            $markerLng = $lokasi?->longitude;
+            $markerKota = $lokasi?->kota;
+            $markerProv = $lokasi?->provinsi;
+            $markerAlamat = $lokasi?->alamat_lengkap;
+
+            // Fallback: jika lokasi perusahaan kosong (mis. hanya ada nama perusahaan),
+            // tetap tampilkan sebagai "Bekerja" memakai domisili alumni agar tidak salah status di peta.
+            if (!$markerLat || !$markerLng) {
+                $alamatAlumni = $job->alumni?->alamat;
+                if ($alamatAlumni?->latitude && $alamatAlumni?->longitude) {
+                    $markerLat = $alamatAlumni->latitude;
+                    $markerLng = $alamatAlumni->longitude;
+                    $markerKota = $markerKota ?: $alamatAlumni->kota;
+                    $markerProv = $markerProv ?: $alamatAlumni->provinsi;
+                    $markerAlamat = $markerAlamat ?: $alamatAlumni->alamat_lengkap;
+                }
+            }
+
+            if (!$markerLat || !$markerLng) {
                 continue;
+            }
+
+            if ($job->alumni_id) {
+                $workingAlumniIds[] = (int) $job->alumni_id;
             }
 
             $jobsAlumni = $pekerjaGrouped->get($job->alumni_id, collect());
@@ -113,8 +138,8 @@ class MapController extends Controller
                 'perusahaan' => $job->perusahaan?->nama_perusahaan,
                 'jabatan' => $job->jabatan,
                 'status_karir' => $job->status_karir,
-                'latitude' => (float) $lokasi->latitude,
-                'longitude' => (float) $lokasi->longitude,
+                'latitude' => (float) $markerLat,
+                'longitude' => (float) $markerLng,
             ];
 
             $pekerjaanLainnya = $jobsAlumni
@@ -160,13 +185,13 @@ class MapController extends Controller
                 'status'        => 'Bekerja',
                 'status_icon'   => 'working',
 
-                'latitude'      => (float) $lokasi->latitude,
-                'longitude'     => (float) $lokasi->longitude,
+                'latitude'      => (float) $markerLat,
+                'longitude'     => (float) $markerLng,
 
-                'kota'          => $lokasi->kota,
-                'provinsi'      => $lokasi->provinsi,
-                'wilayah_key'   => $this->normalisasiWilayahKey($lokasi->kota ?? $lokasi->provinsi),
-                'alamat'        => $lokasi->alamat_lengkap,
+                'kota'          => $markerKota,
+                'provinsi'      => $markerProv,
+                'wilayah_key'   => $this->normalisasiWilayahKey($markerKota ?? $markerProv),
+                'alamat'        => $markerAlamat,
 
                 'perusahaan'    => $job->perusahaan?->nama_perusahaan,
                 'jabatan'       => $job->jabatan,
@@ -179,6 +204,12 @@ class MapController extends Controller
                 'pekerjaan_lainnya' => $pekerjaanLainnya,
             ]);
         }
+
+        $workingAlumniIds = collect($workingAlumniIds)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
 
         /*
         |--------------------------------------------------------------------------
