@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root {
-            --bg: #f1f5f9;
+            --bg: #f3f6f9;
             --card: #ffffff;
             --text: #0f172a;
             --muted: #64748b;
