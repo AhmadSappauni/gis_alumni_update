@@ -21,14 +21,32 @@ body {
     position: sticky;
     top: 0;
     z-index: 10;
+    padding: 0;
+    background: linear-gradient(135deg, rgba(0, 74, 135, 0.96) 0%, rgba(2, 132, 199, 0.92) 100%);
+    color: #fff;
+    box-shadow: 0 12px 22px rgba(0, 74, 135, 0.16);
+}
+
+.stat-container {
+    width: 100%;
+    max-width: 1600px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 80px;
+    padding-right: 80px;
+}
+
+@media (max-width: 1200px) {
+    .stat-container { padding-left: 64px; padding-right: 64px; }
+}
+
+.stat-topbar-inner {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 12px 16px;
-    background: linear-gradient(135deg, rgba(0, 74, 135, 0.96) 0%, rgba(2, 132, 199, 0.92) 100%);
-    color: #fff;
-    box-shadow: 0 12px 22px rgba(0, 74, 135, 0.16);
+    padding-top: 12px;
+    padding-bottom: 12px;
 }
 
 .stat-back {
@@ -76,9 +94,8 @@ body {
 }
 
 .stat-wrap {
-    padding: 18px;
-    max-width: 1240px;
-    margin: 0 auto;
+    padding-top: 18px;
+    padding-bottom: 18px;
 }
 
 .stat-panel {
@@ -87,7 +104,7 @@ body {
     border-radius: 18px;
     backdrop-filter: blur(12px);
     box-shadow: 0 12px 26px rgba(0, 74, 135, 0.10);
-    padding: 14px 14px 12px 14px;
+    padding: 18px 18px 14px 18px;
 }
 
 .stat-filter-head {
@@ -98,6 +115,10 @@ body {
 
 .stat-filter-panel {
     margin-top: 6px;
+    padding: 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(0, 74, 135, 0.10);
+    background: rgba(255, 255, 255, 0.72);
 }
 
 .stat-btn-filter {
@@ -106,8 +127,9 @@ body {
 
 .stat-filter-grid {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(4, minmax(180px, 1fr));
+    gap: 16px 18px;
+    align-items: end;
 }
 
 .stat-field label {
@@ -121,12 +143,14 @@ body {
 }
 .stat-field select {
     width: 100%;
-    padding: 10px 12px;
-    border-radius: 14px;
+    min-height: 48px;
+    padding: 12px 12px;
+    border-radius: 16px;
     border: 1px solid rgba(226, 232, 240, 0.95);
     background: rgba(255,255,255,0.9);
     color: var(--text);
     font-weight: 800;
+    font-size: 13px;
     outline: none;
     transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
@@ -138,8 +162,11 @@ body {
 .stat-filter-actions {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 10px;
-    margin-top: 12px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px dashed rgba(0, 74, 135, 0.14);
 }
 
 .stat-btn-filter {
@@ -147,12 +174,14 @@ body {
 }
 
 .stat-btn {
+    min-height: 48px;
     padding: 12px 16px;
-    border-radius: 14px;
+    border-radius: 16px;
     border: 1px solid rgba(0, 74, 135, 0.18);
     background: rgba(255,255,255,0.75);
     color: var(--blue-dark);
     font-weight: 900;
+    font-size: 13px;
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -180,7 +209,7 @@ body {
 .stat-kpis { margin-top: 14px; }
 .stat-kpi-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
 }
 .stat-kpi-card {
@@ -192,6 +221,9 @@ body {
     padding: 16px;
     position: relative;
     overflow: hidden;
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 .stat-kpi-card:hover {
@@ -340,6 +372,34 @@ body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
 }
+.stat-chart-grid--1 { grid-template-columns: 1fr; }
+.stat-chart-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.stat-chart-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.stat-chart-grid--3 .stat-card {
+    padding: 14px;
+    min-height: 380px;
+}
+.stat-chart-grid--3 .stat-card-body {
+    height: 300px;
+}
+.stat-chart-grid--3 .stat-card.stat-card-wilayah {
+    padding: 16px;
+    min-height: 420px;
+}
+.stat-chart-grid--3 .stat-card.stat-card-wilayah .stat-card-body {
+    height: 320px;
+}
+.stat-chart-grid--3 .chart-fixed,
+.stat-chart-grid--3 .chart-toefl-box {
+    height: 300px;
+    max-height: 300px;
+    min-height: 300px;
+}
+.stat-chart-grid--3 .chart-toefl-box canvas {
+    height: 300px !important;
+    max-height: 300px !important;
+}
 .stat-card {
     background: var(--card);
     border: 1px solid var(--border);
@@ -364,6 +424,42 @@ body {
 .stat-card-body { position: relative; flex: 1; height: 320px; }
 .stat-card-wide .stat-card-body { height: 360px; }
 .stat-card-body canvas { width: 100% !important; height: 100% !important; }
+.stat-card-wilayah { min-height: 420px; }
+.stat-card-title-center { text-align: center; }
+.stat-card-sub-center { text-align: center; }
+
+.stat-wilayah-toolbar {
+    display: flex;
+    justify-content: center;
+    margin: 4px 0 10px 0;
+}
+
+.stat-inline-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 800;
+    font-size: 12px;
+    color: var(--muted);
+    user-select: none;
+}
+.stat-inline-check input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--blue-dark);
+}
+
+.stat-wilayah-chart-wrap {
+    position: relative;
+    border-radius: 16px;
+    border: 1px solid rgba(0, 74, 135, 0.10);
+    background: rgba(255,255,255,0.72);
+    padding: 12px 12px 10px 12px;
+    overflow: hidden;
+}
+.stat-wilayah-chart-wrap::-webkit-scrollbar { width: 10px; }
+.stat-wilayah-chart-wrap::-webkit-scrollbar-thumb { background: rgba(0, 74, 135, 0.18); border-radius: 999px; }
+.stat-wilayah-chart-wrap::-webkit-scrollbar-track { background: rgba(0, 74, 135, 0.06); border-radius: 999px; }
 .stat-empty {
     position: absolute;
     inset: 0;
@@ -384,15 +480,150 @@ body {
     display: none !important;
 }
 
-@media (max-width: 1024px) {
-    .stat-filter-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.stat-kpi-meta {
+    margin-top: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--muted);
+}
+
+.stat-card-footnote {
+    margin-top: 10px;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--muted);
+}
+
+.chart-fixed {
+    position: relative;
+    width: 100%;
+    height: 320px;
+    max-height: 320px;
+    min-height: 320px;
+    overflow: hidden;
+}
+
+.chart-toefl-box {
+    height: 320px;
+    max-height: 320px;
+    min-height: 320px;
+}
+
+.chart-toefl-box canvas {
+    width: 100% !important;
+    height: 320px !important;
+    max-height: 320px !important;
+    display: block;
+}
+
+.stat-heatmap-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.stat-heatmap-tabs {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.stat-heatmap-tab {
+    padding: 10px 14px;
+}
+
+.stat-heatmap-body {
+    height: auto;
+}
+
+.stat-heatmap-map {
+    height: 480px;
+    min-height: 420px;
+    border-radius: 16px;
+    border: 1px solid rgba(0, 74, 135, 0.12);
+    overflow: hidden;
+    background: rgba(255,255,255,0.7);
+    position: relative;
+}
+
+.stat-heatmap-map .leaflet-heatmap-layer {
+    opacity: 1 !important;
+    visibility: visible !important;
+    /* Tingkatkan kontras heatmap di atas basemap OSM */
+    filter: saturate(2.5) contrast(1.8) !important;
+    mix-blend-mode: multiply !important;
+    z-index: 650 !important;
+}
+
+.stat-heatmap-map .leaflet-heat-pane {
+    z-index: 650 !important;
+    pointer-events: none !important;
+}
+
+.stat-heatmap-map .leaflet-polygon-pane {
+    z-index: 430 !important;
+    pointer-events: none !important;
+}
+
+.stat-heatmap-status {
+    margin-top: 8px;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--muted);
+    padding: 8px 10px;
+    border-radius: 12px;
+    border: 1px dashed rgba(0, 74, 135, 0.18);
+    background: rgba(255, 255, 255, 0.75);
+}
+.stat-heatmap-status.is-info { color: #0f172a; border-style: solid; }
+.stat-heatmap-status.is-success { color: #065f46; border-style: solid; border-color: rgba(6, 95, 70, 0.25); }
+.stat-heatmap-status.is-warn { color: #92400e; border-style: solid; border-color: rgba(146, 64, 14, 0.25); }
+.stat-heatmap-status.is-error { color: #991b1b; border-style: solid; border-color: rgba(153, 27, 27, 0.25); }
+
+.stat-heatmap-foot {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.stat-heatmap-meta {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--muted);
+}
+
+@media (max-width: 1200px) {
+    .stat-filter-grid { grid-template-columns: repeat(3, minmax(180px, 1fr)); }
+    .stat-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .stat-chart-grid--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 768px) {
+    .stat-filter-grid { grid-template-columns: repeat(2, minmax(160px, 1fr)); }
     .stat-chart-grid { grid-template-columns: 1fr; }
     .stat-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .stat-heatmap-head { flex-direction: column; align-items: stretch; }
+    .stat-heatmap-tabs { justify-content: flex-start; }
+    .stat-heatmap-map { height: 420px; }
+    .stat-container { padding-left: 32px; padding-right: 32px; }
+
+    .chart-fixed,
+    .chart-toefl-box {
+        height: 280px;
+        max-height: 280px;
+        min-height: 280px;
+    }
+
+    .chart-toefl-box canvas {
+        height: 280px !important;
+        max-height: 280px !important;
+    }
 }
 @media (max-width: 480px) {
-    .stat-wrap { padding: 14px; }
+    .stat-wrap { padding-top: 14px; padding-bottom: 14px; }
+    .stat-container { padding-left: 16px; padding-right: 16px; }
     .stat-filter-grid { grid-template-columns: 1fr; }
     .stat-kpi-grid { grid-template-columns: 1fr; }
     .stat-brand { display: none; }

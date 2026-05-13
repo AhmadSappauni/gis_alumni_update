@@ -12,10 +12,10 @@
         </div>
 
         <div class="header-right statistik-actions">
-            <button class="btn-export" type="button" disabled title="Export PDF (segera hadir)">
+            <button id="stat-export-pdf" class="btn-export" type="button" title="Export PDF laporan statistik">
                 Export PDF
             </button>
-            <button class="btn-export" type="button" disabled title="Export Excel (segera hadir)">
+            <button id="stat-export-excel" class="btn-export" type="button" title="Export Excel laporan statistik">
                 Export Excel
             </button>
             <button class="btn-export btn-export-xml" type="button" onclick="alert('Fitur export sedang disiapkan')">
@@ -92,6 +92,13 @@
                     @foreach($wilayahOptions as $opt)
                         <option value="{{ $opt }}" {{ (string)($initialFilters['wilayah'] ?? '') === (string)$opt ? 'selected' : '' }}>{{ $opt }}</option>
                     @endforeach
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>Mode Data</label>
+                <select id="stat-filter-data-mode">
+                    <option value="valid" selected>Data valid</option>
+                    <option value="all">Semua data</option>
                 </select>
             </div>
         </div>
@@ -223,6 +230,24 @@
                 <div class="kpi-value"><span id="kpi-masatunggu">-</span> <span class="kpi-unit">bulan</span></div>
                 <div class="kpi-sub">Estimasi waktu mendapat kerja</div>
             </div>
+
+            <div class="kpi-card glass-panel kpi-accent-sky toefl-summary-card">
+                <div class="kpi-top">
+                    <div class="kpi-icon" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 19h16"></path>
+                            <path d="M8 19V5"></path>
+                            <path d="M16 19V9"></path>
+                            <path d="M12 19V13"></path>
+                        </svg>
+                    </div>
+                    <div class="kpi-label">Rata-rata TOEFL</div>
+                </div>
+                <div class="kpi-value" id="kpi-toefl">-</div>
+                <div class="kpi-sub" id="kpi-toefl-sub">Data TOEFL belum tersedia</div>
+                <div class="kpi-meta" id="kpi-toefl-meta" style="display:none;">Data tersedia: 0 alumni</div>
+            </div>
         </div>
     </section>
 
@@ -252,6 +277,53 @@
                     <div class="chart-body">
                         <canvas id="chart-masa-tunggu"></canvas>
                         <div class="chart-empty" data-empty-for="chart-masa-tunggu" hidden>Belum ada data untuk ditampilkan.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-section stat-profile-section">
+            <div class="chart-section-head">
+                <div class="chart-section-title">Profil Alumni</div>
+                <div class="chart-section-sub">Komposisi jenis kelamin dan distribusi TOEFL</div>
+            </div>
+            <div class="chart-grid chart-grid--3">
+                <div class="chart-card glass-panel gender-chart-card">
+                    <div class="chart-head">
+                        <div class="chart-title">Jenis Kelamin</div>
+                        <div class="chart-subtitle">Perbandingan alumni laki-laki dan perempuan</div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="chart-gender"></canvas>
+                        <div class="chart-empty" data-empty-for="chart-gender" hidden>Data jenis kelamin belum tersedia.</div>
+                    </div>
+                </div>
+
+                <div class="chart-card glass-panel toefl-dist-chart-card">
+                    <div class="chart-head">
+                        <div class="chart-title">Distribusi Nilai TOEFL</div>
+                        <div class="chart-subtitle">Kelompok nilai TOEFL alumni</div>
+                    </div>
+                    <div class="chart-body">
+                        <div class="chart-fixed chart-toefl-box">
+                            <canvas id="chart-toefl-dist"></canvas>
+                            <div class="chart-empty" data-empty-for="chart-toefl-dist" hidden>Data TOEFL belum tersedia.</div>
+                        </div>
+                        <div class="chart-footnote" id="toefl-dist-footnote" style="display:none;"></div>
+                    </div>
+                </div>
+
+                <div class="chart-card glass-panel salary-dist-chart-card">
+                    <div class="chart-head">
+                        <div class="chart-title">Distribusi Rentang Gaji Alumni</div>
+                        <div class="chart-subtitle">Pengelompokan alumni berdasarkan gaji nominal</div>
+                    </div>
+                    <div class="chart-body">
+                        <div class="chart-fixed">
+                            <canvas id="chart-salary-dist"></canvas>
+                            <div class="chart-empty" data-empty-for="chart-salary-dist" hidden>Data gaji belum tersedia.</div>
+                        </div>
+                        <div class="chart-footnote" id="salary-dist-footnote" style="display:none;"></div>
                     </div>
                 </div>
             </div>
@@ -289,18 +361,45 @@
 
         <div class="chart-section">
             <div class="chart-section-head">
+                <div class="chart-section-title">Keterserapan Kerja</div>
+                <div class="chart-section-sub">Instansi paling banyak menyerap alumni</div>
+            </div>
+            <div class="chart-grid">
+                <div class="chart-card glass-panel chart-card-wide top-company-chart-card">
+                    <div class="chart-head">
+                        <div class="chart-title">Top 10 Perusahaan/Instansi Tujuan</div>
+                        <div class="chart-subtitle">Berdasarkan pekerjaan utama (aktif)</div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="chart-top-company"></canvas>
+                        <div class="chart-empty" data-empty-for="chart-top-company" hidden>Data perusahaan/instansi tujuan belum tersedia.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <div class="chart-section-head">
                 <div class="chart-section-title">Persebaran Wilayah</div>
                 <div class="chart-section-sub">Wilayah kerja dan kampus studi lanjut terbanyak</div>
             </div>
             <div class="chart-grid">
-                <div class="chart-card glass-panel">
+                <div class="chart-card glass-panel chart-card-wilayah">
                     <div class="chart-head">
-                        <div class="chart-title">Top 5 Wilayah Kerja</div>
-                        <div class="chart-subtitle">Kota/provinsi terbanyak (pekerjaan aktif)</div>
+                        <div class="chart-title chart-title-center">Persebaran Kerja Alumni</div>
+                        <div class="chart-subtitle chart-subtitle-center">Semua wilayah kerja (alumni bekerja)</div>
                     </div>
                     <div class="chart-body">
-                        <canvas id="chart-top-wilayah"></canvas>
-                        <div class="chart-empty" data-empty-for="chart-top-wilayah" hidden>Belum ada data untuk ditampilkan.</div>
+                        <div class="chart-wilayah-toolbar">
+                            <label class="chart-inline-check">
+                                <input id="stat-wilayah-sort" type="checkbox">
+                                <span>Urutkan dari terbanyak</span>
+                            </label>
+                        </div>
+                        <div class="chart-wilayah-chart-wrap">
+                            <canvas id="chart-top-wilayah"></canvas>
+                            <div class="chart-empty" data-empty-for="chart-top-wilayah" hidden>Data persebaran kerja alumni belum tersedia.</div>
+                        </div>
                     </div>
                 </div>
 
@@ -317,12 +416,43 @@
             </div>
         </div>
 
+        {{-- Heatmap Persebaran Alumni dinonaktifkan (admin) --}}
+        {{--
+        <div class="chart-section">
+            <div class="chart-section-head">
+                <div class="chart-section-title">Heatmap Persebaran Alumni</div>
+                <div class="chart-section-sub">Kalimantan Selatan (Domisili vs Lokasi Kerja)</div>
+            </div>
+            <div class="chart-grid chart-grid--1">
+                <div class="chart-card glass-panel chart-card-wide heatmap-stat-card">
+                    <div class="chart-head chart-heatmap-head">
+                        <div>
+                            <div class="chart-title">Heatmap Persebaran Alumni (Kalimantan Selatan)</div>
+                            <div class="chart-subtitle" id="heatmap-subtitle">Menampilkan kepadatan domisili alumni di Kalsel</div>
+                        </div>
+                        <div class="chart-heatmap-tabs" role="tablist" aria-label="Mode heatmap">
+                            <button id="heatmap-tab-domisili" class="btn-primary chart-heatmap-tab" type="button" aria-selected="true">Domisili</button>
+                            <button id="heatmap-tab-kerja" class="btn-outline-primary chart-heatmap-tab" type="button" aria-selected="false">Lokasi Kerja</button>
+                        </div>
+                    </div>
+                    <div class="chart-body chart-heatmap-body">
+                        <div id="heatmap-map" class="chart-heatmap-map"></div>
+                        <div class="chart-empty chart-heatmap-empty" data-empty-for="heatmap-map" hidden>Data koordinat belum tersedia.</div>
+                    </div>
+                    <div class="chart-heatmap-foot">
+                        <div class="chart-heatmap-meta" id="heatmap-meta">0 titik valid • 0 data tanpa koordinat</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        --}}
+
         <div class="chart-section">
             <div class="chart-section-head">
                 <div class="chart-section-title">Tren Alumni</div>
                 <div class="chart-section-sub">Perubahan jumlah alumni dan keterserapan kerja per angkatan</div>
             </div>
-            <div class="chart-grid">
+            <div class="chart-grid chart-grid--1">
                 <div class="chart-card glass-panel chart-card-wide">
                     <div class="chart-head">
                         <div class="chart-title">Tren Alumni per Angkatan</div>
@@ -353,6 +483,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script>
         window.__STATISTIK_ENDPOINT__ = @json(route('admin.statistik.data'));
+        window.__STATISTIK_EXPORT_PDF__ = @json(route('admin.statistik.export.pdf'));
+        window.__STATISTIK_EXPORT_EXCEL__ = @json(route('admin.statistik.export.excel'));
     </script>
     <script src="{{ asset('js/admin/statistik.js') }}"></script>
 @endpush

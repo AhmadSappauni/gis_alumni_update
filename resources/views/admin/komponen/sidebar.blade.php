@@ -1,7 +1,7 @@
 <aside class="sidebar glass-panel">
     <div class="sidebar-brand">
         <h2>WebGIS<br>Pil<span>kom</span></h2>
-        <p>Pendidikan Komputer</p>
+        <p>Halaman Admin</p>
     </div>
 
     <nav class="nav-menu">

@@ -45,6 +45,12 @@
     transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+}
+
+.main-sidebar,
+.main-sidebar * {
+    box-sizing: border-box;
 }
 
 /* Kelas saat sidebar ditarik keluar */
@@ -57,6 +63,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 14px;
     padding: 18px 18px 16px 18px;
     border-bottom: 1px solid rgba(226, 232, 240, 0.85);
     background: linear-gradient(135deg, rgba(0, 74, 135, 0.96) 0%, rgba(2, 132, 199, 0.92) 100%);
@@ -67,7 +74,9 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    flex: 1 1 auto;
     min-width: 0;
+    padding-right: 8px;
 }
 
 .sidebar-brand-icon {
@@ -86,6 +95,7 @@
 
 .sidebar-brand-text {
     min-width: 0;
+    max-width: calc(100% - 8px);
 }
 
 #sidebar-title {
@@ -118,6 +128,7 @@
     cursor: pointer;
     line-height: 1;
     transition: all 0.2s ease;
+    flex: 0 0 40px;
 }
 .close-sidebar-btn:hover {
     background: rgba(253, 184, 19, 0.22);
@@ -132,10 +143,13 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    width: 100%;
+    overflow: hidden;
 }
 .menu-item {
     appearance: none;
     -webkit-appearance: none;
+    font-family: inherit;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -150,6 +164,7 @@
     box-shadow: 0 10px 22px rgba(0, 74, 135, 0.08);
     transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, border-color 0.22s ease, color 0.22s ease;
     width: 100%;
+    max-width: 100%;
     text-align: left;
     cursor: pointer;
 }
@@ -179,6 +194,7 @@
 }
 
 .menu-text {
+    font-family: inherit;
     font-size: 14px;
     font-weight: 800;
     color: #0f172a;
@@ -196,7 +212,7 @@
     background: rgba(224, 242, 254, 0.85);
     border-color: rgba(2, 132, 199, 0.35);
     color: #004a87;
-    transform: translateX(6px);
+    transform: translateY(-1px);
     box-shadow: 0 14px 28px rgba(0, 74, 135, 0.14);
 }
 

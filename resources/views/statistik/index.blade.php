@@ -10,39 +10,42 @@
 </head>
 <body>
     <header class="stat-topbar">
-        <a class="stat-back" href="{{ route('map.index') }}" aria-label="Kembali ke Peta">
-            <span class="stat-back-icon" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M15 18l-6-6 6-6"></path>
-                </svg>
-            </span>
-            <span>Kembali ke Peta</span>
-        </a>
+        <div class="stat-topbar-inner stat-container">
+            <a class="stat-back" href="{{ route('map.index') }}" aria-label="Kembali ke Peta">
+                <span class="stat-back-icon" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M15 18l-6-6 6-6"></path>
+                    </svg>
+                </span>
+                <span>Kembali ke Peta</span>
+            </a>
 
-        <div class="stat-brand">
-            <div class="stat-brand-title">Statistik Alumni</div>
-            <div class="stat-brand-sub">Dashboard analisis tracer study alumni Pendidikan Komputer</div>
+            <div class="stat-brand">
+                <div class="stat-brand-title">Statistik Alumni</div>
+                <div class="stat-brand-sub">Dashboard analisis tracer study alumni Pendidikan Komputer</div>
+            </div>
         </div>
     </header>
 
     <main class="stat-wrap">
-        <section class="stat-panel">
-            @php
-                $hasInitialFilters = collect($initialFilters ?? [])
-                    ->filter(fn ($v) => $v !== null && trim((string) $v) !== '')
-                    ->isNotEmpty();
-            @endphp
+        <div class="stat-container">
+            <section class="stat-panel">
+                @php
+                    $hasInitialFilters = collect($initialFilters ?? [])
+                        ->filter(fn ($v) => $v !== null && trim((string) $v) !== '')
+                        ->isNotEmpty();
+                @endphp
 
-            <div class="stat-filter-head">
-                <button id="stat-filter-toggle" class="stat-btn stat-btn-filter" type="button" aria-controls="stat-filter-panel"
-                    aria-expanded="{{ $hasInitialFilters ? 'true' : 'false' }}">
-                    Filter Statistik
-                </button>
-            </div>
+                <div class="stat-filter-head">
+                    <button id="stat-filter-toggle" class="stat-btn stat-btn-filter" type="button" aria-controls="stat-filter-panel"
+                        aria-expanded="{{ $hasInitialFilters ? 'true' : 'false' }}">
+                        Filter Statistik
+                    </button>
+                </div>
 
-            <div id="stat-filter-panel" class="stat-filter-panel" {{ $hasInitialFilters ? '' : 'hidden' }}>
-                <div class="stat-filter-grid">
+                <div id="stat-filter-panel" class="stat-filter-panel" {{ $hasInitialFilters ? '' : 'hidden' }}>
+                    <div class="stat-filter-grid">
                 <div class="stat-field">
                     <label>Angkatan</label>
                     <select id="stat-filter-angkatan">
@@ -95,6 +98,13 @@
                         @foreach($wilayahOptions as $opt)
                             <option value="{{ $opt }}" {{ (string)($initialFilters['wilayah'] ?? '') === (string)$opt ? 'selected' : '' }}>{{ $opt }}</option>
                         @endforeach
+                    </select>
+                </div>
+                <div class="stat-field">
+                    <label>Mode Data</label>
+                    <select id="stat-filter-data-mode">
+                        <option value="valid" selected>Data valid</option>
+                        <option value="all">Semua data</option>
                     </select>
                 </div>
             </div>
@@ -226,6 +236,24 @@
                     <div class="stat-kpi-value"><span id="kpi-masatunggu">-</span> <span class="stat-kpi-unit">bulan</span></div>
                     <div class="stat-kpi-sub">Estimasi waktu mendapat kerja</div>
                 </div>
+
+                <div class="stat-kpi-card kpi-accent-sky toefl-summary-card">
+                    <div class="kpi-top">
+                        <div class="kpi-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 19h16"></path>
+                                <path d="M8 19V5"></path>
+                                <path d="M16 19V9"></path>
+                                <path d="M12 19V13"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-kpi-label">Rata-rata TOEFL</div>
+                    </div>
+                    <div class="stat-kpi-value" id="kpi-toefl">-</div>
+                    <div class="stat-kpi-sub" id="kpi-toefl-sub">Data TOEFL belum tersedia</div>
+                    <div class="stat-kpi-meta" id="kpi-toefl-meta" style="display:none;">Data tersedia: 0 alumni</div>
+                </div>
             </div>
         </section>
 
@@ -235,7 +263,7 @@
                     <div class="stat-section-title">Ringkasan Ketenagakerjaan</div>
                     <div class="stat-section-sub">Gambaran status kerja dan masa tunggu</div>
                 </div>
-                <div class="stat-chart-grid">
+                <div class="stat-chart-grid stat-chart-grid--3">
                     <div class="stat-card">
                         <div class="stat-card-head">
                             <div class="stat-card-title">Status Alumni</div>
@@ -257,15 +285,54 @@
                             <div class="stat-empty" data-empty-for="chart-masa-tunggu" hidden>Belum ada data untuk ditampilkan.</div>
                         </div>
                     </div>
+
+                    <div class="stat-card gender-chart-card">
+                        <div class="stat-card-head">
+                            <div class="stat-card-title">Jenis Kelamin</div>
+                            <div class="stat-card-sub">Perbandingan alumni laki-laki dan perempuan</div>
+                        </div>
+                        <div class="stat-card-body">
+                            <canvas id="chart-gender"></canvas>
+                            <div class="stat-empty" data-empty-for="chart-gender" hidden>Data jenis kelamin belum tersedia.</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="stat-section">
+            <div class="stat-section stat-profile-section">
                 <div class="stat-section-head">
-                    <div class="stat-section-title">Relevansi Karier</div>
-                    <div class="stat-section-sub">Kesesuaian bidang ilmu dan bidang pekerjaan dominan</div>
+                    <div class="stat-section-title">Profil & Relevansi</div>
+                    <div class="stat-section-sub">TOEFL, linearitas, dan persebaran kerja</div>
                 </div>
-                <div class="stat-chart-grid">
+                <div class="stat-chart-grid stat-chart-grid--3">
+                    <div class="stat-card toefl-dist-chart-card">
+                        <div class="stat-card-head">
+                            <div class="stat-card-title">Distribusi Nilai TOEFL</div>
+                            <div class="stat-card-sub">Kelompok nilai TOEFL alumni</div>
+                        </div>
+                        <div class="stat-card-body">
+                            <div class="chart-fixed chart-toefl-box">
+                                <canvas id="chart-toefl-dist"></canvas>
+                                <div class="stat-empty" data-empty-for="chart-toefl-dist" hidden>Data TOEFL belum tersedia.</div>
+                            </div>
+                            <div class="stat-card-footnote" id="toefl-dist-footnote" style="display:none;"></div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card salary-dist-chart-card">
+                        <div class="stat-card-head">
+                            <div class="stat-card-title">Distribusi Rentang Gaji Alumni</div>
+                            <div class="stat-card-sub">Pengelompokan alumni berdasarkan gaji nominal</div>
+                        </div>
+                        <div class="stat-card-body">
+                            <div class="chart-fixed">
+                                <canvas id="chart-salary-dist"></canvas>
+                                <div class="stat-empty" data-empty-for="chart-salary-dist" hidden>Data gaji belum tersedia.</div>
+                            </div>
+                            <div class="stat-card-footnote" id="salary-dist-footnote" style="display:none;"></div>
+                        </div>
+                    </div>
+
                     <div class="stat-card">
                         <div class="stat-card-head">
                             <div class="stat-card-title">Kesesuaian Bidang Ilmu</div>
@@ -277,6 +344,44 @@
                         </div>
                     </div>
 
+                    <div class="stat-card stat-card-wilayah">
+                        <div class="stat-card-head">
+                            <div class="stat-card-title stat-card-title-center">Persebaran Kerja Alumni</div>
+                            <div class="stat-card-sub stat-card-sub-center">Semua wilayah kerja (alumni bekerja)</div>
+                        </div>
+                        <div class="stat-card-body">
+                            <div class="stat-wilayah-toolbar">
+                                <label class="stat-inline-check">
+                                    <input id="stat-wilayah-sort" type="checkbox">
+                                    <span>Urutkan dari terbanyak</span>
+                                </label>
+                            </div>
+                            <div class="stat-wilayah-chart-wrap">
+                                <canvas id="chart-top-wilayah"></canvas>
+                                <div class="stat-empty" data-empty-for="chart-top-wilayah" hidden>Data persebaran kerja alumni belum tersedia.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-section">
+                <div class="stat-section-head">
+                    <div class="stat-section-title">Keterserapan & Studi Lanjut</div>
+                    <div class="stat-section-sub">Instansi tujuan, bidang dominan, dan kampus studi lanjut</div>
+                </div>
+                <div class="stat-chart-grid stat-chart-grid--2">
+                    <div class="stat-card stat-card-wide top-company-chart-card">
+                        <div class="stat-card-head">
+                            <div class="stat-card-title">Top 10 Perusahaan/Instansi Tujuan</div>
+                            <div class="stat-card-sub">Berdasarkan pekerjaan utama (aktif)</div>
+                        </div>
+                        <div class="stat-card-body">
+                            <canvas id="chart-top-company"></canvas>
+                            <div class="stat-empty" data-empty-for="chart-top-company" hidden>Data perusahaan/instansi tujuan belum tersedia.</div>
+                        </div>
+                    </div>
+
                     <div class="stat-card">
                         <div class="stat-card-head">
                             <div class="stat-card-title">Top 5 Bidang Pekerjaan</div>
@@ -285,25 +390,6 @@
                         <div class="stat-card-body">
                             <canvas id="chart-top-bidang"></canvas>
                             <div class="stat-empty" data-empty-for="chart-top-bidang" hidden>Belum ada data untuk ditampilkan.</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="stat-section">
-                <div class="stat-section-head">
-                    <div class="stat-section-title">Persebaran Wilayah</div>
-                    <div class="stat-section-sub">Wilayah kerja dan kampus studi lanjut terbanyak</div>
-                </div>
-                <div class="stat-chart-grid">
-                    <div class="stat-card">
-                        <div class="stat-card-head">
-                            <div class="stat-card-title">Top 5 Wilayah Kerja</div>
-                            <div class="stat-card-sub">Kota/provinsi terbanyak (aktif)</div>
-                        </div>
-                        <div class="stat-card-body">
-                            <canvas id="chart-top-wilayah"></canvas>
-                            <div class="stat-empty" data-empty-for="chart-top-wilayah" hidden>Belum ada data untuk ditampilkan.</div>
                         </div>
                     </div>
 
@@ -325,7 +411,7 @@
                     <div class="stat-section-title">Tren Alumni</div>
                     <div class="stat-section-sub">Perubahan jumlah alumni dan keterserapan kerja per angkatan</div>
                 </div>
-                <div class="stat-chart-grid">
+                <div class="stat-chart-grid stat-chart-grid--1">
                     <div class="stat-card stat-card-wide">
                         <div class="stat-card-head">
                             <div class="stat-card-title">Tren Alumni per Angkatan</div>
@@ -347,9 +433,10 @@
                             <div class="stat-empty" data-empty-for="chart-tren-serap" hidden>Belum ada data untuk ditampilkan.</div>
                         </div>
                     </div>
+                    </div>
                 </div>
-            </div>
-        </section>
+            </section>
+        </div>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>

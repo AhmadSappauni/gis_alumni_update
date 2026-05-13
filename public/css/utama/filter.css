@@ -137,6 +137,28 @@
     min-width: 0;
 }
 
+.map-clear-btn {
+    width: 40px;
+    height: var(--search-height);
+    border: none;
+    background: transparent;
+    color: rgba(15, 23, 42, 0.55);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+
+.map-clear-btn:hover {
+    background: rgba(15, 23, 42, 0.06);
+    color: rgba(15, 23, 42, 0.75);
+}
+
+.map-clear-btn[hidden] {
+    display: none !important;
+}
+
 .map-search-btn,
 .map-filter-btn,
 .map-collapse-btn {
@@ -544,6 +566,20 @@
 /* Container Daftar Hasil (Diperbarui) */
 .results-container {
     padding: 0 20px 15px 20px;
+}
+
+.results-container.is-hidden {
+    display: none !important;
+}
+
+.result-helper {
+    font-size: 12px;
+    color: #64748b;
+    text-align: center;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px dashed rgba(148, 163, 184, 0.55);
+    border-radius: 10px;
 }
 
 /* Custom Scrollbar agar terlihat rapi */

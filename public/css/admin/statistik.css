@@ -54,7 +54,7 @@
 }
 
 .statistik-filter {
-    padding: 14px 16px;
+    padding: 18px 18px;
     margin-bottom: 18px;
 }
 
@@ -83,12 +83,17 @@
 
 .filter-panel {
     margin-top: 6px;
+    padding: 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(0, 74, 135, 0.10);
+    background: rgba(255, 255, 255, 0.72);
 }
 
 .filter-grid {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(4, minmax(180px, 1fr));
+    gap: 16px 18px;
+    align-items: end;
 }
 
 .filter-item label {
@@ -103,8 +108,9 @@
 
 .filter-item select {
     width: 100%;
-    padding: 10px 12px;
-    border-radius: 14px;
+    min-height: 48px;
+    padding: 12px 12px;
+    border-radius: 16px;
     border: 1px solid rgba(226, 232, 240, 0.95);
     background: rgba(255, 255, 255, 0.75);
     outline: none;
@@ -123,17 +129,22 @@
 .filter-actions {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 10px;
-    margin-top: 12px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px dashed rgba(0, 74, 135, 0.14);
 }
 
 .btn-apply {
+    min-height: 48px;
     padding: 12px 16px;
-    border-radius: 14px;
+    border-radius: 16px;
     border: none;
     background: var(--pilkom-blue-dark);
     color: #ffffff;
     font-weight: 800;
+    font-size: 13px;
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
@@ -145,12 +156,14 @@
 }
 
 .btn-reset {
+    min-height: 48px;
     padding: 12px 16px;
-    border-radius: 14px;
+    border-radius: 16px;
     border: 1px solid rgba(0, 74, 135, 0.18);
     background: rgba(255, 255, 255, 0.65);
     color: var(--pilkom-blue-dark);
     font-weight: 800;
+    font-size: 13px;
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
@@ -222,7 +235,7 @@
 
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 14px;
 }
 
@@ -292,6 +305,13 @@
     color: var(--text-secondary);
 }
 
+.kpi-meta {
+    margin-top: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
 .kpi-unit {
     font-size: 12px;
     font-weight: 900;
@@ -337,13 +357,44 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px;
+    align-items: stretch;
+    grid-auto-rows: 1fr;
+}
+.chart-grid--1 { grid-template-columns: 1fr; }
+.chart-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.chart-grid--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.chart-grid--3 .chart-card {
+    padding: 16px;
+    min-height: 280px;
+}
+.chart-grid--3 .chart-body {
+    height: 280px;
+}
+.chart-grid--3 .chart-card.chart-card-wilayah {
+    padding: 18px;
+    min-height: 420px;
+}
+.chart-grid--3 .chart-card.chart-card-wilayah .chart-body {
+    height: 320px;
+}
+.chart-grid--3 .chart-fixed,
+.chart-grid--3 .chart-toefl-box {
+    height: 280px;
+    max-height: 280px;
+    min-height: 280px;
+}
+.chart-grid--3 .chart-toefl-box canvas {
+    height: 280px !important;
+    max-height: 280px !important;
 }
 
 .chart-card {
     padding: 18px;
     display: flex;
     flex-direction: column;
-    min-height: 300px;
+    height: 100%;
+    min-height: 360px;
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
@@ -388,6 +439,43 @@
     height: 100% !important;
 }
 
+.chart-card-wilayah { min-height: 360px; }
+.chart-title-center { text-align: center; }
+.chart-subtitle-center { text-align: center; }
+
+.chart-wilayah-toolbar {
+    display: flex;
+    justify-content: center;
+    margin: 4px 0 10px 0;
+}
+
+.chart-inline-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--text-secondary);
+    user-select: none;
+}
+.chart-inline-check input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary);
+}
+
+.chart-wilayah-chart-wrap {
+    position: relative;
+    border-radius: 16px;
+    border: 1px solid rgba(0, 74, 135, 0.12);
+    background: rgba(255, 255, 255, 0.72);
+    padding: 12px 12px 10px 12px;
+    overflow: hidden;
+}
+.chart-wilayah-chart-wrap::-webkit-scrollbar { width: 10px; }
+.chart-wilayah-chart-wrap::-webkit-scrollbar-thumb { background: rgba(0, 74, 135, 0.18); border-radius: 999px; }
+.chart-wilayah-chart-wrap::-webkit-scrollbar-track { background: rgba(0, 74, 135, 0.06); border-radius: 999px; }
+
 .chart-empty {
     position: absolute;
     inset: 0;
@@ -408,19 +496,123 @@
     display: none !important;
 }
 
-@media (max-width: 1024px) {
-    .filter-grid {
+.chart-footnote {
+    margin-top: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.toefl-dist-chart-card .chart-body {
+    overflow: hidden;
+    padding-bottom: 28px;
+}
+
+.toefl-dist-chart-card .chart-footnote {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    padding-top: 8px;
+    background: linear-gradient(180deg, rgba(241, 245, 249, 0), rgba(241, 245, 249, 0.9));
+}
+
+.chart-fixed {
+    position: relative;
+    width: 100%;
+    height: 320px;
+    max-height: 320px;
+    min-height: 320px;
+    overflow: hidden;
+}
+
+.chart-toefl-box {
+    height: 320px;
+    max-height: 320px;
+    min-height: 320px;
+}
+
+.chart-toefl-box canvas {
+    width: 100% !important;
+    height: 320px !important;
+    max-height: 320px !important;
+    display: block;
+}
+
+.chart-heatmap-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.chart-heatmap-tabs {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.chart-heatmap-map {
+    height: 480px;
+    border-radius: 16px;
+    border: 1px solid rgba(0, 74, 135, 0.12);
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.chart-heatmap-foot {
+    margin-top: 10px;
+}
+
+.chart-heatmap-meta {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 1200px) {
+    .filter-grid { grid-template-columns: repeat(3, minmax(180px, 1fr)); }
+
+    .kpi-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .chart-grid--3 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
 @media (max-width: 768px) {
+    .filter-grid { grid-template-columns: repeat(2, minmax(160px, 1fr)); }
+
     .kpi-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .chart-grid {
         grid-template-columns: 1fr;
+    }
+
+    .chart-heatmap-head {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .chart-heatmap-map {
+        height: 420px;
+    }
+
+    .chart-fixed,
+    .chart-toefl-box {
+        height: 280px;
+        max-height: 280px;
+        min-height: 280px;
+    }
+
+    .chart-toefl-box canvas {
+        height: 280px !important;
+        max-height: 280px !important;
     }
 }
 

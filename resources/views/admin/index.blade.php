@@ -46,12 +46,26 @@
         
         <div class="header-center">
             <div class="search-wrapper">
-                <div class="search-box-mini">
-                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                    <input type="text" id="alumniSearch" placeholder="Cari alumni..." onkeyup="applyFilters()">
-                </div>
+                <form id="alumniSearchForm" method="GET" action="{{ route('admin.alumni.index') }}" class="search-box-mini" style="display:flex; align-items:center; gap:8px;">
+                    @foreach (request()->except(['search', 'page']) as $key => $value)
+                        @if (is_scalar($value) && $value !== '')
+                            <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                        @endif
+                    @endforeach
+
+                    <button type="button" title="Cari" style="all: unset; cursor: pointer; display:flex; align-items:center;">
+                        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </button>
+                    <input type="text" id="alumniSearch" name="search" value="{{ request('search') }}"
+                        placeholder="Cari alumni berdasarkan nama atau NIM..." autocomplete="off">
+                </form>
+
+                <a id="resetSearchLink" href="{{ route('admin.alumni.index', request()->except(['search', 'page'])) }}"
+                    style="margin-left: 8px; font-size: 12px; font-weight: 700; color: #004a87; text-decoration: none; {{ request()->filled('search') ? '' : 'display:none;' }}">
+                    Reset
+                </a>
                 
                 <div class="filter-dropdown">
                     <button class="filter-btn" onclick="toggleFilterMenu()" title="Filter Data">
@@ -61,26 +75,58 @@
                     </button>
                     <div id="filterMenu" class="filter-menu glass-panel">
                         <div class="filter-group">
+                            <label>Angkatan</label>
+                            <select id="filterAngkatan" onchange="applyFilters()">
+                                <option value="">Semua Angkatan</option>
+                                @foreach (($angkatanOptions ?? collect()) as $angkatan)
+                                    <option value="{{ $angkatan }}" {{ (string) request('angkatan') === (string) $angkatan ? 'selected' : '' }}>{{ $angkatan }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="filter-group">
                             <label>Tahun Lulus</label>
                             <select id="filterTahun" onchange="applyFilters()">
                                 <option value="">Semua Tahun</option>
+                                @foreach (($tahunLulusOptions ?? collect()) as $tahun)
+                                    <option value="{{ $tahun }}" {{ (string) request('tahun_lulus') === (string) $tahun ? 'selected' : '' }}>{{ $tahun }}</option>
+                                @endforeach
                             </select>
                         </div>
                         <div class="filter-group">
                             <label>Linearitas Pekerjaan</label>
                             <select id="filterLinear" onchange="applyFilters()">
                                 <option value="">Semua Linearitas</option>
-                                <option value="Sangat Erat">Sangat Erat</option>
-                                <option value="Erat">Erat</option>
-                                <option value="Cukup Erat">Cukup Erat</option>
-                                <option value="Kurang Erat">Kurang Erat</option>
-                                <option value="Tidak Erat">Tidak Erat</option>
+                                <option value="Sangat Erat" {{ request('linearitas') === 'Sangat Erat' ? 'selected' : '' }}>Sangat Erat</option>
+                                <option value="Erat" {{ request('linearitas') === 'Erat' ? 'selected' : '' }}>Erat</option>
+                                <option value="Cukup Erat" {{ request('linearitas') === 'Cukup Erat' ? 'selected' : '' }}>Cukup Erat</option>
+                                <option value="Kurang Erat" {{ request('linearitas') === 'Kurang Erat' ? 'selected' : '' }}>Kurang Erat</option>
+                                <option value="Tidak Erat" {{ request('linearitas') === 'Tidak Erat' ? 'selected' : '' }}>Tidak Erat</option>
                             </select>
                         </div>
                         <div class="filter-group">
                             <label>Bidang Pekerjaan</label>
                             <select id="filterBidang" onchange="applyFilters()">
                                 <option value="">Semua Bidang</option>
+                                @foreach (($bidangOptions ?? collect()) as $bidang)
+                                    <option value="{{ $bidang }}" {{ (string) request('bidang_pekerjaan') === (string) $bidang ? 'selected' : '' }}>{{ $bidang }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Kelengkapan Data</label>
+                            <select id="filterKelengkapan" onchange="applyFilters()">
+                                <option value="">Semua</option>
+                                <option value="complete" {{ request('kelengkapan') === 'complete' ? 'selected' : '' }}>Data Lengkap</option>
+                                <option value="incomplete" {{ request('kelengkapan') === 'incomplete' ? 'selected' : '' }}>Belum Lengkap</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Bagian Belum Lengkap</label>
+                            <select id="filterKelengkapanBagian" onchange="applyFilters()">
+                                <option value="">Semua Bagian</option>
+                                <option value="data_diri" {{ request('kelengkapan_bagian') === 'data_diri' ? 'selected' : '' }}>Data Diri</option>
+                                <option value="pekerjaan" {{ request('kelengkapan_bagian') === 'pekerjaan' ? 'selected' : '' }}>Pekerjaan</option>
+                                <option value="studi_lanjut" {{ request('kelengkapan_bagian') === 'studi_lanjut' ? 'selected' : '' }}>Studi Lanjut</option>
                             </select>
                         </div>
                         <button onclick="resetFilters()" id="reset-filter">
@@ -107,7 +153,9 @@
         </div>
     </header>
 
-    @include('admin.komponen.content')
+    <div id="alumniResults">
+        @include('admin.komponen.content')
+    </div>
 @endsection
 @push('scripts')
 <script src="{{ asset('js/admin/filter-data.js') }}"></script>

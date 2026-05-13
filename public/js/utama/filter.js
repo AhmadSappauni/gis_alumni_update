@@ -619,6 +619,9 @@ function bindFilterEvents() {
 
     const filterPanel = document.querySelector('.filter-panel');
     const collapsePanelBtn = document.getElementById('collapse-filter-panel');
+    const resultsPanelEl = document.getElementById('search-results');
+    const searchWrapEl = document.querySelector('.map-search-input-wrap');
+    const clearBtnEl = document.getElementById('btn-clear-search');
 
     const setPanelCollapsed = (collapsed) => {
         if (!filterPanel) {
@@ -639,6 +642,77 @@ function bindFilterEvents() {
 
         const isCollapsed = !!filterPanel?.classList.contains('is-collapsed');
         setPanelCollapsed(!isCollapsed);
+    });
+
+    const closeSearchPanel = (opts) => {
+        const options = opts || {};
+        const clearResults = options.clearResults === true;
+        if (resultsPanelEl) {
+            if (clearResults) resultsPanelEl.innerHTML = '';
+            resultsPanelEl.classList.add('is-hidden');
+        }
+        if (typeof sinkronkanKontenPanel === 'function') {
+            sinkronkanKontenPanel();
+        }
+    };
+
+    const openSearchPanel = () => {
+        if (resultsPanelEl) {
+            resultsPanelEl.classList.remove('is-hidden');
+        }
+        if (typeof sinkronkanKontenPanel === 'function') {
+            sinkronkanKontenPanel();
+        }
+    };
+
+    const renderSearchHelper = (message) => {
+        if (!resultsPanelEl) return;
+        resultsPanelEl.innerHTML = `<div class="result-helper">${message}</div>`;
+        openSearchPanel();
+    };
+
+    const syncClearButton = () => {
+        if (!clearBtnEl) return;
+        const val = document.getElementById('search-input')?.value ?? '';
+        const hasText = String(val).trim().length > 0;
+        clearBtnEl.hidden = !hasText;
+    };
+
+    const clearSearch = () => {
+        const input = document.getElementById('search-input');
+        if (input) input.value = '';
+        if (typeof window.resetHighlightWilayah === 'function') {
+            window.resetHighlightWilayah();
+        }
+        closeSearchPanel({ clearResults: true });
+        syncClearButton();
+        filterDanTampilkanMarker();
+    };
+
+    if (clearBtnEl) {
+        clearBtnEl.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            clearSearch();
+        });
+    }
+
+    // Klik di dalam search/panel jangan dianggap "klik di luar".
+    searchWrapEl?.addEventListener('click', function (e) {
+        e.stopPropagation();
+    });
+    resultsPanelEl?.addEventListener('click', function (e) {
+        e.stopPropagation();
+    });
+
+    // Klik di luar (peta/area lain) -> tutup panel hasil tanpa menghapus keyword.
+    document.addEventListener('click', function (event) {
+        const t = event.target;
+        const clickedInsideSearch = !!searchWrapEl && searchWrapEl.contains(t);
+        const clickedInsideResult = !!resultsPanelEl && resultsPanelEl.contains(t);
+        if (!clickedInsideSearch && !clickedInsideResult) {
+            closeSearchPanel({ clearResults: false });
+        }
     });
 
     document.getElementById('search-category')
@@ -704,12 +778,55 @@ function bindFilterEvents() {
     document.getElementById('btn-search')
         ?.addEventListener('click', handleSearchSubmit);
 
-    document.getElementById('search-input')
-        ?.addEventListener('keypress', function (e) {
+    const searchInputEl = document.getElementById('search-input');
+    if (searchInputEl) {
+        let liveSearchTimer = null;
+        let isComposing = false;
+
+        const triggerLiveSearch = function () {
+            if (isComposing) return;
+            if (liveSearchTimer) {
+                clearTimeout(liveSearchTimer);
+            }
+            liveSearchTimer = setTimeout(function () {
+                handleSearchSubmit();
+            }, 200);
+        };
+
+        // Tetap dukung Enter, tapi tidak wajib.
+        searchInputEl.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
+                if (liveSearchTimer) clearTimeout(liveSearchTimer);
                 handleSearchSubmit();
             }
         });
+
+        // Live search: jalankan saat user mengetik (debounced).
+        searchInputEl.addEventListener('input', function () {
+            syncClearButton();
+            triggerLiveSearch();
+        });
+
+        // Saat fokus kembali: jika keyword masih valid, tampilkan lagi panelnya.
+        searchInputEl.addEventListener('focus', function () {
+            const k = (searchInputEl.value ?? '').toString().trim();
+            if (k.length >= 2) {
+                openSearchPanel();
+            } else if (k.length === 1) {
+                renderSearchHelper('Ketik minimal 2 huruf untuk mencari alumni atau tempat kerja.');
+            }
+        });
+
+        // Hindari pencarian saat IME composition (contoh: input bahasa).
+        searchInputEl.addEventListener('compositionstart', function () {
+            isComposing = true;
+        });
+        searchInputEl.addEventListener('compositionend', function () {
+            isComposing = false;
+            syncClearButton();
+            triggerLiveSearch();
+        });
+    }
 
     document.getElementById('toggle-filter')
         ?.addEventListener('click', function () {
@@ -737,18 +854,19 @@ function bindFilterEvents() {
         const results = document.getElementById('search-results');
 
         const filterTerbuka = !!filterBody && !filterBody.classList.contains('hidden');
-        const adaHasil = !!results && (results.textContent || '').trim() !== '';
+        const resultsHidden = !!results && results.classList.contains('is-hidden');
+        const adaHasil = !!results && !resultsHidden && (results.textContent || '').trim() !== '';
 
         scrollable.classList.toggle('is-empty', !filterTerbuka && !adaHasil);
     };
 
-    const resultsEl = document.getElementById('search-results');
+    const resultsObserverEl = document.getElementById('search-results');
     const filterBodyEl = document.getElementById('filter-body');
 
     if (typeof MutationObserver !== 'undefined') {
-        if (resultsEl) {
+        if (resultsObserverEl) {
             new MutationObserver(sinkronkanKontenPanel)
-                .observe(resultsEl, { childList: true, subtree: true, characterData: true });
+                .observe(resultsObserverEl, { childList: true, subtree: true, characterData: true });
         }
 
         if (filterBodyEl) {
@@ -758,15 +876,58 @@ function bindFilterEvents() {
     }
 
     sinkronkanKontenPanel();
+
+    // Initial state: kalau keyword kosong, panel hasil ditutup & tombol clear disembunyikan.
+    syncClearButton();
+    const initialKeyword = (document.getElementById('search-input')?.value ?? '').toString().trim();
+    if (initialKeyword.length === 0) {
+        closeSearchPanel({ clearResults: true });
+    }
 }
 
 function handleSearchSubmit() {
 
     const scopes = getCariBerdasarkanScopes();
 
-    const keyword =
-        document.getElementById('search-input')
-            ?.value.trim() || '';
+    const inputEl = document.getElementById('search-input');
+    const keyword = (inputEl?.value ?? '').toString().trim();
+
+    // Empty: tutup panel + jangan render semua alumni di panel.
+    if (keyword.length === 0) {
+        if (typeof window.resetHighlightWilayah === 'function') {
+            window.resetHighlightWilayah();
+        }
+        const container = document.getElementById('search-results');
+        if (container) {
+            container.innerHTML = '';
+            container.classList.add('is-hidden');
+        }
+        const btn = document.getElementById('btn-clear-search');
+        if (btn) btn.hidden = true;
+        filterDanTampilkanMarker();
+        return;
+    }
+
+    // Minimal 2 karakter: tampilkan helper, tapi jangan filter daftar alumni dulu.
+    if (keyword.length < 2) {
+        const container = document.getElementById('search-results');
+        if (container) {
+            container.innerHTML = `<div class="result-helper">Ketik minimal 2 huruf untuk mencari alumni atau tempat kerja.</div>`;
+            container.classList.remove('is-hidden');
+        }
+        window.__SEARCH_KEYWORD_OVERRIDE__ = '';
+        filterDanTampilkanMarker();
+        window.__SEARCH_KEYWORD_OVERRIDE__ = null;
+        return;
+    }
+
+    // Keyword valid: panel boleh tampil.
+    const container = document.getElementById('search-results');
+    if (container) {
+        container.classList.remove('is-hidden');
+    }
+    const btn = document.getElementById('btn-clear-search');
+    if (btn) btn.hidden = false;
 
     if (keyword === '' && typeof window.resetHighlightWilayah === 'function') {
         window.resetHighlightWilayah();
@@ -995,7 +1156,9 @@ function initCustomSelect() {
 
             item.appendChild(left);
 
-            item.addEventListener('click', function () {
+            item.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
 
                 if (!select.multiple) {
                     select.value = this.dataset.value;
@@ -1007,9 +1170,6 @@ function initCustomSelect() {
                         .forEach(x => x.classList.remove('selected'));
 
                     this.classList.add('selected');
-
-                    list.classList.remove('open');
-                    trigger.classList.remove('active');
 
                     select.dispatchEvent(new Event('change'));
                     return;
@@ -1067,7 +1227,11 @@ function initCustomSelect() {
         });
     });
 
-    document.addEventListener('click', function () {
+    document.addEventListener('click', function (e) {
+        if (e.target && e.target.closest && e.target.closest('.custom-dropdown-wrapper')) {
+            return;
+        }
+
         document.querySelectorAll('.custom-dropdown-options')
             .forEach(x => x.classList.remove('open'));
 
@@ -1677,9 +1841,14 @@ function filterDanTampilkanMarker() {
         return re.test(t);
     }
 
-    const keyword =
-        document.getElementById('search-input')
-            ?.value.toLowerCase() || '';
+    const rawKeyword =
+        window.__SEARCH_KEYWORD_OVERRIDE__ !== undefined && window.__SEARCH_KEYWORD_OVERRIDE__ !== null
+            ? String(window.__SEARCH_KEYWORD_OVERRIDE__)
+            : (document.getElementById('search-input')?.value ?? '');
+
+    const keywordTrimmed = rawKeyword.toString().trim().toLowerCase();
+    // Minimal 2 karakter untuk benar-benar menjalankan pencarian (panel tetap bisa menampilkan helper).
+    const keyword = keywordTrimmed.length >= 2 ? keywordTrimmed : '';
 
     const scopes = getCariBerdasarkanScopes();
 
@@ -2366,19 +2535,27 @@ function filterDanTampilkanMarker() {
 
     if (!container) return;
 
-    if (isDefaultState) {
+    // UI panel hasil pencarian:
+    // - keyword kosong: tutup panel (jangan render semua alumni)
+    // - keyword 1 char: helper
+    // - keyword >=2: tampilkan hasil / empty state
+    if (keywordTrimmed.length === 0) {
         container.innerHTML = '';
-    }
-    else if (jumlah > 0) {
+        container.classList.add('is-hidden');
+    } else if (keywordTrimmed.length < 2) {
+        container.classList.remove('is-hidden');
+        container.innerHTML = `<div class="result-helper">Ketik minimal 2 huruf untuk mencari alumni atau tempat kerja.</div>`;
+    } else if (jumlah > 0) {
+        container.classList.remove('is-hidden');
         container.innerHTML =
             `<div class="result-count">
                 Ditemukan ${jumlah} Alumni
              </div>` + hasilHTML;
-    }
-    else {
+    } else {
+        container.classList.remove('is-hidden');
         container.innerHTML =
             `<div class="result-empty">
-                Data tidak ditemukan.
+                Tidak ada alumni yang cocok.
              </div>`;
     }
 }
@@ -2436,4 +2613,3 @@ function terbangKeLokasi(index) {
         duration: 1.5
     });
 }
-

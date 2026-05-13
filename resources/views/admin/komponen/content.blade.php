@@ -1,9 +1,34 @@
 <main class="main-content">
+    @php
+        $isSearchActive = request()->filled('search');
+        $isFilterActive =
+            request()->filled('angkatan') ||
+            request()->filled('tahun_lulus') ||
+            request()->filled('linearitas') ||
+            request()->filled('bidang_pekerjaan') ||
+            request()->filled('kelengkapan') ||
+            request()->filled('kelengkapan_bagian');
+        $hasResults = $dataAlumni->count() > 0;
+        $isQueryActive = $isSearchActive || $isFilterActive;
+
+        if ($isSearchActive && $isFilterActive) {
+            $emptyMessage = 'Tidak ada alumni yang cocok dengan pencarian dan filter saat ini.';
+        } elseif ($isSearchActive) {
+            $emptyMessage = 'Tidak ada alumni yang cocok dengan pencarian.';
+        } elseif (request()->filled('angkatan')) {
+            $emptyMessage = 'Tidak ada alumni pada angkatan yang dipilih.';
+        } elseif ($isFilterActive) {
+            $emptyMessage = 'Tidak ada alumni untuk filter yang dipilih.';
+        } else {
+            $emptyMessage = 'Ups! Alumni yang kamu cari tidak ditemukan.';
+        }
+    @endphp
     <div id="card-view-wrapper">
         <div id="card-view" class="cards-grid">
             @foreach ($dataAlumni as $alumni)
             @php
                 $pekerjaanAktif = $alumni->pekerjaan->where('is_current', true)->first();
+                $kelengkapan = $alumni->data_completeness;
             @endphp
                 <div class="data-card glass-panel"
                     data-tahun="{{ $alumni->akademik?->tahun_lulus ?? '' }}"
@@ -96,6 +121,33 @@
                         </span>
                     </div>
 
+                    <div class="completion-wrap">
+                        <button type="button" style="margin-top: -10px; margin-bottom: 10px;" class="completion-badge {{ $kelengkapan['is_complete'] ? 'is-complete' : 'is-incomplete' }}">
+                            <span>{!! $kelengkapan['is_complete'] ? '&#10003;' : '&#9888;' !!}</span>
+                            {{ $kelengkapan['is_complete'] ? 'Data Lengkap' : 'Belum Lengkap' }}
+                        </button>
+                        <div class="completion-popover">
+                            <div class="completion-title">Checklist Kelengkapan</div>
+                            <div class="completion-row {{ $kelengkapan['data_diri'] ? 'is-ok' : 'is-missing' }}">
+                                <span>{!! $kelengkapan['data_diri'] ? '&#10003;' : '&#10007;' !!}</span>
+                                Data Diri
+                            </div>
+                            <div class="completion-row {{ $kelengkapan['pekerjaan_required'] ? ($kelengkapan['pekerjaan'] ? 'is-ok' : 'is-missing') : 'is-muted' }}">
+                                <span>{!! !$kelengkapan['pekerjaan_required'] ? '-' : ($kelengkapan['pekerjaan'] ? '&#10003;' : '&#10007;') !!}</span>
+                                Pekerjaan {{ !$kelengkapan['pekerjaan_required'] ? 'tidak wajib' : '' }}
+                            </div>
+                            <div class="completion-row {{ $kelengkapan['studi_lanjut_required'] ? ($kelengkapan['studi_lanjut'] ? 'is-ok' : 'is-missing') : 'is-muted' }}">
+                                <span>{!! !$kelengkapan['studi_lanjut_required'] ? '-' : ($kelengkapan['studi_lanjut'] ? '&#10003;' : '&#10007;') !!}</span>
+                                Studi Lanjut {{ !$kelengkapan['studi_lanjut_required'] ? 'tidak wajib' : '' }}
+                            </div>
+                            @if(!$kelengkapan['is_complete'])
+                                <div class="completion-missing">
+                                    Belum lengkap: {{ implode(', ', $kelengkapan['missing_fields']) }}
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
                     <div class="card-body">
                         <div style="margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(0,0,0,0.05);">
                             <div class="info-row" style="font-size: 11px; margin-bottom: 4px;">
@@ -174,14 +226,32 @@
                 </div>
             @endforeach
         </div>
-        <div class="pagination-footer d-flex justify-content-between align-items-center" style="padding: 15px 25px; border-top: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.3);">
-            <div class="pagination-links">
-                {{ $dataAlumni->links('pagination::bootstrap-5') }}
+        <div class="pagination-footer d-flex justify-content-between align-items-center" style="padding: 10px 25px; margin-bottom: 30px; border-top: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.3);">
+            @php
+                $perPageActive = (int) request()->query('per_page', 40);
+                $perPageOptions = [40, 60, 80, 100];
+                $from = (int) ($dataAlumni->firstItem() ?? 0);
+                $to = (int) ($dataAlumni->lastItem() ?? 0);
+                $total = (int) ($dataAlumni->total() ?? 0);
+            @endphp
+            <div class="pagination-meta">
+                <span class="pagination-showing">Showing {{ $from }} to {{ $to }} of {{ $total }} rows</span>
+                <div class="per-page-select-wrap">
+                    <select class="per-page-select" aria-label="Rows per page">
+                        @foreach ($perPageOptions as $opt)
+                            <option value="{{ $opt }}" {{ $perPageActive === $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                        @endforeach
+                    </select>
+                    <span class="per-page-text">rows per page</span>
+                </div>
+            </div>
+            <div class="pagination-links pagination-links--compact">
+                {{ $dataAlumni->onEachSide(1)->links('vendor.pagination.admin-compact') }}
             </div>
         </div>
-        <div id="card-empty" class="no-results" style="display: none;">
+        <div id="card-empty" class="no-results" style="display: {{ ($isQueryActive && !$hasResults) ? 'block' : 'none' }};">
             <span class="no-results-icon">🔍</span>
-            <p>Ups! Alumni yang kamu cari tidak ditemukan.</p>
+            <p>{{ $emptyMessage }}</p>
         </div>
     </div>
 
@@ -213,6 +283,7 @@
                         <th>Kontak</th>
                         <th>Perusahaan</th>
                         <th>Jabatan</th>
+                        <th>Kelengkapan</th>
                         <th style="text-align: center;">Aksi</th>
                     </tr>
                 </thead>
@@ -220,6 +291,7 @@
                     @foreach ($dataAlumni as $alumni)
                     @php
                         $pekerjaanAktif = $alumni->pekerjaan->where('is_current', true)->first();
+                        $kelengkapan = $alumni->data_completeness;
                     @endphp
                         <tr
                             data-tahun="{{ $alumni->akademik?->tahun_lulus ?? '' }}"
@@ -267,6 +339,34 @@
                                 @endif
                             </td>
                             <td>
+                                <div class="completion-wrap completion-wrap--table">
+                                    <button type="button" class="completion-badge {{ $kelengkapan['is_complete'] ? 'is-complete' : 'is-incomplete' }}">
+                                        <span>{!! $kelengkapan['is_complete'] ? '&#10003;' : '&#9888;' !!}</span>
+                                        {{ $kelengkapan['is_complete'] ? 'Lengkap' : 'Belum Lengkap' }}
+                                    </button>
+                                    <div class="completion-popover">
+                                        <div class="completion-title">Checklist Kelengkapan</div>
+                                        <div class="completion-row {{ $kelengkapan['data_diri'] ? 'is-ok' : 'is-missing' }}">
+                                            <span>{!! $kelengkapan['data_diri'] ? '&#10003;' : '&#10007;' !!}</span>
+                                            Data Diri
+                                        </div>
+                                        <div class="completion-row {{ $kelengkapan['pekerjaan_required'] ? ($kelengkapan['pekerjaan'] ? 'is-ok' : 'is-missing') : 'is-muted' }}">
+                                            <span>{!! !$kelengkapan['pekerjaan_required'] ? '-' : ($kelengkapan['pekerjaan'] ? '&#10003;' : '&#10007;') !!}</span>
+                                            Pekerjaan {{ !$kelengkapan['pekerjaan_required'] ? 'tidak wajib' : '' }}
+                                        </div>
+                                        <div class="completion-row {{ $kelengkapan['studi_lanjut_required'] ? ($kelengkapan['studi_lanjut'] ? 'is-ok' : 'is-missing') : 'is-muted' }}">
+                                            <span>{!! !$kelengkapan['studi_lanjut_required'] ? '-' : ($kelengkapan['studi_lanjut'] ? '&#10003;' : '&#10007;') !!}</span>
+                                            Studi Lanjut {{ !$kelengkapan['studi_lanjut_required'] ? 'tidak wajib' : '' }}
+                                        </div>
+                                        @if(!$kelengkapan['is_complete'])
+                                            <div class="completion-missing">
+                                                Belum lengkap: {{ implode(', ', $kelengkapan['missing_fields']) }}
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
                                 <div style="display: flex; justify-content: center; gap: 8px;">
                                     <button class="action-btn-small view" onclick="document.getElementById('modal-profil-{{ $alumni->id }}').style.display='flex'" title="Lihat Profil Lengkap">
                                         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
@@ -288,21 +388,39 @@
                         </tr>
                     @endforeach
                 </tbody>
-                <tbody id="list-empty" style="display: none;">
+                <tbody id="list-empty" style="display: {{ ($isQueryActive && !$hasResults) ? 'table-row-group' : 'none' }};">
                     <tr class="list-empty-row">
-                        <td colspan="7">
+                        <td colspan="8">
                             <div class="list-empty-content">
                                 <span class="no-results-icon" style="font-size: 40px;">📂</span>
-                                <p>Data tidak ditemukan dalam daftar ini.</p>
+                                <p>{{ $emptyMessage }}</p>
                             </div>
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
-        <div class="pagination-footer d-flex justify-content-between align-items-center" style="padding: 15px 25px; border-top: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.3);">
-            <div class="pagination-links">
-                {{ $dataAlumni->links('pagination::bootstrap-5') }}
+        <div class="pagination-footer d-flex justify-content-between align-items-center" style="padding: 15px 25px; margin-bottom: 30px; border-top: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.3);">
+            @php
+                $perPageActive = (int) request()->query('per_page', 40);
+                $perPageOptions = [40, 60, 80, 100];
+                $from = (int) ($dataAlumni->firstItem() ?? 0);
+                $to = (int) ($dataAlumni->lastItem() ?? 0);
+                $total = (int) ($dataAlumni->total() ?? 0);
+            @endphp
+            <div class="pagination-meta">
+                <span class="pagination-showing">Showing {{ $from }} to {{ $to }} of {{ $total }} rows</span>
+                <div class="per-page-select-wrap">
+                    <select class="per-page-select" aria-label="Rows per page">
+                        @foreach ($perPageOptions as $opt)
+                            <option value="{{ $opt }}" {{ $perPageActive === $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                        @endforeach
+                    </select>
+                    <span class="per-page-text">rows per page</span>
+                </div>
+            </div>
+            <div class="pagination-links pagination-links--compact">
+                {{ $dataAlumni->onEachSide(1)->links('vendor.pagination.admin-compact') }}
             </div>
         </div>
     </div>

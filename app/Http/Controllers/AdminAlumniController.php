@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Exports\AlumniImportTemplateExport;
 use App\Models\AlamatAlumni;
 use App\Models\Alumni;
 use App\Models\AlumniAkademik;
@@ -13,6 +14,7 @@ use App\Models\StudiLanjut;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -22,6 +24,102 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class AdminAlumniController extends Controller
 {
+    private function isEmptyLocationValue(?string $value): bool
+    {
+        $s = trim((string) $value);
+        if ($s === '') return true;
+        $sl = strtolower($s);
+        return $sl === '-' || $sl === 'null' || $sl === 'n/a' || $sl === 'na';
+    }
+
+    private function reverseGeocodeWilayah(?float $lat, ?float $lng, array $context = []): array
+    {
+        if ($lat === null || $lng === null) {
+            return [null, null];
+        }
+
+        $latKey = number_format($lat, 5, '.', '');
+        $lngKey = number_format($lng, 5, '.', '');
+        $cacheKey = "nominatim:reverse:{$latKey}:{$lngKey}";
+
+        return Cache::remember($cacheKey, now()->addDays(30), function () use ($lat, $lng, $context) {
+            static $lastCallAt = 0.0;
+
+            try {
+                // Throttle: max ~1 req/detik (hindari 429 / blokir Nominatim)
+                $now = microtime(true);
+                $minInterval = 1.05;
+                $elapsed = $now - $lastCallAt;
+                if ($elapsed < $minInterval) {
+                    usleep((int) (($minInterval - $elapsed) * 1_000_000));
+                }
+
+                $response = Http::withHeaders([
+                    'User-Agent' => 'WebGIS Alumni Pilkom (Laravel)'
+                ])
+                    ->acceptJson()
+                    ->connectTimeout(8)
+                    ->timeout(20)
+                    ->retry(2, 1100)
+                    ->get('https://nominatim.openstreetmap.org/reverse', [
+                        'format' => 'jsonv2',
+                        'lat' => $lat,
+                        'lon' => $lng,
+                        'zoom' => 10,
+                        'addressdetails' => 1,
+                    ]);
+
+                $lastCallAt = microtime(true);
+
+                if (!$response->successful()) {
+                    Log::debug('Reverse geocoding failed', $context + [
+                        'lat' => $lat,
+                        'lng' => $lng,
+                        'status' => $response->status(),
+                    ]);
+                    return [null, null];
+                }
+
+                $json = $response->json();
+                $addr = is_array($json) ? ($json['address'] ?? null) : null;
+                if (!is_array($addr)) {
+                    return [null, null];
+                }
+
+                $candidatesKota = [
+                    'city',
+                    'town',
+                    'village',
+                    'municipality',
+                    'city_district',
+                    'county',
+                    'state_district',
+                    'region',
+                ];
+
+                $kota = null;
+                foreach ($candidatesKota as $k) {
+                    $val = trim((string) ($addr[$k] ?? ''));
+                    if ($val !== '') {
+                        $kota = $val;
+                        break;
+                    }
+                }
+
+                $provinsi = trim((string) ($addr['state'] ?? $addr['province'] ?? '')) ?: null;
+
+                return [$kota, $provinsi];
+            } catch (\Throwable $e) {
+                Log::debug('Reverse geocode error', $context + [
+                    'lat' => $lat,
+                    'lng' => $lng,
+                    'error' => $e->getMessage(),
+                ]);
+                return [null, null];
+            }
+        });
+    }
+
     private function normalizeExcelHeaderKey($cell): ?string
     {
         if (!is_string($cell)) {
@@ -128,23 +226,250 @@ class AdminAlumniController extends Controller
         }
     }
 
-   public function index()
+   public function index(Request $request)
     {
-        $dataAlumni = Alumni::with([
+        $allowedPerPage = [40, 60, 80, 100];
+        $perPage = (int) $request->query('per_page', 40);
+        if (!in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 40;
+        }
+
+        $query = Alumni::query();
+
+        if ($request->filled('angkatan')) {
+            $angkatan = trim((string) $request->query('angkatan'));
+            $query->whereHas('akademik', function ($q) use ($angkatan) {
+                $q->where('angkatan', $angkatan);
+            });
+        }
+
+        if ($request->filled('tahun_lulus')) {
+            $tahunLulus = trim((string) $request->query('tahun_lulus'));
+            $query->whereHas('akademik', function ($q) use ($tahunLulus) {
+                $q->where('tahun_lulus', $tahunLulus);
+            });
+        }
+
+        if ($request->filled('linearitas')) {
+            $linearitas = trim((string) $request->query('linearitas'));
+            $query->whereHas('pekerjaan', function ($q) use ($linearitas) {
+                $q->where('is_current', true)
+                    ->whereHas('perusahaan', function ($p) use ($linearitas) {
+                        $p->where('linearitas', $linearitas);
+                    });
+            });
+        }
+
+        if ($request->filled('bidang_pekerjaan')) {
+            $bidang = trim((string) $request->query('bidang_pekerjaan'));
+            $query->whereHas('pekerjaan', function ($q) use ($bidang) {
+                $q->where('is_current', true)
+                    ->where('bidang_pekerjaan', $bidang);
+            });
+        }
+
+        $personalComplete = function ($q) {
+            $q->whereNotNull('nim')
+                ->where('nim', '<>', '')
+                ->whereNotNull('nama_lengkap')
+                ->where('nama_lengkap', '<>', '')
+                ->whereNotNull('jenis_kelamin')
+                ->where('jenis_kelamin', '<>', '')
+                ->where(function ($contact) {
+                    $contact->where(function ($email) {
+                        $email->whereNotNull('email')->where('email', '<>', '');
+                    })->orWhere(function ($phone) {
+                        $phone->whereNotNull('no_hp')->where('no_hp', '<>', '');
+                    });
+                })
+                ->whereHas('alamat', function ($alamat) {
+                    $alamat->whereNotNull('alamat_lengkap')
+                        ->where('alamat_lengkap', '<>', '')
+                        ->whereNotNull('kota')
+                        ->where('kota', '<>', '')
+                        ->whereNotNull('provinsi')
+                        ->where('provinsi', '<>', '')
+                        ->whereNotNull('latitude')
+                        ->whereNotNull('longitude');
+                });
+        };
+
+        $workComplete = function ($q) {
+            $q->whereNotNull('jabatan')
+                ->where('jabatan', '<>', '')
+                ->whereNotNull('bidang_pekerjaan')
+                ->where('bidang_pekerjaan', '<>', '')
+                ->whereNotNull('status_kerja')
+                ->where('status_kerja', '<>', '')
+                ->whereHas('perusahaan', function ($perusahaan) {
+                    $perusahaan->whereNotNull('nama_perusahaan')
+                        ->where('nama_perusahaan', '<>', '')
+                        ->whereHas('lokasi', function ($lokasi) {
+                            $lokasi->whereNotNull('alamat_lengkap')
+                                ->where('alamat_lengkap', '<>', '')
+                                ->whereNotNull('kota')
+                                ->where('kota', '<>', '')
+                                ->whereNotNull('provinsi')
+                                ->where('provinsi', '<>', '')
+                                ->whereNotNull('latitude')
+                                ->whereNotNull('longitude');
+                        });
+                });
+        };
+
+        $workRequired = function ($q) {
+            $q->where(function ($work) {
+                $work->where(function ($detail) {
+                    $detail->whereNotNull('jabatan')->where('jabatan', '<>', '');
+                })
+                    ->orWhere(function ($detail) {
+                        $detail->whereNotNull('bidang_pekerjaan')->where('bidang_pekerjaan', '<>', '');
+                    })
+                    ->orWhere('is_current', true)
+                    ->orWhereRaw("(LOWER(COALESCE(status_kerja, '')) LIKE '%kerja%' AND LOWER(COALESCE(status_kerja, '')) NOT LIKE '%belum%' AND LOWER(COALESCE(status_kerja, '')) NOT LIKE '%tidak%')")
+                    ->orWhereRaw("LOWER(COALESCE(status_karir, '')) LIKE '%utama%'")
+                    ->orWhereRaw("LOWER(COALESCE(status_karir, '')) LIKE '%sampingan%'")
+                    ->orWhereHas('perusahaan', function ($perusahaan) {
+                        $perusahaan->whereNotNull('nama_perusahaan')
+                            ->where('nama_perusahaan', '<>', '');
+                    });
+            });
+        };
+
+        $studyComplete = function ($q) {
+            $q->whereNotNull('kampus')
+                ->where('kampus', '<>', '')
+                ->whereNotNull('jenjang')
+                ->where('jenjang', '<>', '')
+                ->whereNotNull('program_studi')
+                ->where('program_studi', '<>', '')
+                ->whereNotNull('status')
+                ->where('status', '<>', '')
+                ->whereNotNull('kota_kampus')
+                ->where('kota_kampus', '<>', '')
+                ->whereNotNull('provinsi_kampus')
+                ->where('provinsi_kampus', '<>', '')
+                ->whereNotNull('latitude')
+                ->whereNotNull('longitude');
+        };
+
+        $personalIncomplete = function ($q) use ($personalComplete) {
+            $q->whereNot($personalComplete);
+        };
+
+        $workIncomplete = function ($q) use ($workRequired, $workComplete) {
+            $q->whereHas('pekerjaan', $workRequired)
+                ->whereDoesntHave('pekerjaan', $workComplete);
+        };
+
+        $studyIncomplete = function ($q) use ($studyComplete) {
+            $q->whereHas('studiLanjut')
+                ->whereDoesntHave('studiLanjut', $studyComplete);
+        };
+
+        if ($request->filled('kelengkapan')) {
+            $kelengkapan = trim((string) $request->query('kelengkapan'));
+
+            if ($kelengkapan === 'complete') {
+                $query->where($personalComplete)
+                    ->where(function ($q) use ($workRequired, $workComplete) {
+                        $q->whereDoesntHave('pekerjaan', $workRequired)
+                            ->orWhereHas('pekerjaan', $workComplete);
+                    })
+                    ->where(function ($q) use ($studyComplete) {
+                        $q->whereDoesntHave('studiLanjut')
+                            ->orWhereHas('studiLanjut', $studyComplete);
+                    });
+            } elseif ($kelengkapan === 'incomplete') {
+                $query->where(function ($q) use ($personalIncomplete, $workIncomplete, $studyIncomplete) {
+                    $q->where($personalIncomplete)
+                        ->orWhere($workIncomplete)
+                        ->orWhere($studyIncomplete);
+                });
+            }
+        }
+
+        if ($request->filled('kelengkapan_bagian')) {
+            $bagian = trim((string) $request->query('kelengkapan_bagian'));
+
+            if ($bagian === 'data_diri') {
+                $query->where($personalIncomplete);
+            } elseif ($bagian === 'pekerjaan') {
+                $query->where($workIncomplete);
+            } elseif ($bagian === 'studi_lanjut') {
+                $query->where($studyIncomplete);
+            }
+        }
+
+        $search = trim((string) $request->query('search', ''));
+        if ($search !== '') {
+            $driver = $query->getModel()->getConnection()->getDriverName();
+            $query->where(function ($q) use ($search, $driver) {
+                if ($driver === 'pgsql') {
+                    $q->where('nama_lengkap', 'ILIKE', "%{$search}%")
+                        ->orWhere('nim', 'ILIKE', "%{$search}%");
+                    return;
+                }
+
+                $needle = mb_strtolower($search, 'UTF-8');
+                $q->whereRaw('LOWER(nama_lengkap) LIKE ?', ["%{$needle}%"])
+                    ->orWhereRaw('LOWER(nim) LIKE ?', ["%{$needle}%"]);
+            });
+        }
+
+        $totalAlumni = (clone $query)->count();
+
+        $dataAlumni = $query->with([
             'akademik',
             'alamat',
-            'pekerjaan.perusahaan',
+            'pekerjaan.perusahaan.lokasi',
+            'pekerjaan.perusahaan.lokasiAktif',
             'studiLanjut' => function ($query) {
                 $query->orderByDesc('tahun_masuk')
                     ->orderByDesc('id');
             }
         ])
         ->latest()
-        ->paginate(10);
+        ->paginate($perPage)
+        ->withQueryString();
 
-        $totalAlumni = Alumni::count();
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('admin.komponen.content', compact('dataAlumni', 'totalAlumni', 'perPage'))->render(),
+                'totalAlumni' => $totalAlumni,
+            ]);
+        }
 
-        return view('admin.index', compact('dataAlumni', 'totalAlumni'));
+        $angkatanOptions = AlumniAkademik::query()
+            ->whereNotNull('angkatan')
+            ->where('angkatan', '>', 0)
+            ->distinct()
+            ->orderByDesc('angkatan')
+            ->pluck('angkatan');
+
+        $tahunLulusOptions = AlumniAkademik::query()
+            ->whereNotNull('tahun_lulus')
+            ->where('tahun_lulus', '>', 0)
+            ->distinct()
+            ->orderByDesc('tahun_lulus')
+            ->pluck('tahun_lulus');
+
+        $bidangOptions = RiwayatPekerjaan::query()
+            ->where('is_current', true)
+            ->whereNotNull('bidang_pekerjaan')
+            ->where('bidang_pekerjaan', '<>', '')
+            ->distinct()
+            ->orderBy('bidang_pekerjaan')
+            ->pluck('bidang_pekerjaan');
+
+        return view('admin.index', compact(
+            'dataAlumni',
+            'totalAlumni',
+            'perPage',
+            'angkatanOptions',
+            'tahunLulusOptions',
+            'bidangOptions'
+        ));
     }
 
     public function create()
@@ -883,7 +1208,17 @@ class AdminAlumniController extends Controller
     
     public function importPage()
     {
-        return view('admin.import.import-excel');
+        return view('admin.import.import-excel', [
+            'templateColumns' => AlumniImportTemplateExport::columns(),
+        ]);
+    }
+
+    public function downloadTemplate()
+    {
+        return Excel::download(
+            new AlumniImportTemplateExport(),
+            'template-import-alumni.xlsx'
+        );
     }
 
 
@@ -995,7 +1330,7 @@ class AdminAlumniController extends Controller
                 | alamat_lengkap_alumni, kota_alumni, provinsi_alumni,
                 | nama_perusahaan, linearitas,
                 | alamat_lengkap_perusahaan, kota_perusahaan, provinsi_perusahaan,
-                | jabatan, status_kerja, tanggal_mulai, tanggal_selesai,
+                | jabatan, bidang_pekerjaan, status_kerja, tanggal_mulai, tanggal_selesai,
                 | masa_tunggu, status_karir, gaji_nominal,
                 | jenjang, tahun_masuk_studi_lanjut, tahun_lulus_studi_lanjut, status_studi_lanjut
                 */
@@ -1098,6 +1433,14 @@ class AdminAlumniController extends Controller
                 ]);
 
                 $jabatan = trim((string) ($row['jabatan'] ?? '')) ?: null;
+                $bidangPekerjaan = $this->getRowValue($row, [
+                    'bidang_pekerjaan',
+                    'bidang_kerja',
+                    'bidang_pekerjaan_utama',
+                    'bidang',
+                ]);
+                $bidangPekerjaan = ($bidangPekerjaan !== null) ? trim((string) $bidangPekerjaan) : null;
+                $bidangPekerjaan = $bidangPekerjaan !== '' ? $bidangPekerjaan : null;
                 $statusKerja = trim((string) ($row['status_kerja'] ?? '')) ?: null;
                 $tanggalMulai = $this->parseTanggal($row['tanggal_mulai'] ?? null);
                 $tanggalSelesai = $this->parseTanggal($row['tanggal_selesai'] ?? null);
@@ -1205,6 +1548,20 @@ class AdminAlumniController extends Controller
                     );
                 }
 
+                // Jika sudah punya koordinat tapi wilayah masih kosong, isi otomatis via reverse geocoding (Nominatim).
+                if ($this->isValidLatLng($latAlumni, $lngAlumni, $provinsiAlumni)
+                    && ($this->isEmptyLocationValue($kotaAlumni) || $this->isEmptyLocationValue($provinsiAlumni))) {
+                    [$kotaRg, $provRg] = $this->reverseGeocodeWilayah($latAlumni, $lngAlumni, $geoContextBase + [
+                        'type' => 'alumni',
+                    ]);
+                    if ($this->isEmptyLocationValue($kotaAlumni) && !$this->isEmptyLocationValue($kotaRg)) {
+                        $kotaAlumni = $kotaRg;
+                    }
+                    if ($this->isEmptyLocationValue($provinsiAlumni) && !$this->isEmptyLocationValue($provRg)) {
+                        $provinsiAlumni = $provRg;
+                    }
+                }
+
                 $sourceAlumniCoordinate = 'kosong';
                 if ($this->isValidLatLng($latExcelAlumni, $lngExcelAlumni, $provinsiAlumni)) {
                     $sourceAlumniCoordinate = 'excel';
@@ -1285,6 +1642,21 @@ class AdminAlumniController extends Controller
                     );
                 }
 
+                // Jika sudah punya koordinat kerja tapi wilayah perusahaan masih kosong, isi otomatis via reverse geocoding (Nominatim).
+                if ($this->isValidLatLng($latPerusahaan, $lngPerusahaan, $provinsiPerusahaan)
+                    && ($this->isEmptyLocationValue($kotaPerusahaan) || $this->isEmptyLocationValue($provinsiPerusahaan))) {
+                    [$kotaRg, $provRg] = $this->reverseGeocodeWilayah($latPerusahaan, $lngPerusahaan, $geoContextBase + [
+                        'type' => 'perusahaan',
+                        'nama_perusahaan' => $namaPerusahaan,
+                    ]);
+                    if ($this->isEmptyLocationValue($kotaPerusahaan) && !$this->isEmptyLocationValue($kotaRg)) {
+                        $kotaPerusahaan = $kotaRg;
+                    }
+                    if ($this->isEmptyLocationValue($provinsiPerusahaan) && !$this->isEmptyLocationValue($provRg)) {
+                        $provinsiPerusahaan = $provRg;
+                    }
+                }
+
                 $sourceKerjaCoordinate = 'kosong';
                 if ($this->isValidLatLng($latExcelPerusahaan, $lngExcelPerusahaan, $provinsiPerusahaan)) {
                     $sourceKerjaCoordinate = 'excel';
@@ -1339,6 +1711,7 @@ class AdminAlumniController extends Controller
                     $namaPerusahaan,
                     $linearitas,
                     $jabatan,
+                    $bidangPekerjaan,
                     $masaTunggu,
                     $gajiNominal,
                     $statusKerja,
@@ -1391,7 +1764,7 @@ class AdminAlumniController extends Controller
                     | 3. Simpan domisili alumni (jika ada)
                     |--------------------------------------------------------------
                     */
-                    if ($alamatAlumni || $kotaAlumni || $provinsiAlumni) {
+                    if ($alamatAlumni || $kotaAlumni || $provinsiAlumni || ($latAlumni !== null && $lngAlumni !== null)) {
                         $alamatUpdate = [
                             'is_current' => true,
                         ];
@@ -1449,7 +1822,7 @@ class AdminAlumniController extends Controller
                     | 5. Lokasi Perusahaan
                     |--------------------------------------------------------------
                     */
-                    if ($perusahaan && ($alamatPerusahaan || $kotaPerusahaan || $provinsiPerusahaan)) {
+                    if ($perusahaan && ($alamatPerusahaan || $kotaPerusahaan || $provinsiPerusahaan || ($latPerusahaan !== null && $lngPerusahaan !== null))) {
                         $lokasiUpdate = [];
 
                         if ($kotaPerusahaan !== null) {
@@ -1484,7 +1857,7 @@ class AdminAlumniController extends Controller
                             'alumni_id'         => $alumni->id,
                             'perusahaan_id'     => $perusahaan?->id,
                             'jabatan'           => $jabatan,
-                            'bidang_pekerjaan'  => '-',
+                            'bidang_pekerjaan'  => $bidangPekerjaan ?? '-',
                             'status_kerja'      => $statusKerja,
                             'status_karir'      => $statusKarir,
                             'is_current'        => $isCurrentPekerjaan,

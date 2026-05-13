@@ -65,6 +65,6 @@
 
     <div class="sidebar-footer" aria-label="Footer">
         <div class="sidebar-footer-title">WebGIS Alumni Pilkom ULM</div>
-        <div class="sidebar-footer-meta">Copyrigth © 2026 Ahmad Sappauni.</div>
+        <div class="sidebar-footer-meta">Copyright &copy; 2026 Ahmad Sappauni.</div>
     </div>
 </div>

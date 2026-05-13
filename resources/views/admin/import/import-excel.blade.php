@@ -5,9 +5,16 @@
 @endpush
 
 @section('content')
-    <header class="top-header glass-panel">
-        <h1>Import Data Alumni</h1>
-        <p style="font-size: 13px; color: #64748b;">Gunakan file format .xlsx untuk unggah masal</p>
+    <header class="top-header glass-panel import-header">
+        <div class="import-header-title">
+            <h1>Import Data Alumni</h1>
+            <p>Gunakan file format .xlsx untuk unggah masal</p>
+        </div>
+        <div class="template-actions" aria-label="Aksi template import alumni">
+            <button type="button" class="btn-template btn-template-outline" id="btn-show-template">
+                Lihat Template Kolom
+            </button>
+        </div>
     </header>
 
     <div class="import-container" >
@@ -63,6 +70,65 @@
                 <p id="result-text"></p>
             </div>
         </div>
+    </div>
+
+    <div class="template-modal" id="template-modal" aria-hidden="true">
+        <div class="template-modal-backdrop" data-template-close></div>
+        <section class="template-modal-panel" role="dialog" aria-modal="true" aria-labelledby="template-modal-title">
+            <div class="template-modal-header">
+                <div>
+                    <h2 id="template-modal-title">Panduan Template Kolom Excel</h2>
+                    <p>Gunakan header berikut pada baris pertama file Excel.</p>
+                </div>
+                <div class="template-modal-actions">
+                    <a href="{{ route('admin.alumni.import.template') }}" class="btn-template btn-template-primary">
+                        Download Template Excel
+                    </a>
+                    <button type="button" class="template-modal-close" data-template-close aria-label="Tutup panduan">&times;</button>
+                </div>
+            </div>
+
+            <div class="template-table-wrap">
+                <table class="template-table">
+                    <thead>
+                        <tr>
+                            <th>Header Excel</th>
+                            <th>Wajib?</th>
+                            <th>Keterangan</th>
+                            <th>Contoh Isi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($templateColumns as $column)
+                            <tr>
+                                <td><code>{{ $column['header'] }}</code></td>
+                                <td>
+                                    @if ($column['required'])
+                                        <span class="template-badge is-required">Wajib</span>
+                                    @else
+                                        <span class="template-badge is-optional">Opsional</span>
+                                    @endif
+                                </td>
+                                <td>{{ $column['description'] }}</td>
+                                <td>{{ $column['example'] !== '' ? $column['example'] : '-' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="template-notes">
+                <strong>Catatan:</strong>
+                <ul aria-label="Catatan penting template Excel">
+                    <li>Format .xlsx</li>
+                    <li>Baris pertama berisi header</li>
+                    <li>Header harus sama persis</li>
+                    <li>Kolom wajib tidak boleh kosong</li>
+                    <li>Kolom opsional boleh kosong</li>
+                    <li>Ubah header hanya jika kode import disesuaikan</li>
+                </ul>
+            </div>
+        </section>
     </div>
 @endsection
 @push('scripts')

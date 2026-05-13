@@ -91,6 +91,9 @@ Route::prefix('admin')->group(function () {
     Route::get('/alumni/import', [AdminAlumniController::class, 'importPage'])
         ->name('admin.alumni.import');
 
+    Route::get('/alumni/import/template', [AdminAlumniController::class, 'downloadTemplate'])
+        ->name('admin.alumni.import.template');
+
     Route::post('/alumni/import-preview', [AdminAlumniController::class, 'importPreview'])
         ->name('admin.alumni.import.preview');
 
@@ -144,5 +147,11 @@ Route::prefix('admin')->group(function () {
 
     Route::get('/statistik/data', [StatistikController::class, 'data'])
         ->name('admin.statistik.data');
+
+    Route::get('/statistik/export/pdf', [StatistikController::class, 'exportPdf'])
+        ->name('admin.statistik.export.pdf');
+
+    Route::get('/statistik/export/excel', [StatistikController::class, 'exportExcel'])
+        ->name('admin.statistik.export.excel');
 
 });

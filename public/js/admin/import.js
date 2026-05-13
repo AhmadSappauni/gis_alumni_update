@@ -16,6 +16,38 @@ const dropArea = document.getElementById("drop-area");
 const cancelBtn = document.getElementById("btn-cancel-import");
 const resultDiv = document.getElementById("import-result");
 const resultText = document.getElementById("result-text");
+const showTemplateBtn = document.getElementById("btn-show-template");
+const templateModal = document.getElementById("template-modal");
+
+function openTemplateModal() {
+    if (!templateModal) return;
+    templateModal.classList.add("is-open");
+    templateModal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+}
+
+function closeTemplateModal() {
+    if (!templateModal) return;
+    templateModal.classList.remove("is-open");
+    templateModal.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+}
+
+if (showTemplateBtn) {
+    showTemplateBtn.addEventListener("click", openTemplateModal);
+}
+
+if (templateModal) {
+    templateModal.querySelectorAll("[data-template-close]").forEach((el) => {
+        el.addEventListener("click", closeTemplateModal);
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && templateModal.classList.contains("is-open")) {
+            closeTemplateModal();
+        }
+    });
+}
 
 function getVal(row, key) {
     if (!row) return null;
