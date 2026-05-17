@@ -198,6 +198,7 @@ function initBulkDeleteAlumni() {
     const deleteBtn = document.getElementById('btn-delete-selected');
     const form = document.getElementById('bulk-delete-form');
     const inputs = document.getElementById('bulk-delete-inputs');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
     if (!checkboxes.length || !selectAllTop || !actionBar || !selectLabel || !headerCell || !countLabel || !deleteBtn || !form || !inputs) {
         return;
@@ -279,6 +280,150 @@ function initBulkDeleteAlumni() {
         });
     });
 
+    function chunkArray(items, size) {
+        const chunks = [];
+        for (let i = 0; i < items.length; i += size) {
+            chunks.push(items.slice(i, i + size));
+        }
+        return chunks;
+    }
+
+    function updateDeleteProgress(done, total) {
+        const safeTotal = Math.max(0, Number(total) || 0);
+        const safeDone = Math.min(Math.max(0, Number(done) || 0), safeTotal);
+        const percent = safeTotal > 0 ? Math.round((safeDone / safeTotal) * 100) : 0;
+        const progressText = document.getElementById('bulk-delete-progress-text');
+        const progressBar = document.getElementById('bulk-delete-progress-bar');
+        const progressPercent = document.getElementById('bulk-delete-progress-percent');
+
+        if (progressText) {
+            progressText.textContent = `${safeDone} dari ${safeTotal} data berhasil dihapus`;
+        }
+
+        if (progressBar) {
+            progressBar.style.width = `${percent}%`;
+        }
+
+        if (progressPercent) {
+            progressPercent.textContent = `${percent}%`;
+        }
+    }
+
+    function showDeleteProgress(total) {
+        Swal.fire({
+            title: 'Sedang menghapus data alumni...',
+            html: `
+                <div style="text-align:left; width:100%;">
+                    <div id="bulk-delete-progress-text" style="font-size:13px; font-weight:700; color:#334155; margin-bottom:10px;">
+                        0 dari ${total} data berhasil dihapus
+                    </div>
+                    <div style="width:100%; height:12px; background:#e2e8f0; border-radius:999px; overflow:hidden;">
+                        <div id="bulk-delete-progress-bar" style="width:0%; height:100%; background:#dc2626; border-radius:999px; transition:width .2s ease;"></div>
+                    </div>
+                    <div id="bulk-delete-progress-percent" style="margin-top:8px; font-size:12px; color:#64748b; text-align:right;">0%</div>
+                </div>
+            `,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => updateDeleteProgress(0, total)
+        });
+    }
+
+    async function deleteBatch(payload) {
+        const response = await fetch(form.action, {
+            method: 'DELETE',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const text = await response.text();
+        let data = null;
+
+        try {
+            data = text ? JSON.parse(text) : null;
+        } catch (_) {
+            data = null;
+        }
+
+        if (!response.ok || !data?.success) {
+            throw new Error(data?.message || `Gagal menghapus data alumni. Status: ${response.status}`);
+        }
+
+        return Number(data.deleted || 0);
+    }
+
+    function currentDeleteFilters() {
+        const params = new URLSearchParams(window.location.search);
+        const filters = {};
+
+        params.forEach((value, key) => {
+            if (key !== 'page' && key !== 'per_page') {
+                filters[key] = value;
+            }
+        });
+
+        return filters;
+    }
+
+    async function deleteSelectedInBatches(selected, totalToDelete, isGlobalDelete) {
+        const batchSize = 10;
+        let deletedTotal = 0;
+        const filters = currentDeleteFilters();
+
+        showDeleteProgress(totalToDelete);
+
+        if (isGlobalDelete) {
+            while (deletedTotal < totalToDelete) {
+                const deleted = await deleteBatch({
+                    ...filters,
+                    select_all: true,
+                    batch_size: Math.min(batchSize, totalToDelete - deletedTotal)
+                });
+
+                if (deleted <= 0) {
+                    break;
+                }
+
+                deletedTotal += deleted;
+                updateDeleteProgress(deletedTotal, totalToDelete);
+            }
+        } else {
+            const selectedIds = selected.map(cb => cb.value);
+            const batches = chunkArray(selectedIds, batchSize);
+
+            for (const ids of batches) {
+                const deleted = await deleteBatch({
+                    ids,
+                    batch_size: batchSize
+                });
+
+                deletedTotal += deleted;
+                updateDeleteProgress(deletedTotal, totalToDelete);
+            }
+        }
+
+        if (deletedTotal < totalToDelete) {
+            throw new Error(`${deletedTotal} dari ${totalToDelete} data berhasil dihapus. Beberapa data mungkin sudah tidak tersedia.`);
+        }
+
+        updateDeleteProgress(deletedTotal, totalToDelete);
+
+        await Swal.fire({
+            icon: 'success',
+            title: 'Berhasil',
+            text: 'Semua data terpilih berhasil dihapus',
+            confirmButtonColor: '#004a87'
+        });
+
+        window.location.reload();
+    }
+
     deleteBtn.addEventListener('click', function () {
         const selected = checkboxes.filter(cb => cb.checked);
 
@@ -303,15 +448,14 @@ function initBulkDeleteAlumni() {
                 return;
             }
 
-            if (selectAllGlobal) {
-                inputs.innerHTML = `<input type="hidden" name="select_all" value="1">`;
-            } else {
-                inputs.innerHTML = selected
-                    .map(cb => `<input type="hidden" name="ids[]" value="${cb.value}">`)
-                    .join('');
-            }
-
-            form.submit();
+            deleteSelectedInBatches(selected, deleteCount, selectAllGlobal).catch((error) => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal menghapus data',
+                    text: error?.message || 'Terjadi kesalahan saat menghapus data alumni.',
+                    confirmButtonColor: '#d33'
+                });
+            });
         });
     });
 

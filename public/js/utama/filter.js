@@ -496,7 +496,8 @@ function toggleMultiJobLayers(alumniId) {
     const mainLatLng = mainMarker.getLatLng();
 
     const sideIcon = L.icon({
-        iconUrl: '/img/icon sampingan.png',
+        // iconUrl: '/img/icon sampingan.png',
+        iconUrl: 'https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/icon%20sampingan.png',
         iconSize: [34, 48],
         iconAnchor: [17, 48],
         popupAnchor: [0, -42]
@@ -2052,9 +2053,12 @@ function filterDanTampilkanMarker() {
             arrayMarker[index] = { latitude, longitude };
         } else {
         const icon = L.icon({
+            // iconUrl: statusKerja === 'Belum Bekerja'
+            //     ? '/img/icon alumni nganggur.png'
+            //     : '/img/icon alumni kerja.png',
             iconUrl: statusKerja === 'Belum Bekerja'
-                ? '/img/icon alumni nganggur.png'
-                : '/img/icon alumni kerja.png',
+                ? 'https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/icon%20alumni%20nganggur.png'
+                : 'https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/icon%20alumni%20kerja.png',
             iconSize: [34, 48],
             iconAnchor: [17, 48],
             popupAnchor: [0, -42]
@@ -2411,7 +2415,8 @@ function filterDanTampilkanMarker() {
                 // Mode selain marker: tidak membuat marker Leaflet (tetap hitung choropleth/heatmap).
             } else {
             const icon = L.icon({
-                iconUrl: '/img/Icon studi lanjut.png',
+                // iconUrl: '/img/Icon studi lanjut.png',
+                iconUrl: 'https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/Icon%20studi%20lanjut.png',
                 iconSize: [34, 48],
                 iconAnchor: [17, 48],
                 popupAnchor: [0, -42]

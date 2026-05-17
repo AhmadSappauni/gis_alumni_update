@@ -47,6 +47,7 @@
             <b id="legend-bekerja-count">0</b>
         </div>
         <div class="status-legend-item">
+            {{-- <img src="{{ asset('img/icon alumni nganggur.png') }}" alt="Alumni Belum Bekerja"> --}}
             <img src="https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/icon%20alumni%20nganggur.png" alt="Alumni Belum Bekerja">
             <span>Alumni Belum Bekerja</span>
             <b id="legend-belum-count">0</b>

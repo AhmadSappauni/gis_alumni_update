@@ -802,13 +802,225 @@ class AdminAlumniController extends Controller
         return back()->with('success', 'Data alumni berhasil dihapus');
     }
 
+    private function buildBulkDeleteAlumniQuery(Request $request)
+    {
+        $query = Alumni::query();
+
+        if ($request->filled('angkatan')) {
+            $angkatan = trim((string) $request->input('angkatan'));
+            $query->whereHas('akademik', function ($q) use ($angkatan) {
+                $q->where('angkatan', $angkatan);
+            });
+        }
+
+        if ($request->filled('tahun_lulus')) {
+            $tahunLulus = trim((string) $request->input('tahun_lulus'));
+            $query->whereHas('akademik', function ($q) use ($tahunLulus) {
+                $q->where('tahun_lulus', $tahunLulus);
+            });
+        }
+
+        if ($request->filled('linearitas')) {
+            $linearitas = trim((string) $request->input('linearitas'));
+            $query->whereHas('pekerjaan', function ($q) use ($linearitas) {
+                $q->where('is_current', true)
+                    ->whereHas('perusahaan', function ($p) use ($linearitas) {
+                        $p->where('linearitas', $linearitas);
+                    });
+            });
+        }
+
+        if ($request->filled('bidang_pekerjaan')) {
+            $bidang = trim((string) $request->input('bidang_pekerjaan'));
+            $query->whereHas('pekerjaan', function ($q) use ($bidang) {
+                $q->where('is_current', true)
+                    ->where('bidang_pekerjaan', $bidang);
+            });
+        }
+
+        $personalComplete = function ($q) {
+            $q->whereNotNull('nim')
+                ->where('nim', '<>', '')
+                ->whereNotNull('nama_lengkap')
+                ->where('nama_lengkap', '<>', '')
+                ->whereNotNull('jenis_kelamin')
+                ->where('jenis_kelamin', '<>', '')
+                ->where(function ($contact) {
+                    $contact->where(function ($email) {
+                        $email->whereNotNull('email')->where('email', '<>', '');
+                    })->orWhere(function ($phone) {
+                        $phone->whereNotNull('no_hp')->where('no_hp', '<>', '');
+                    });
+                })
+                ->whereHas('alamat', function ($alamat) {
+                    $alamat->whereNotNull('alamat_lengkap')
+                        ->where('alamat_lengkap', '<>', '')
+                        ->whereNotNull('kota')
+                        ->where('kota', '<>', '')
+                        ->whereNotNull('provinsi')
+                        ->where('provinsi', '<>', '')
+                        ->whereNotNull('latitude')
+                        ->whereNotNull('longitude');
+                });
+        };
+
+        $workComplete = function ($q) {
+            $q->whereNotNull('jabatan')
+                ->where('jabatan', '<>', '')
+                ->whereNotNull('bidang_pekerjaan')
+                ->where('bidang_pekerjaan', '<>', '')
+                ->whereNotNull('status_kerja')
+                ->where('status_kerja', '<>', '')
+                ->whereHas('perusahaan', function ($perusahaan) {
+                    $perusahaan->whereNotNull('nama_perusahaan')
+                        ->where('nama_perusahaan', '<>', '')
+                        ->whereHas('lokasi', function ($lokasi) {
+                            $lokasi->whereNotNull('alamat_lengkap')
+                                ->where('alamat_lengkap', '<>', '')
+                                ->whereNotNull('kota')
+                                ->where('kota', '<>', '')
+                                ->whereNotNull('provinsi')
+                                ->where('provinsi', '<>', '')
+                                ->whereNotNull('latitude')
+                                ->whereNotNull('longitude');
+                        });
+                });
+        };
+
+        $workRequired = function ($q) {
+            $q->where(function ($work) {
+                $work->where(function ($detail) {
+                    $detail->whereNotNull('jabatan')->where('jabatan', '<>', '');
+                })
+                    ->orWhere(function ($detail) {
+                        $detail->whereNotNull('bidang_pekerjaan')->where('bidang_pekerjaan', '<>', '');
+                    })
+                    ->orWhere('is_current', true)
+                    ->orWhereRaw("(LOWER(COALESCE(status_kerja, '')) LIKE '%kerja%' AND LOWER(COALESCE(status_kerja, '')) NOT LIKE '%belum%' AND LOWER(COALESCE(status_kerja, '')) NOT LIKE '%tidak%')")
+                    ->orWhereRaw("LOWER(COALESCE(status_karir, '')) LIKE '%utama%'")
+                    ->orWhereRaw("LOWER(COALESCE(status_karir, '')) LIKE '%sampingan%'")
+                    ->orWhereHas('perusahaan', function ($perusahaan) {
+                        $perusahaan->whereNotNull('nama_perusahaan')
+                            ->where('nama_perusahaan', '<>', '');
+                    });
+            });
+        };
+
+        $studyComplete = function ($q) {
+            $q->whereNotNull('kampus')
+                ->where('kampus', '<>', '')
+                ->whereNotNull('jenjang')
+                ->where('jenjang', '<>', '')
+                ->whereNotNull('program_studi')
+                ->where('program_studi', '<>', '')
+                ->whereNotNull('status')
+                ->where('status', '<>', '')
+                ->whereNotNull('kota_kampus')
+                ->where('kota_kampus', '<>', '')
+                ->whereNotNull('provinsi_kampus')
+                ->where('provinsi_kampus', '<>', '')
+                ->whereNotNull('latitude')
+                ->whereNotNull('longitude');
+        };
+
+        $personalIncomplete = function ($q) use ($personalComplete) {
+            $q->whereNot($personalComplete);
+        };
+
+        $workIncomplete = function ($q) use ($workRequired, $workComplete) {
+            $q->whereHas('pekerjaan', $workRequired)
+                ->whereDoesntHave('pekerjaan', $workComplete);
+        };
+
+        $studyIncomplete = function ($q) use ($studyComplete) {
+            $q->whereHas('studiLanjut')
+                ->whereDoesntHave('studiLanjut', $studyComplete);
+        };
+
+        if ($request->filled('kelengkapan')) {
+            $kelengkapan = trim((string) $request->input('kelengkapan'));
+
+            if ($kelengkapan === 'complete') {
+                $query->where($personalComplete)
+                    ->where(function ($q) use ($workRequired, $workComplete) {
+                        $q->whereDoesntHave('pekerjaan', $workRequired)
+                            ->orWhereHas('pekerjaan', $workComplete);
+                    })
+                    ->where(function ($q) use ($studyComplete) {
+                        $q->whereDoesntHave('studiLanjut')
+                            ->orWhereHas('studiLanjut', $studyComplete);
+                    });
+            } elseif ($kelengkapan === 'incomplete') {
+                $query->where(function ($q) use ($personalIncomplete, $workIncomplete, $studyIncomplete) {
+                    $q->where($personalIncomplete)
+                        ->orWhere($workIncomplete)
+                        ->orWhere($studyIncomplete);
+                });
+            }
+        }
+
+        if ($request->filled('kelengkapan_bagian')) {
+            $bagian = trim((string) $request->input('kelengkapan_bagian'));
+
+            if ($bagian === 'data_diri') {
+                $query->where($personalIncomplete);
+            } elseif ($bagian === 'pekerjaan') {
+                $query->where($workIncomplete);
+            } elseif ($bagian === 'studi_lanjut') {
+                $query->where($studyIncomplete);
+            }
+        }
+
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $driver = $query->getModel()->getConnection()->getDriverName();
+            $query->where(function ($q) use ($search, $driver) {
+                if ($driver === 'pgsql') {
+                    $q->where('nama_lengkap', 'ILIKE', "%{$search}%")
+                        ->orWhere('nim', 'ILIKE', "%{$search}%");
+                    return;
+                }
+
+                $needle = mb_strtolower($search, 'UTF-8');
+                $q->whereRaw('LOWER(nama_lengkap) LIKE ?', ["%{$needle}%"])
+                    ->orWhereRaw('LOWER(nim) LIKE ?', ["%{$needle}%"]);
+            });
+        }
+
+        return $query;
+    }
+
     public function bulkDestroy(Request $request)
     {
-        if ($request->boolean('select_all')) {
-            $count = Alumni::count();
-            Alumni::query()->delete();
+        $wantsJson = $request->expectsJson() || $request->ajax();
+        $batchSize = max(1, min((int) $request->input('batch_size', 10), 100));
 
-            return back()->with('success', $count . ' data alumni berhasil dihapus.');
+        if ($request->boolean('select_all')) {
+            if (!$wantsJson) {
+                $query = $this->buildBulkDeleteAlumniQuery($request);
+                $count = (clone $query)->count();
+                $query->delete();
+
+                return back()->with('success', $count . ' data alumni berhasil dihapus.');
+            }
+
+            $ids = $this->buildBulkDeleteAlumniQuery($request)
+                ->orderBy('id')
+                ->limit($batchSize)
+                ->pluck('id');
+
+            $deleted = $ids->isEmpty()
+                ? 0
+                : Alumni::whereIn('id', $ids)->delete();
+
+            if ($wantsJson) {
+                return response()->json([
+                    'success' => true,
+                    'deleted' => $deleted,
+                ]);
+            }
+
+            return back()->with('success', $deleted . ' data alumni berhasil dihapus.');
         }
 
         $ids = collect($request->input('ids', []))
@@ -817,12 +1029,28 @@ class AdminAlumniController extends Controller
             ->values();
 
         if ($ids->isEmpty()) {
+            if ($wantsJson) {
+                return response()->json([
+                    'success' => false,
+                    'deleted' => 0,
+                    'message' => 'Pilih minimal satu data alumni untuk dihapus.',
+                ], 422);
+            }
+
             return back()->with('error', 'Pilih minimal satu data alumni untuk dihapus.');
         }
 
-        Alumni::whereIn('id', $ids)->delete();
+        $idsToDelete = $wantsJson ? $ids->take($batchSize)->values() : $ids;
+        $deleted = Alumni::whereIn('id', $idsToDelete)->delete();
 
-        return back()->with('success', $ids->count() . ' data alumni berhasil dihapus.');
+        if ($wantsJson) {
+            return response()->json([
+                'success' => true,
+                'deleted' => $deleted,
+            ]);
+        }
+
+        return back()->with('success', $deleted . ' data alumni berhasil dihapus.');
     }
 
     //Pekerjaan 
