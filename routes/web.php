@@ -14,6 +14,7 @@ use App\Http\Controllers\NominatimController;
 */
 
 Route::get('/', [MapController::class, 'index'])->name('map.index');
+Route::get('/map/data', [MapController::class, 'data'])->name('map.data');
 
 /*
 |--------------------------------------------------------------------------

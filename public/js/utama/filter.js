@@ -361,6 +361,202 @@ function initMarkerGroups() {
 // Default: cluster aktif saat peta dibuka
 window.statusClusterAktif = true;
 
+let mapMarkerFetchController = null;
+let mapMarkerFetchSequence = 0;
+let mapFilterOptionsInitialized = false;
+
+function getSelectedFilterValues(selectId) {
+    const select = document.getElementById(selectId);
+
+    if (!select) {
+        return [];
+    }
+
+    return Array.from(select.selectedOptions || [])
+        .map(option => option.value)
+        .filter(Boolean);
+}
+
+function appendMultiValueParam(params, key, values) {
+    const cleanValues = (values || [])
+        .map(value => (value || '').toString().trim())
+        .filter(value => value !== '' && value !== 'semua');
+
+    if (cleanValues.length) {
+        params.set(key, cleanValues.join(','));
+    }
+}
+
+function buildMapMarkerApiParams() {
+    const params = new URLSearchParams();
+    const rawKeyword =
+        window.__SEARCH_KEYWORD_OVERRIDE__ !== undefined && window.__SEARCH_KEYWORD_OVERRIDE__ !== null
+            ? String(window.__SEARCH_KEYWORD_OVERRIDE__)
+            : (document.getElementById('search-input')?.value ?? '');
+
+    const keyword = rawKeyword.toString().trim();
+    if (keyword.length >= 2) {
+        params.set('search', keyword);
+    }
+
+    appendMultiValueParam(params, 'search_scope', getSelectedFilterValues('search-category'));
+    appendMultiValueParam(params, 'bidang_pekerjaan', getSelectedFilterValues('filter-bidang'));
+    appendMultiValueParam(params, 'status', getSelectedFilterValues('filter-status-kerja'));
+
+    const linearitas = document.getElementById('filter-linearitas')?.value || 'semua';
+    if (linearitas !== 'semua') {
+        params.set('linearitas', linearitas);
+    }
+
+    const tahun = document.getElementById('filter-tahun')?.value || 'semua';
+    if (tahun !== 'semua') {
+        params.set('tahun', tahun);
+    }
+
+    const angkatan = document.getElementById('filter-angkatan')?.value || 'semua';
+    if (angkatan !== 'semua') {
+        params.set('angkatan', angkatan);
+    }
+
+    return params;
+}
+
+function hydrateMapPayload(payload) {
+    const safePayload = payload && typeof payload === 'object' ? payload : {};
+
+    window.mapPayload = safePayload;
+    alumniData = Array.isArray(safePayload.markers) ? safePayload.markers : [];
+    window.alumniData = alumniData;
+    window.studiLanjutData = Array.isArray(safePayload.studi_lanjut_markers)
+        ? safePayload.studi_lanjut_markers
+        : [];
+}
+
+function emptyMapPayload() {
+    return {
+        total_alumni: 0,
+        total_bekerja: 0,
+        total_belum_bekerja: 0,
+        total_multi_job: 0,
+        total_studi_lanjut: 0,
+        markers: [],
+        studi_lanjut_markers: []
+    };
+}
+
+function renderFetchedMapPayload() {
+    window.__RENDERING_FETCHED_MARKERS__ = true;
+    try {
+        filterDanTampilkanMarker();
+    } finally {
+        window.__RENDERING_FETCHED_MARKERS__ = false;
+    }
+}
+
+function showMapDataError(message) {
+    const text = message || 'Data marker peta gagal dimuat. Silakan coba lagi.';
+
+    if (typeof Swal !== 'undefined' && Swal && typeof Swal.fire === 'function') {
+        Swal.fire({
+            icon: 'error',
+            title: 'Gagal memuat peta',
+            text
+        });
+        return;
+    }
+
+    if (typeof window.showToastKecil === 'function') {
+        window.showToastKecil(text);
+    }
+
+    const container = document.getElementById('search-results');
+    if (container) {
+        container.classList.remove('is-hidden');
+        container.innerHTML = '';
+        const messageEl = document.createElement('div');
+        messageEl.className = 'result-empty';
+        messageEl.textContent = text;
+        container.appendChild(messageEl);
+    }
+}
+
+function initializeMapFilterOptions() {
+    if (mapFilterOptionsInitialized) {
+        return;
+    }
+
+    populateBidangFilter();
+    populateAngkatanFilter();
+    mapFilterOptionsInitialized = true;
+}
+
+function fetchMapMarkersAndRender(options) {
+    const endpoint = window.mapDataUrl || window.__MAP_MARKER_ENDPOINT__;
+
+    if (!endpoint || typeof fetch !== 'function') {
+        renderFetchedMapPayload();
+        return Promise.resolve();
+    }
+
+    if (mapMarkerFetchController) {
+        mapMarkerFetchController.abort();
+    }
+
+    const requestId = ++mapMarkerFetchSequence;
+    mapMarkerFetchController = new AbortController();
+
+    const params = buildMapMarkerApiParams();
+    const url = new URL(endpoint, window.location.origin);
+    params.forEach((value, key) => url.searchParams.set(key, value));
+
+    return fetch(url.toString(), {
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        signal: mapMarkerFetchController.signal
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Gagal memuat data marker (${response.status})`);
+            }
+
+            return response.json();
+        })
+        .then(payload => {
+            if (requestId !== mapMarkerFetchSequence) {
+                return;
+            }
+
+            hydrateMapPayload(payload);
+            initializeMapFilterOptions();
+
+            if (options?.initializeCustomSelect && !window.__CUSTOM_SELECT_INITIALIZED__) {
+                initCustomSelect();
+                window.__CUSTOM_SELECT_INITIALIZED__ = true;
+            }
+
+            renderFetchedMapPayload();
+        })
+        .catch(error => {
+            if (error && error.name === 'AbortError') {
+                return;
+            }
+
+            console.error(error);
+            hydrateMapPayload(emptyMapPayload());
+
+            if (options?.initializeCustomSelect && !window.__CUSTOM_SELECT_INITIALIZED__) {
+                initializeMapFilterOptions();
+                initCustomSelect();
+                window.__CUSTOM_SELECT_INITIALIZED__ = true;
+            }
+
+            renderFetchedMapPayload();
+            showMapDataError(error?.message || 'Data marker peta gagal dimuat. Silakan coba lagi.');
+        });
+}
+
 // ======================================================
 // SAAT DOM READY
 // ======================================================
@@ -373,9 +569,6 @@ document.addEventListener("DOMContentLoaded", function () {
     sinkronkanLegendaModeVisualisasi();
 
     bindFilterEvents();
-
-    populateBidangFilter();
-    populateAngkatanFilter();
 
     // Bidang Kerja dibuat multi-select (tetap tampil dropdown via custom select)
     const bidangSelect = document.getElementById('filter-bidang');
@@ -395,13 +588,19 @@ document.addEventListener("DOMContentLoaded", function () {
         statusKerjaSelect.multiple = true;
     }
 
-    initCustomSelect();
-
     initMultiJobStorage();
     initMultiJobToggleHandler();
     initPopupProfileClickHandler();
 
-    filterDanTampilkanMarker();
+    if (window.mapDataUrl || window.__MAP_MARKER_ENDPOINT__) {
+        fetchMapMarkersAndRender({ initializeCustomSelect: true });
+    } else {
+        populateBidangFilter();
+        populateAngkatanFilter();
+        initCustomSelect();
+        window.__CUSTOM_SELECT_INITIALIZED__ = true;
+        filterDanTampilkanMarker();
+    }
 });
 
 function initPopupProfileClickHandler() {
@@ -979,6 +1178,9 @@ function populateBidangFilter() {
         return;
     }
 
+    Array.from(select.querySelectorAll('option[data-dynamic-option="true"]'))
+        .forEach(option => option.remove());
+
     const bidangList = [...new Set(
         alumniData
             .map(item => (item?.bidang || '').trim())
@@ -989,6 +1191,7 @@ function populateBidangFilter() {
         const option = document.createElement('option');
         option.value = bidang;
         option.textContent = bidang;
+        option.dataset.dynamicOption = 'true';
         select.appendChild(option);
     });
 }
@@ -1002,6 +1205,9 @@ function populateAngkatanFilter() {
         return;
     }
 
+    Array.from(select.querySelectorAll('option[data-dynamic-option="true"]'))
+        .forEach(option => option.remove());
+
     const angkatanList = [...new Set(
         alumniData
             .map(item => String(item?.angkatan || '').trim())
@@ -1012,6 +1218,7 @@ function populateAngkatanFilter() {
         const option = document.createElement('option');
         option.value = angkatan;
         option.textContent = angkatan;
+        option.dataset.dynamicOption = 'true';
         select.appendChild(option);
     });
 }
@@ -1098,6 +1305,10 @@ function initCustomSelect() {
     window.updateCustomSelectUI = updateCustomSelectUI;
 
     selects.forEach(select => {
+        if (select.dataset.customSelectInitialized === 'true') {
+            updateCustomSelectUI(select);
+            return;
+        }
 
         const wrapper = document.createElement('div');
         wrapper.className = 'custom-dropdown-wrapper';
@@ -1508,6 +1719,11 @@ function bindTooltipDenganDelay(marker, tooltipHtml) {
 // FILTER UTAMA
 // ======================================================
 function filterDanTampilkanMarker() {
+
+    if ((window.mapDataUrl || window.__MAP_MARKER_ENDPOINT__) && !window.__RENDERING_FETCHED_MARKERS__) {
+        fetchMapMarkersAndRender();
+        return;
+    }
 
     initMarkerGroups();
     initMultiJobStorage();

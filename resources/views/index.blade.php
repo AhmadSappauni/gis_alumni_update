@@ -85,6 +85,7 @@
     <script src="https://cdn.jsdelivr.net/npm/leaflet-betterscale@1.0.0/L.Control.BetterScale.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-minimap/3.6.1/Control.MiniMap.min.js"></script>
     <script>
+        window.mapDataUrl = @json($mapDataUrl ?? route('map.data'));
         window.mapPayload = @json($mapPayload ?? []);
         var alumniData = window.mapPayload.markers || [];
         window.studiLanjutData = window.mapPayload.studi_lanjut_markers || [];
