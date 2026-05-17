@@ -1540,8 +1540,9 @@ class AdminAlumniController extends Controller
         $skip    = 0;
         $failed  = 0;
         $no_map  = 0;
+        $failedRows = [];
 
-        foreach ($rows as $row) {
+        foreach ($rows as $index => $row) {
 
             try {
 
@@ -2032,13 +2033,7 @@ class AdminAlumniController extends Controller
                             $alamatUpdate['longitude'] = $lngAlumni;
                         }
 
-                        AlamatAlumni::updateOrCreate(
-                            [
-                                'alumni_id' => $alumni->id,
-                                'is_current' => true,
-                            ],
-                            $alamatUpdate
-                        );
+                        $alumni->alamat()->create($alamatUpdate);
                     }
 
                     /*
@@ -2138,6 +2133,11 @@ class AdminAlumniController extends Controller
             } catch (\Throwable $e) {
                 report($e);
                 $failed++;
+                $failedRows[] = [
+                    'row' => $index + 2,
+                    'nim' => isset($nim) ? (string) $nim : null,
+                    'message' => $e->getMessage(),
+                ];
             }
         }
 
@@ -2145,7 +2145,8 @@ class AdminAlumniController extends Controller
             'success' => $success,
             'skip'    => $skip,
             'failed'  => $failed
-            , 'no_map' => $no_map
+            , 'no_map' => $no_map,
+            'failed_rows' => $failedRows,
         ]);
     }
 

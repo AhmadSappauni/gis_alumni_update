@@ -394,6 +394,7 @@ if (importBtn) {
                 let skip = 0;
                 let failed = 0;
                 let noMap = 0;
+                let failedRows = [];
 
                 for (let i = 0; i < total; i += batchSize) {
                     const batch = excelRows.slice(i, i + batchSize);
@@ -404,6 +405,9 @@ if (importBtn) {
                     skip += Number(data?.skip || 0);
                     failed += Number(data?.failed || 0);
                     noMap += Number(data?.no_map || 0);
+                    if (Array.isArray(data?.failed_rows)) {
+                        failedRows = failedRows.concat(data.failed_rows);
+                    }
 
                     processed = Math.min(i + batch.length, total);
                     setImportProgress(processed, total, 'Menyimpan & memetakan lokasi...');
@@ -412,12 +416,28 @@ if (importBtn) {
                 setImportProgress(total, total, 'Selesai.');
 
                 resultDiv.style.display = "block";
+                const failedDetailHtml = failedRows.length
+                    ? `
+                        <div style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(0,0,0,.08); color:#7f1d1d;">
+                            <b>Detail data gagal:</b><br>
+                            ${failedRows.slice(0, 8).map((item) => {
+                                const row = item?.row ? `Baris ${item.row}` : 'Baris tidak diketahui';
+                                const nim = item?.nim ? `, NIM ${item.nim}` : '';
+                                const message = String(item?.message || 'Error tidak diketahui')
+                                    .replace(/[<>&"]/g, (ch) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[ch]));
+                                return `- ${row}${nim}: ${message}`;
+                            }).join('<br>')}
+                            ${failedRows.length > 8 ? `<br>...dan ${failedRows.length - 8} error lainnya.` : ''}
+                        </div>
+                    `
+                    : '';
 
                 document.getElementById("result-text").innerHTML = `
                     ✔ <b>${success}</b> data berhasil diimport & dipetakan.<br>
                     ⚠ <b>${skip}</b> data NIM sudah ada (dilewati).<br>
                     ✖ <b>${failed}</b> data gagal diproses.<br>
                     🗺️ <b>${noMap}</b> data tersimpan tapi belum punya koordinat (belum muncul di peta).
+                    ${failedDetailHtml}
                 `;
 
                 Swal.fire('Selesai!', 'Import selesai diproses.', 'success');
