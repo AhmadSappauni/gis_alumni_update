@@ -28,7 +28,7 @@ class Alumni extends Model
     public function alamat()
     {
         return $this->hasOne(AlamatAlumni::class, 'alumni_id')
-                    ->where('is_current', true);
+                    ->whereRaw('is_current IS TRUE');
     }
 
     public function pekerjaan()

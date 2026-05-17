@@ -53,7 +53,7 @@ class MapController extends Controller
             'perusahaan.lokasiAktif',
             'perusahaan.lokasi'
         ])
-        ->where('is_current', true)
+        ->whereRaw('is_current IS TRUE')
         ->where(function ($q) {
             $q->whereNull('status_kerja')
                 // Hindari false-positive: "Belum Bekerja" mengandung kata "kerja"

@@ -35,6 +35,6 @@ class Alumni extends Model
     public function pekerjaanAktif()
     {
         return $this->hasOne(Pekerjaan::class, 'nim', 'nim')
-                    ->where('is_current', true);
+                    ->whereRaw('is_current IS TRUE');
     }
 }

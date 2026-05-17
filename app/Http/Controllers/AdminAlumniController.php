@@ -253,7 +253,7 @@ class AdminAlumniController extends Controller
         if ($request->filled('linearitas')) {
             $linearitas = trim((string) $request->query('linearitas'));
             $query->whereHas('pekerjaan', function ($q) use ($linearitas) {
-                $q->where('is_current', true)
+                $q->whereRaw('is_current IS TRUE')
                     ->whereHas('perusahaan', function ($p) use ($linearitas) {
                         $p->where('linearitas', $linearitas);
                     });
@@ -263,7 +263,7 @@ class AdminAlumniController extends Controller
         if ($request->filled('bidang_pekerjaan')) {
             $bidang = trim((string) $request->query('bidang_pekerjaan'));
             $query->whereHas('pekerjaan', function ($q) use ($bidang) {
-                $q->where('is_current', true)
+                $q->whereRaw('is_current IS TRUE')
                     ->where('bidang_pekerjaan', $bidang);
             });
         }
@@ -325,7 +325,7 @@ class AdminAlumniController extends Controller
                     ->orWhere(function ($detail) {
                         $detail->whereNotNull('bidang_pekerjaan')->where('bidang_pekerjaan', '<>', '');
                     })
-                    ->orWhere('is_current', true)
+                    ->orWhereRaw('is_current IS TRUE')
                     ->orWhereRaw("(LOWER(COALESCE(status_kerja, '')) LIKE '%kerja%' AND LOWER(COALESCE(status_kerja, '')) NOT LIKE '%belum%' AND LOWER(COALESCE(status_kerja, '')) NOT LIKE '%tidak%')")
                     ->orWhereRaw("LOWER(COALESCE(status_karir, '')) LIKE '%utama%'")
                     ->orWhereRaw("LOWER(COALESCE(status_karir, '')) LIKE '%sampingan%'")
@@ -455,7 +455,7 @@ class AdminAlumniController extends Controller
             ->pluck('tahun_lulus');
 
         $bidangOptions = RiwayatPekerjaan::query()
-            ->where('is_current', true)
+            ->whereRaw('is_current IS TRUE')
             ->whereNotNull('bidang_pekerjaan')
             ->where('bidang_pekerjaan', '<>', '')
             ->distinct()
@@ -499,7 +499,7 @@ class AdminAlumniController extends Controller
             |--------------------------------------------------------------------------
             */
             'alamat' => function ($query) {
-                $query->where('is_current', true)
+                $query->whereRaw('is_current IS TRUE')
                     ->latest('id');
             },
 
@@ -823,7 +823,7 @@ class AdminAlumniController extends Controller
         if ($request->filled('linearitas')) {
             $linearitas = trim((string) $request->input('linearitas'));
             $query->whereHas('pekerjaan', function ($q) use ($linearitas) {
-                $q->where('is_current', true)
+                $q->whereRaw('is_current IS TRUE')
                     ->whereHas('perusahaan', function ($p) use ($linearitas) {
                         $p->where('linearitas', $linearitas);
                     });
@@ -833,7 +833,7 @@ class AdminAlumniController extends Controller
         if ($request->filled('bidang_pekerjaan')) {
             $bidang = trim((string) $request->input('bidang_pekerjaan'));
             $query->whereHas('pekerjaan', function ($q) use ($bidang) {
-                $q->where('is_current', true)
+                $q->whereRaw('is_current IS TRUE')
                     ->where('bidang_pekerjaan', $bidang);
             });
         }
@@ -895,7 +895,7 @@ class AdminAlumniController extends Controller
                     ->orWhere(function ($detail) {
                         $detail->whereNotNull('bidang_pekerjaan')->where('bidang_pekerjaan', '<>', '');
                     })
-                    ->orWhere('is_current', true)
+                    ->orWhereRaw('is_current IS TRUE')
                     ->orWhereRaw("(LOWER(COALESCE(status_kerja, '')) LIKE '%kerja%' AND LOWER(COALESCE(status_kerja, '')) NOT LIKE '%belum%' AND LOWER(COALESCE(status_kerja, '')) NOT LIKE '%tidak%')")
                     ->orWhereRaw("LOWER(COALESCE(status_karir, '')) LIKE '%utama%'")
                     ->orWhereRaw("LOWER(COALESCE(status_karir, '')) LIKE '%sampingan%'")
@@ -1311,7 +1311,7 @@ class AdminAlumniController extends Controller
                 $adaUtamaLain = RiwayatPekerjaan::where('alumni_id', $job->alumni_id)
                     ->where('id', '!=', $job->id)
                     ->where('status_karir', 'Utama')
-                    ->where('is_current', true)
+                    ->whereRaw('is_current IS TRUE')
                     ->exists();
 
                 $statusKarirBaru = $adaUtamaLain ? 'Sampingan' : 'Utama';
@@ -1338,7 +1338,7 @@ class AdminAlumniController extends Controller
             if (!$isCurrentPekerjaan && $statusKarirSebelumnya === 'Utama') {
                 $penggantiUtama = RiwayatPekerjaan::where('alumni_id', $job->alumni_id)
                     ->where('id', '!=', $job->id)
-                    ->where('is_current', true)
+                    ->whereRaw('is_current IS TRUE')
                     ->orderByDesc('id')
                     ->first();
 
