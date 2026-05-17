@@ -1221,29 +1221,23 @@ class AdminAlumniController extends Controller
         );
     }
 
-
-
-    public function importPreview(Request $request)
+    private function readExcelUploadRows($file): array
     {
-        $file = $request->file('file');
-
         $data = Excel::toArray([], $file);
-
         $sheetRows = $data[0] ?? [];
+
         if (count($sheetRows) < 2) {
-            return response()->json([
+            return [
                 'headers' => [],
-                'rows'    => [],
-            ]);
+                'rows' => [],
+            ];
         }
 
-        // baris pertama dianggap header (contoh: nim, nama_lengkap, dst)
-        // normalisasi: lower + non-alnum -> underscore, agar "Kota/Kabupaten" => "kota_kabupaten"
+        // Baris pertama dianggap header; normalisasi agar "Kota/Kabupaten" => "kota_kabupaten".
         $headerRow = array_map(fn ($cell) => $this->normalizeExcelHeaderKey($cell), $sheetRows[0]);
-
         $headers = array_values(array_filter($headerRow, fn ($h) => (bool) $h));
 
-        $result = [];
+        $rows = [];
         foreach (array_slice($sheetRows, 1) as $row) {
             if (!is_array($row)) {
                 continue;
@@ -1254,6 +1248,7 @@ class AdminAlumniController extends Controller
                 if (!$key) {
                     continue;
                 }
+
                 $assoc[$key] = $row[$i] ?? null;
             }
 
@@ -1262,12 +1257,28 @@ class AdminAlumniController extends Controller
                 continue;
             }
 
-            $result[] = $assoc;
+            $rows[] = $assoc;
         }
 
-        return response()->json([
+        return [
             'headers' => $headers,
-            'rows'    => $result,
+            'rows' => $rows,
+        ];
+    }
+
+
+
+    public function importPreview(Request $request)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:10240'],
+        ]);
+
+        $preview = $this->readExcelUploadRows($request->file('file'));
+
+        return response()->json([
+            'headers' => $preview['headers'],
+            'rows'    => $preview['rows'],
         ]);
     }
 
@@ -1279,6 +1290,14 @@ class AdminAlumniController extends Controller
 
         $rowsRaw = $request->input('rows');
         $rows = is_string($rowsRaw) ? json_decode($rowsRaw, true) : $rowsRaw;
+
+        if ((!$rows || !is_array($rows)) && $request->hasFile('file')) {
+            $request->validate([
+                'file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:10240'],
+            ]);
+
+            $rows = $this->readExcelUploadRows($request->file('file'))['rows'];
+        }
 
         if (!$rows || !is_array($rows)) {
             return response()->json([
