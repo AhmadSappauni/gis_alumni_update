@@ -22,7 +22,8 @@
     <div id="map"></div>
 
     <div class="kompas-ui is-hidden" aria-hidden="true">
-        <img src="<?php echo e(asset('img/kompas.png')); ?>" alt="Kompas">
+        
+        <img src="https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/kompas.png" alt="Kompas">
     </div>
 
     <div class="status-legend" role="status" aria-live="polite">
@@ -30,7 +31,8 @@
         <div class="status-legend-summary" aria-label="Jumlah alumni">
             <img
                 class="status-legend-logo"
-                src="<?php echo e(asset('img/ULM-PNG-Baru.png')); ?>"
+                
+                src="https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/ULM-PNG-Baru.png"
                 alt="Logo ULM"
             >
             <div class="status-legend-summary-text">
@@ -39,22 +41,25 @@
             </div>
         </div>
         <div class="status-legend-item">
-            <img src="<?php echo e(asset('img/icon alumni kerja.png')); ?>" alt="Alumni Bekerja">
+            
+            <img src="https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/icon%20alumni%20kerja.png" alt="Alumni Bekerja">
             <span>Alumni Bekerja</span>
             <b id="legend-bekerja-count">0</b>
         </div>
         <div class="status-legend-item">
-            <img src="<?php echo e(asset('img/icon alumni nganggur.png')); ?>" alt="Alumni Belum Bekerja">
+            <img src="https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/icon%20alumni%20nganggur.png" alt="Alumni Belum Bekerja">
             <span>Alumni Belum Bekerja</span>
             <b id="legend-belum-count">0</b>
         </div>
         <div class="status-legend-item">
-            <img src="<?php echo e(asset('img/icon sampingan.png')); ?>" alt="Multi-Job">
+            
+            <img src="https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/icon%20sampingan.png" alt="Multi-Job">
             <span>Multi-Job</span>
             <b id="legend-multijob-count">0</b>
         </div>
         <div class="status-legend-item">
-            <img src="<?php echo e(asset('img/Icon studi lanjut.png')); ?>" alt="Studi Lanjut">
+            
+            <img src="https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/Icon%20studi%20lanjut.png" alt="Studi Lanjut">
             <span>Studi Lanjut</span>
             <b id="legend-studi-count">0</b>
         </div>
