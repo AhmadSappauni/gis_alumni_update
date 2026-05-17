@@ -21,6 +21,10 @@ class AlamatAlumni extends Model
         'is_current'
     ];
 
+    protected $casts = [
+        'is_current' => 'boolean',
+    ];
+
     public function alumni()
     {
         return $this->belongsTo(Alumni::class, 'alumni_id');

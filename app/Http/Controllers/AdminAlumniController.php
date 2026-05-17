@@ -671,7 +671,7 @@ class AdminAlumniController extends Controller
                     'provinsi'        => $request->provinsi,
                     'latitude'        => $request->latitude,
                     'longitude'       => $request->longitude,
-                    'is_current'      => true
+                    'is_current'      => DB::raw('TRUE')
                 ]);
 
                 return;
@@ -725,7 +725,7 @@ class AdminAlumniController extends Controller
 
                 'status_kerja'     => 'Bekerja',
                 'status_karir'     => 'Utama',
-                'is_current'       => true,
+                'is_current'       => DB::raw('TRUE'),
 
                 'masa_tunggu' => $request->masa_tunggu !== ''
                     ? $request->masa_tunggu
@@ -785,7 +785,7 @@ class AdminAlumniController extends Controller
                     'provinsi'       => $request->provinsi,
                     'latitude'       => $request->latitude_tinggal,
                     'longitude'      => $request->longitude_tinggal,
-                    'is_current'     => true
+                    'is_current'     => DB::raw('TRUE')
                 ]
             );
         });
@@ -1116,7 +1116,7 @@ class AdminAlumniController extends Controller
                 'status_karir'     => $isCurrentPekerjaan
                     ? ($sudahAdaUtama ? 'Sampingan' : 'Utama')
                     : 'Riwayat',
-                'is_current'       => $isCurrentPekerjaan,
+                'is_current'       => DB::raw($isCurrentPekerjaan ? 'TRUE' : 'FALSE'),
                 'tanggal_mulai'    => $request->tanggal_mulai ?: null,
                 'tanggal_selesai'  => $isCurrentPekerjaan
                     ? null
@@ -1172,12 +1172,12 @@ class AdminAlumniController extends Controller
                     RiwayatPekerjaan::where('alumni_id', $alumniId)
                         ->update([
                             'status_karir' => 'Riwayat',
-                            'is_current'   => false
+                            'is_current'   => DB::raw('FALSE')
                         ]);
 
                     $pengganti->update([
                         'status_karir' => 'Utama',
-                        'is_current'   => true
+                        'is_current'   => DB::raw('TRUE')
                     ]);
                 }
             }
@@ -1214,12 +1214,12 @@ class AdminAlumniController extends Controller
         RiwayatPekerjaan::where('alumni_id', $job->alumni_id)
             ->update([
                 'status_karir' => 'Riwayat',
-                'is_current' => false
+                'is_current' => DB::raw('FALSE')
             ]);
 
         $job->update([
             'status_karir' => $request->status ?? 'Utama',
-            'is_current' => true
+            'is_current' => DB::raw('TRUE')
         ]);
 
         return back()->with('success', 'Status pekerjaan diubah');
@@ -1322,7 +1322,7 @@ class AdminAlumniController extends Controller
                 'jabatan'          => $request->jabatan,
                 'bidang_pekerjaan' => $request->bidang_pekerjaan,
                 'status_karir'     => $statusKarirBaru,
-                'is_current'       => $isCurrentPekerjaan,
+                'is_current'       => DB::raw($isCurrentPekerjaan ? 'TRUE' : 'FALSE'),
                 'tanggal_mulai'    => $request->tanggal_mulai ?: null,
                 'tanggal_selesai'  => $isCurrentPekerjaan
                     ? null
@@ -1345,7 +1345,7 @@ class AdminAlumniController extends Controller
                 if ($penggantiUtama) {
                     $penggantiUtama->update([
                         'status_karir' => 'Utama',
-                        'is_current' => true
+                        'is_current' => DB::raw('TRUE')
                     ]);
                 }
             }
@@ -2014,7 +2014,7 @@ class AdminAlumniController extends Controller
                     */
                     if ($alamatAlumni || $kotaAlumni || $provinsiAlumni || ($latAlumni !== null && $lngAlumni !== null)) {
                         $alamatUpdate = [
-                            'is_current' => true,
+                            'is_current' => DB::raw('TRUE'),
                         ];
 
                         if ($alamatAlumni !== null) {
@@ -2102,7 +2102,7 @@ class AdminAlumniController extends Controller
                             'bidang_pekerjaan'  => $bidangPekerjaan ?? '-',
                             'status_kerja'      => $statusKerja,
                             'status_karir'      => $statusKarir,
-                            'is_current'        => $isCurrentPekerjaan,
+                            'is_current'        => DB::raw($isCurrentPekerjaan ? 'TRUE' : 'FALSE'),
                             'tanggal_mulai'     => $tanggalMulai,
                             'tanggal_selesai'   => $tanggalSelesai,
                             'masa_tunggu'       => $masaTunggu,
