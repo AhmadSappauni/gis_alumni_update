@@ -449,7 +449,7 @@ class MapController extends Controller
                 'created_at',
             ])
             ->with($this->workingMarkerRelations())
-            ->where('is_current', true)
+            ->whereRaw('is_current IS TRUE')
             ->where(function ($q) {
                 $q->whereNull('status_kerja')
                     ->orWhereIn('status_kerja', ['Bekerja', 'bekerja', 'BEKERJA', 'Kerja', 'kerja', 'KERJA']);
