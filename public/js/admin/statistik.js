@@ -27,7 +27,7 @@ function getFiltersFromUi() {
         jenis_kelamin: qs('stat-filter-jenis-kelamin')?.value || '',
         status_alumni: qs('stat-filter-status-alumni')?.value || '',
         bidang_pekerjaan: qs('stat-filter-bidang')?.value || '',
-        wilayah: qs('stat-filter-wilayah')?.value || ''
+        wilayah_id: qs('stat-filter-wilayah')?.value || ''
     };
 }
 
@@ -474,6 +474,16 @@ function updateBarChart(key, canvasId, labels, data, horizontal) {
         return t.slice(0, Math.max(0, max - 1)) + '…';
     };
 
+    const makeHorizontalTickCallback = () => function (value) {
+        const idx = typeof value === 'number' ? value : Number(value);
+        const chartLabels = this?.chart?.data?.labels || [];
+        const labelFromScale = Number.isFinite(idx) && typeof this?.getLabelForValue === 'function'
+            ? this.getLabelForValue(idx)
+            : null;
+        const label = labelFromScale || chartLabels[idx] || value;
+        return truncate(label, isCompany ? 28 : 24);
+    };
+
     const config = {
         type: 'bar',
         data: {
@@ -511,11 +521,7 @@ function updateBarChart(key, canvasId, labels, data, horizontal) {
                         color: '#334155',
                         font: { weight: '700' },
                         precision: 0,
-                        callback: horizontal ? function (value) {
-                            const idx = typeof value === 'number' ? value : Number(value);
-                            const label = safeLabels?.[idx] ?? value;
-                            return truncate(label, isCompany ? 28 : 24);
-                        } : undefined
+                        callback: horizontal ? makeHorizontalTickCallback() : undefined
                     },
                     grid: { color: 'rgba(0, 74, 135, 0.06)' }
                 }
@@ -557,6 +563,7 @@ function updateBarChart(key, canvasId, labels, data, horizontal) {
         charts[key].data.labels = safeLabels;
         charts[key].data.datasets[0].data = data;
         charts[key].options.indexAxis = horizontal ? 'y' : 'x';
+        charts[key].options.scales.y.ticks.callback = horizontal ? makeHorizontalTickCallback() : undefined;
         charts[key].resize();
         if (key === 'top_wilayah') {
             charts[key].data.datasets[0].backgroundColor = wilayahColors;
@@ -722,6 +729,10 @@ function applyData(payload) {
     setText('kpi-bekerja-sub', pctBekerja === null ? '' : `${pctBekerja}% dari total alumni`);
 
     const c = payload?.charts || {};
+    setText(
+        'chart-top-wilayah-subtitle',
+        c.top_wilayah?.subtitle || payload?.meta?.top_wilayah_subtitle || 'Distribusi wilayah kerja seluruh alumni yang bekerja'
+    );
 
     safeRenderChart('Status Alumni', () => {
         const labels = normalizeLabels(c.status?.labels || []);
@@ -861,6 +872,10 @@ function findTop(labels, data) {
     return { label: String(arrLabels[bestIdx] ?? '').trim(), value: bestVal };
 }
 
+function normalizeCompareText(value) {
+    return String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
 function renderInsights(payload) {
     const wrap = qs('stat-insight');
     const list = qs('stat-insight-list');
@@ -868,6 +883,7 @@ function renderInsights(payload) {
 
     const k = payload?.kpis || {};
     const c = payload?.charts || {};
+    const meta = payload?.meta || {};
     const insights = [];
 
     const total = Number(k.total_alumni ?? 0) || 0;
@@ -886,13 +902,24 @@ function renderInsights(payload) {
     if (topBidang?.label) insights.push(`Bidang pekerjaan terbanyak adalah ${topBidang.label}.`);
 
     const topWilayah = findTop(c.top_wilayah?.labels, c.top_wilayah?.data);
-    if (topWilayah?.label) insights.push(`Wilayah kerja terbanyak adalah ${topWilayah.label}.`);
+    if (topWilayah?.label) {
+        insights.push(`Wilayah kerja terbanyak adalah ${topWilayah.label}.`);
+
+        const filterWilayah = String(meta.wilayah_filter_label || '').trim();
+        if (filterWilayah) {
+            if (normalizeCompareText(topWilayah.label) === normalizeCompareText(filterWilayah)) {
+                insights.push(`Mayoritas alumni terkait ${filterWilayah} memang bekerja di wilayah tersebut.`);
+            } else {
+                insights.push(`Catatan: sebagian alumni terkait ${filterWilayah} bekerja di luar ${filterWilayah}, dengan konsentrasi terbesar di ${topWilayah.label}.`);
+            }
+        }
+    }
 
     const masa = Number(k.rata_masa_tunggu);
     if (Number.isFinite(masa)) insights.push(`Rata-rata masa tunggu kerja sekitar ${formatDecimal(masa, 1)} bulan.`);
 
     list.innerHTML = '';
-    const finalInsights = insights.filter(Boolean).slice(0, 4);
+    const finalInsights = insights.filter(Boolean).slice(0, 5);
     if (!finalInsights.length) {
         wrap.hidden = true;
         return;
@@ -1368,6 +1395,33 @@ function exportExcel() {
     window.location.href = url;
 }
 
+function populateWilayahFilter() {
+    const select = qs('stat-filter-wilayah');
+    if (!select || select.options.length > 1) return Promise.resolve();
+
+    const initialId = String(select.dataset.initialWilayahId || '').trim();
+
+    return fetch('/api/wilayah-kalsel', {
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+    })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (!Array.isArray(data)) return;
+            data.forEach(function (wilayah) {
+                const option = document.createElement('option');
+                option.value = wilayah.id;
+                option.textContent = wilayah.display;
+                if (initialId !== '' && String(wilayah.id) === initialId) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+        })
+        .catch(function (err) {
+            console.warn('Gagal memuat daftar wilayah Kalsel:', err);
+        });
+}
+
 function resetFilters() {
     const ids = [
         'stat-filter-angkatan',
@@ -1426,7 +1480,7 @@ document.addEventListener('DOMContentLoaded', function () {
         observeAndRender('chart-top-wilayah', () => updateBarChart('top_wilayah', 'chart-top-wilayah', c.top_wilayah?.labels || [], c.top_wilayah?.data || [], true));
     });
 
-    refresh().catch(() => {
+    Promise.resolve(populateWilayahFilter()).finally(() => refresh().catch(() => {
         // Silent: empty state handled by UI. Errors will show in console.
-    });
+    }));
 });

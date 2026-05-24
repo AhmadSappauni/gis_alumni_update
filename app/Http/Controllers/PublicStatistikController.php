@@ -10,13 +10,14 @@ class PublicStatistikController extends StatistikController
     {
         $options = $this->getDashboardOptions();
 
+        $wilayahIdRaw = $request->query('wilayah_id');
         $initialFilters = [
             'angkatan' => $request->query('angkatan'),
             'tahun_lulus' => $request->query('tahun_lulus'),
             'jenis_kelamin' => $request->query('jenis_kelamin'),
             'status_alumni' => $request->query('status_alumni'),
             'bidang_pekerjaan' => $request->query('bidang_pekerjaan'),
-            'wilayah' => $request->query('wilayah'),
+            'wilayah_id' => is_numeric($wilayahIdRaw) && (int) $wilayahIdRaw > 0 ? (int) $wilayahIdRaw : null,
         ];
 
         return view('statistik.index', [
@@ -24,7 +25,6 @@ class PublicStatistikController extends StatistikController
             'tahunLulusOptions' => $options['tahunLulusOptions'],
             'jenisKelaminOptions' => $options['jenisKelaminOptions'],
             'bidangOptions' => $options['bidangOptions'],
-            'wilayahOptions' => $options['wilayahOptions'],
             'initialFilters' => $initialFilters,
         ]);
     }

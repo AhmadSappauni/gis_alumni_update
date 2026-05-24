@@ -11,7 +11,7 @@
 <body>
     <header class="stat-topbar">
         <div class="stat-topbar-inner stat-container">
-            <a class="stat-back" href="{{ route('map.index') }}" aria-label="Kembali ke Peta">
+            <a class="stat-back" href="{{ route('peta') }}" aria-label="Kembali ke Peta">
                 <span class="stat-back-icon" aria-hidden="true">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -93,11 +93,9 @@
                 </div>
                 <div class="stat-field">
                     <label>Wilayah Kerja</label>
-                    <select id="stat-filter-wilayah">
-                        <option value="">Semua</option>
-                        @foreach($wilayahOptions as $opt)
-                            <option value="{{ $opt }}" {{ (string)($initialFilters['wilayah'] ?? '') === (string)$opt ? 'selected' : '' }}>{{ $opt }}</option>
-                        @endforeach
+                    <select id="stat-filter-wilayah"
+                        data-initial-wilayah-id="{{ $initialFilters['wilayah_id'] ?? '' }}">
+                        <option value="">Semua Wilayah Kalsel</option>
                     </select>
                 </div>
                 <div class="stat-field">
@@ -346,8 +344,12 @@
 
                     <div class="stat-card stat-card-wilayah">
                         <div class="stat-card-head">
-                            <div class="stat-card-title stat-card-title-center">Persebaran Kerja Alumni</div>
-                            <div class="stat-card-sub stat-card-sub-center">Semua wilayah kerja (alumni bekerja)</div>
+                            <div class="stat-card-title-row stat-card-title-row-center">
+                                <div class="stat-card-title stat-card-title-center">Persebaran Kerja Alumni</div>
+                                <span class="stat-info-icon" tabindex="0" role="img" aria-label="Info persebaran kerja alumni"
+                                    title="Alumni dianggap terhubung dengan suatu wilayah jika tempat kerja saat ini atau alamat domisilinya berada dalam batas administratif wilayah tersebut. Chart menampilkan distribusi lokasi kerja saat ini dari alumni-alumni tersebut, sehingga dapat mencakup wilayah selain yang difilter.">i</span>
+                            </div>
+                            <div id="chart-top-wilayah-subtitle" class="stat-card-sub stat-card-sub-center">Distribusi wilayah kerja seluruh alumni yang bekerja</div>
                         </div>
                         <div class="stat-card-body">
                             <div class="stat-wilayah-toolbar">

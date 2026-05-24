@@ -50,8 +50,8 @@ class DataAlumniDetailSheet implements FromArray, WithHeadings, WithTitle, WithE
     protected function getCompanyLocation(?RiwayatPekerjaan $job): ?object
     {
         if (!$job) return null;
-        return $job->perusahaan?->lokasiAktif
-            ?? $job->perusahaan?->lokasi?->sortByDesc('id')?->first();
+        // Gunakan lokasiAktif saja — konsisten dengan StatistikController::getLokasiPerusahaan().
+        return $job->perusahaan?->lokasiAktif;
     }
 
     protected function deriveStatus($alumni): string

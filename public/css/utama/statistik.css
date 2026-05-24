@@ -420,6 +420,32 @@ body {
 .stat-card-wide { grid-column: 1 / -1; min-height: 340px; }
 .stat-card-head { display: grid; gap: 4px; margin-bottom: 12px; }
 .stat-card-title { font-weight: 900; font-size: 15px; color: var(--blue-dark); }
+.stat-card-title-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.stat-card-title-row-center { justify-content: center; }
+.stat-info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 17px;
+    height: 17px;
+    flex: 0 0 17px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 74, 135, 0.24);
+    background: rgba(0, 74, 135, 0.08);
+    color: var(--blue-dark);
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1;
+    cursor: help;
+}
+.stat-info-icon:focus-visible {
+    outline: 2px solid rgba(0, 74, 135, 0.35);
+    outline-offset: 2px;
+}
 .stat-card-sub { font-weight: 700; font-size: 12px; color: var(--muted); }
 .stat-card-body { position: relative; flex: 1; height: 320px; }
 .stat-card-wide .stat-card-body { height: 360px; }

@@ -18,9 +18,6 @@
             <button id="stat-export-excel" class="btn-export" type="button" title="Export Excel laporan statistik">
                 Export Excel
             </button>
-            <button class="btn-export btn-export-xml" type="button" onclick="alert('Fitur export sedang disiapkan')">
-                Export XML
-            </button>
         </div>
     </header>
 
@@ -87,11 +84,9 @@
             </div>
             <div class="filter-item">
                 <label>Wilayah Kerja</label>
-                <select id="stat-filter-wilayah">
-                    <option value="">Semua</option>
-                    @foreach($wilayahOptions as $opt)
-                        <option value="{{ $opt }}" {{ (string)($initialFilters['wilayah'] ?? '') === (string)$opt ? 'selected' : '' }}>{{ $opt }}</option>
-                    @endforeach
+                <select id="stat-filter-wilayah"
+                    data-initial-wilayah-id="{{ $initialFilters['wilayah_id'] ?? '' }}">
+                    <option value="">Semua Wilayah Kalsel</option>
                 </select>
             </div>
             <div class="filter-item">
@@ -386,8 +381,12 @@
             <div class="chart-grid">
                 <div class="chart-card glass-panel chart-card-wilayah">
                     <div class="chart-head">
-                        <div class="chart-title chart-title-center">Persebaran Kerja Alumni</div>
-                        <div class="chart-subtitle chart-subtitle-center">Semua wilayah kerja (alumni bekerja)</div>
+                        <div class="chart-title-row chart-title-row-center">
+                            <div class="chart-title chart-title-center">Persebaran Kerja Alumni</div>
+                            <span class="chart-info-icon" tabindex="0" role="img" aria-label="Info persebaran kerja alumni"
+                                title="Alumni dianggap terhubung dengan suatu wilayah jika tempat kerja saat ini atau alamat domisilinya berada dalam batas administratif wilayah tersebut. Chart menampilkan distribusi lokasi kerja saat ini dari alumni-alumni tersebut, sehingga dapat mencakup wilayah selain yang difilter.">i</span>
+                        </div>
+                        <div id="chart-top-wilayah-subtitle" class="chart-subtitle chart-subtitle-center">Distribusi wilayah kerja seluruh alumni yang bekerja</div>
                     </div>
                     <div class="chart-body">
                         <div class="chart-wilayah-toolbar">

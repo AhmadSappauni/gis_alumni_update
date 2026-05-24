@@ -418,6 +418,11 @@ function buildMapMarkerApiParams() {
         params.set('angkatan', angkatan);
     }
 
+    const wilayahId = document.getElementById('filter-wilayah')?.value || '';
+    if (wilayahId !== '' && wilayahId !== '0') {
+        params.set('wilayah_id', wilayahId);
+    }
+
     return params;
 }
 
@@ -487,6 +492,7 @@ function initializeMapFilterOptions() {
 
     populateBidangFilter();
     populateAngkatanFilter();
+    populateWilayahFilter();
     mapFilterOptionsInitialized = true;
 }
 
@@ -966,6 +972,9 @@ function bindFilterEvents() {
     document.getElementById('filter-angkatan')
         ?.addEventListener('change', filterDanTampilkanMarker);
 
+    document.getElementById('filter-wilayah')
+        ?.addEventListener('change', filterDanTampilkanMarker);
+
     ['visualization-mode-ui', 'filter-visualization-mode'].forEach(function (id) {
         document.getElementById(id)
             ?.addEventListener('change', function () {
@@ -1221,6 +1230,73 @@ function populateAngkatanFilter() {
         option.dataset.dynamicOption = 'true';
         select.appendChild(option);
     });
+}
+
+function populateWilayahFilter() {
+    const select = document.getElementById('filter-wilayah');
+    if (!select) {
+        return;
+    }
+
+    // Jangan populate ulang kalau sudah ada pilihan (selain "Semua")
+    if (select.options.length > 1) {
+        return;
+    }
+
+    fetch('/api/wilayah-kalsel', {
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+    })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (!Array.isArray(data)) {
+                return;
+            }
+
+            data.forEach(function (wilayah) {
+                const option = document.createElement('option');
+                option.value = wilayah.id;
+                option.textContent = wilayah.display;
+                select.appendChild(option);
+            });
+
+            // initCustomSelect() runs synchronously before this async fetch resolves,
+            // so the custom dropdown was built with only "Semua". Rebuild its option list now.
+            const wrapper = select.closest('.custom-dropdown-wrapper');
+            if (wrapper) {
+                const list = wrapper.querySelector('.custom-dropdown-options');
+                const trigger = wrapper.querySelector('.custom-dropdown-trigger');
+                if (list && trigger) {
+                    list.innerHTML = '';
+                    Array.from(select.options).forEach(function (opt) {
+                        const item = document.createElement('div');
+                        item.className = 'custom-option' + (opt.selected ? ' selected' : '');
+                        item.dataset.value = opt.value;
+                        const left = document.createElement('span');
+                        left.className = 'custom-option-left';
+                        const text = document.createElement('span');
+                        text.className = 'custom-option-text';
+                        text.textContent = opt.text;
+                        left.appendChild(text);
+                        item.appendChild(left);
+                        item.addEventListener('click', function (e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            select.value = item.dataset.value;
+                            trigger.querySelector('span').textContent = opt.text;
+                            list.querySelectorAll('.custom-option').forEach(function (x) {
+                                x.classList.remove('selected');
+                            });
+                            item.classList.add('selected');
+                            select.dispatchEvent(new Event('change'));
+                        });
+                        list.appendChild(item);
+                    });
+                }
+            }
+        })
+        .catch(function (err) {
+            console.warn('Gagal memuat daftar wilayah Kalsel:', err);
+        });
 }
 
 // ======================================================
@@ -1507,6 +1583,7 @@ window.resetSemuaFilter = function () {
         window.syncCustomSelectValue('filter-status-kerja', ['bekerja', 'belum_bekerja']);
         window.syncCustomSelectValue('filter-tahun', 'semua');
         window.syncCustomSelectValue('filter-angkatan', 'semua');
+        window.syncCustomSelectValue('filter-wilayah', '');
         window.syncCustomSelectValue('visualization-mode-ui', 'marker');
         window.syncCustomSelectValue('filter-visualization-mode', 'marker');
     } else {
@@ -1517,6 +1594,7 @@ window.resetSemuaFilter = function () {
             'filter-status-kerja',
             'filter-tahun',
             'filter-angkatan',
+            'filter-wilayah',
             'visualization-mode-ui',
             'filter-visualization-mode'
         ];
@@ -1530,6 +1608,8 @@ window.resetSemuaFilter = function () {
                     });
                 } else if (id === 'visualization-mode-ui' || id === 'filter-visualization-mode') {
                     element.value = 'marker';
+                } else if (id === 'filter-wilayah') {
+                    element.value = '';
                 } else {
                     element.value = 'semua';
                 }

@@ -6,6 +6,8 @@ use App\Http\Controllers\AdminAlumniController;
 use App\Http\Controllers\StatistikController;
 use App\Http\Controllers\PublicStatistikController;
 use App\Http\Controllers\NominatimController;
+use App\Http\Controllers\WilayahController;
+use App\Http\Controllers\LandingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -13,7 +15,7 @@ use App\Http\Controllers\NominatimController;
 |--------------------------------------------------------------------------
 */
 
-Route::get('/', [MapController::class, 'index'])->name('map.index');
+Route::get('/peta', [MapController::class, 'index'])->name('peta');
 Route::get('/map/data', [MapController::class, 'data'])->name('map.data');
 
 /*
@@ -33,6 +35,24 @@ Route::get('/statistik/data', [PublicStatistikController::class, 'data'])->name(
 
 Route::view('/nominatim', 'nominatim')->name('nominatim');
 Route::get('/nominatim/reverse', [NominatimController::class, 'reverse'])->name('nominatim.reverse');
+
+/*
+|--------------------------------------------------------------------------
+| SPATIAL DATA API
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/api/wilayah-kalsel', [WilayahController::class, 'index'])->name('api.wilayah-kalsel');
+
+
+/*
+|--------------------------------------------------------------------------
+| LANDING PAGE
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/', [LandingController::class, 'index'])->name('landing');
+Route::redirect('/welcome', '/', 301);
 
 
 /*

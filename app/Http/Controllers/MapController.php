@@ -583,6 +583,9 @@ class MapController extends Controller
             $linearitas = null;
         }
 
+        $wilayahId = $request->query('wilayah_id');
+        $wilayahId = is_numeric($wilayahId) && (int) $wilayahId > 0 ? (int) $wilayahId : null;
+
         return [
             'keyword' => $keyword,
             'search_scopes' => $this->parseFilterList($request, 'search_scope'),
@@ -591,6 +594,7 @@ class MapController extends Controller
             'statuses' => $this->parseFilterList($request, 'status'),
             'tahun' => $tahun,
             'angkatan' => $angkatan,
+            'wilayah_id' => $wilayahId,
         ];
     }
 
@@ -626,7 +630,8 @@ class MapController extends Controller
     {
         return ($filters['keyword'] ?? '') !== ''
             || !empty($filters['bidang'] ?? [])
-            || ($filters['linearitas'] ?? null) !== null;
+            || ($filters['linearitas'] ?? null) !== null
+            || ($filters['wilayah_id'] ?? null) !== null;
     }
 
     private function applyWorkingQueryFilters($query, array $filters): void
@@ -636,6 +641,16 @@ class MapController extends Controller
         $bidangFilters = $filters['bidang'] ?? [];
         if (!empty($bidangFilters)) {
             $query->whereIn('bidang_pekerjaan', $bidangFilters);
+        }
+
+        $wilayahId = $filters['wilayah_id'] ?? null;
+        if ($wilayahId !== null) {
+            $query->whereHas('perusahaan.lokasiAktif', function ($q) use ($wilayahId) {
+                $q->whereRaw(
+                    'ST_Within(lokasi_perusahaan.geom::geometry, (SELECT geom FROM wilayah_kalsel WHERE id = ?))',
+                    [$wilayahId]
+                );
+            });
         }
 
         $linearitas = $filters['linearitas'] ?? null;
@@ -685,6 +700,16 @@ class MapController extends Controller
     private function applyBelumBekerjaQueryFilters($query, array $filters): void
     {
         $this->applyAcademicFiltersToRelation($query, 'akademik', $filters);
+
+        $wilayahId = $filters['wilayah_id'] ?? null;
+        if ($wilayahId !== null) {
+            $query->whereHas('alamat', function ($q) use ($wilayahId) {
+                $q->whereRaw(
+                    'ST_Within(alamat_alumni.geom::geometry, (SELECT geom FROM wilayah_kalsel WHERE id = ?))',
+                    [$wilayahId]
+                );
+            });
+        }
 
         $this->applyKeywordQueryFilter($query, $filters, [
             'nama' => function ($q, string $pattern) {

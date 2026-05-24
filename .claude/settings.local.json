@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"d:\\\\Aplikasi_Skripsi\\\\gis_alumni_5\")",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(php artisan *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:8000/statistik)",
+      "Bash(curl -s \"http://127.0.0.1:8000/statistik/data\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('NO FILTER total:', d['kpis']['total_alumni']\\)\")",
+      "Bash(curl -s \"http://127.0.0.1:8000/statistik/data?wilayah_id=7\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('wilayah_id=7 total:', d['kpis']['total_alumni']\\)\")"
+    ]
+  }
+}

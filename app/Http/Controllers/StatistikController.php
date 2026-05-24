@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Alumni;
 use App\Models\AlumniAkademik;
-use App\Models\LokasiPerusahaan;
 use App\Models\RiwayatPekerjaan;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\StatistikAlumniExport;
@@ -169,8 +169,9 @@ class StatistikController extends Controller
             return null;
         }
 
-        return $job->perusahaan?->lokasiAktif
-            ?? $job->perusahaan?->lokasi->sortByDesc('id')->first();
+        // Gunakan lokasiAktif saja — tracer study hanya mencatat lokasi kerja SAAT INI,
+        // bukan lokasi historis perusahaan. Konsisten dengan filter wilayah_id di query SQL.
+        return $job->perusahaan?->lokasiAktif;
     }
 
     protected function listFromRequest(Request $request, string $key): array
@@ -189,17 +190,234 @@ class StatistikController extends Controller
         return array_values(array_filter(array_map('trim', explode(',', $text)), fn ($x) => $x !== ''));
     }
 
+    protected function statistikFiltersFromRequest(Request $request): array
+    {
+        $wilayahId = $request->input('wilayah_id');
+        $wilayahId = is_numeric($wilayahId) && (int) $wilayahId > 0 ? (int) $wilayahId : null;
+
+        return [
+            'angkatan' => $this->listFromRequest($request, 'angkatan'),
+            'tahun_lulus' => $this->listFromRequest($request, 'tahun_lulus'),
+            'jenis_kelamin' => $this->listFromRequest($request, 'jenis_kelamin'),
+            'status_alumni' => $this->listFromRequest($request, 'status_alumni'),
+            'bidang_pekerjaan' => $this->listFromRequest($request, 'bidang_pekerjaan'),
+            'wilayah_id' => $wilayahId,
+        ];
+    }
+
+    protected function buildFilteredAlumniQuery(array $filters)
+    {
+        $query = Alumni::query()
+            ->with([
+                'akademik',
+                'alamat',
+                // Muat lokasiAktif saja - tidak perlu semua rekaman lokasi historis perusahaan.
+                // Semantik konsisten: persebaran wilayah kerja berdasarkan lokasi SAAT INI.
+                'pekerjaan.perusahaan.lokasiAktif',
+                'studiLanjut',
+            ]);
+
+        if (!empty($filters['jenis_kelamin'])) {
+            $query->whereIn('jenis_kelamin', $filters['jenis_kelamin']);
+        }
+
+        if (!empty($filters['angkatan'])) {
+            $query->whereHas('akademik', function ($q) use ($filters) {
+                $q->whereIn('angkatan', $filters['angkatan']);
+            });
+        }
+
+        if (!empty($filters['tahun_lulus'])) {
+            $query->whereHas('akademik', function ($q) use ($filters) {
+                $q->whereIn('tahun_lulus', $filters['tahun_lulus']);
+            });
+        }
+
+        $this->applyWilayahConnectionFilter($query, $filters['wilayah_id'] ?? null);
+
+        return $query;
+    }
+
+    protected function applyWilayahConnectionFilter($query, ?int $wilayahId): void
+    {
+        if ($wilayahId === null) {
+            return;
+        }
+
+        // Alumni terhubung dengan wilayah jika bekerja saat ini DI wilayah itu
+        // atau berdomisili DI wilayah itu.
+        $query->where(function ($q) use ($wilayahId) {
+            $q->whereHas('pekerjaan', function ($q2) use ($wilayahId) {
+                $q2->where('is_current', true)
+                    ->whereHas('perusahaan.lokasiAktif', function ($q3) use ($wilayahId) {
+                        $q3->whereRaw(
+                            'ST_Within(lokasi_perusahaan.geom::geometry, (SELECT geom FROM wilayah_kalsel WHERE id = ?))',
+                            [$wilayahId]
+                        );
+                    });
+            })
+            ->orWhereHas('alamat', function ($q2) use ($wilayahId) {
+                $q2->whereRaw(
+                    'ST_Within(alamat_alumni.geom::geometry, (SELECT geom FROM wilayah_kalsel WHERE id = ?))',
+                    [$wilayahId]
+                );
+            });
+        });
+    }
+
+    protected function filterAlumniForStatistik($alumniRows, array $filters)
+    {
+        $statusAlumni = $filters['status_alumni'] ?? [];
+        $bidangPekerjaan = $filters['bidang_pekerjaan'] ?? [];
+
+        return $alumniRows->filter(function ($alumni) use ($statusAlumni, $bidangPekerjaan) {
+            $jobs = $alumni->pekerjaan ?? collect();
+            $jobUtama = $this->pilihPekerjaanUtama($jobs);
+
+            $hasStudi = ($alumni->studiLanjut && $alumni->studiLanjut->isNotEmpty());
+
+            $workingAktif = $jobs->filter(function ($job) {
+                $status = strtolower(trim((string) ($job->status_kerja ?? '')));
+                if (!($status === 'bekerja' || $status === 'wirausaha')) {
+                    return false;
+                }
+                return $this->getStatusKarirLower($job->status_karir) === 'utama' || (bool) $job->is_current;
+            });
+
+            $isBekerja = $workingAktif->isNotEmpty();
+
+            $statusDerived = $hasStudi ? 'studi_lanjut' : ($isBekerja ? 'bekerja' : 'belum_bekerja');
+
+            if (!empty($statusAlumni) && !in_array($statusDerived, $statusAlumni, true)) {
+                return false;
+            }
+
+            if (!empty($bidangPekerjaan)) {
+                $jobBidang = $workingAktif->isNotEmpty()
+                    ? $this->pilihPekerjaanUtama($workingAktif)
+                    : $jobUtama;
+
+                $bidang = trim((string) ($jobBidang?->bidang_pekerjaan ?? ''));
+                $bidang = $bidang !== '' ? $bidang : 'Tidak diketahui';
+                if (!in_array($bidang, $bidangPekerjaan, true)) {
+                    return false;
+                }
+            }
+
+            // wilayah_id sudah difilter di level SQL via ST_Within - tidak perlu filter PHP di sini.
+
+            return true;
+        })->values();
+    }
+
+    protected function resolveWilayahLabel(?int $wilayahId): ?string
+    {
+        if ($wilayahId === null) {
+            return null;
+        }
+
+        $wilayahRow = DB::table('wilayah_kalsel')->where('id', $wilayahId)->first(['nama', 'level']);
+        if (!$wilayahRow) {
+            return 'ID: ' . $wilayahId;
+        }
+
+        return $wilayahRow->level === 'kota'
+            ? 'Kota ' . $wilayahRow->nama
+            : 'Kab. ' . $wilayahRow->nama;
+    }
+
+    protected function buildTopWilayahSubtitle(?string $wilayahLabel): string
+    {
+        if ($wilayahLabel === null) {
+            return 'Distribusi wilayah kerja seluruh alumni yang bekerja';
+        }
+
+        return 'Wilayah kerja alumni terkait ' . $wilayahLabel
+            . ' (bekerja atau berdomisili di ' . $wilayahLabel . ')';
+    }
+
+    protected function buildTopWilayahCounts(array $alumniIds, int $limit = 5): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $alumniIds), fn ($id) => $id > 0)));
+        if (empty($ids)) {
+            return [];
+        }
+
+        $limit = max(1, min(50, (int) $limit));
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        $rows = DB::select(
+            "
+            SELECT work_wilayah.wilayah, COUNT(DISTINCT work_wilayah.alumni_id) AS total
+            FROM (
+                SELECT
+                    ranked_jobs.alumni_id,
+                    COALESCE(
+                        MAX(
+                            CASE
+                                WHEN w.level = 'kota' THEN 'Kota ' || w.nama
+                                WHEN w.nama IS NOT NULL THEN 'Kab. ' || w.nama
+                                ELSE NULL
+                            END
+                        ),
+                        'Luar Kalsel'
+                    ) AS wilayah
+                FROM (
+                    SELECT
+                        rp.alumni_id,
+                        rp.perusahaan_id,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY rp.alumni_id
+                            ORDER BY
+                                CASE WHEN LOWER(TRIM(COALESCE(rp.status_karir, ''))) = 'utama' THEN 0 ELSE 1 END,
+                                COALESCE(rp.tanggal_mulai, DATE '0001-01-01') DESC,
+                                COALESCE(rp.created_at, TIMESTAMP '0001-01-01 00:00:00') DESC,
+                                rp.id DESC
+                        ) AS rn
+                    FROM riwayat_pekerjaan rp
+                    WHERE rp.alumni_id IN ($placeholders)
+                      AND rp.is_current IS TRUE
+                      AND LOWER(TRIM(COALESCE(rp.status_kerja, ''))) IN ('bekerja', 'wirausaha')
+                ) ranked_jobs
+                LEFT JOIN (
+                    SELECT perusahaan_id, MAX(id) AS lokasi_id
+                    FROM lokasi_perusahaan
+                    GROUP BY perusahaan_id
+                ) lokasi_aktif ON lokasi_aktif.perusahaan_id = ranked_jobs.perusahaan_id
+                LEFT JOIN lokasi_perusahaan lp ON lp.id = lokasi_aktif.lokasi_id
+                LEFT JOIN wilayah_kalsel w ON lp.geom IS NOT NULL AND ST_Within(lp.geom::geometry, w.geom)
+                WHERE ranked_jobs.rn = 1
+                GROUP BY ranked_jobs.alumni_id
+            ) work_wilayah
+            GROUP BY work_wilayah.wilayah
+            ORDER BY total DESC, work_wilayah.wilayah ASC
+            LIMIT {$limit}
+            ",
+            $ids
+        );
+
+        $counts = [];
+        foreach ($rows as $row) {
+            $label = trim((string) ($row->wilayah ?? ''));
+            $label = $label !== '' ? $label : 'Luar Kalsel';
+            $counts[$label] = (int) ($row->total ?? 0);
+        }
+
+        return $counts;
+    }
+
     public function index(Request $request)
     {
         $options = $this->getDashboardOptions();
 
+        $wilayahIdRaw = $request->query('wilayah_id');
         $initialFilters = [
             'angkatan' => $request->query('angkatan'),
             'tahun_lulus' => $request->query('tahun_lulus'),
             'jenis_kelamin' => $request->query('jenis_kelamin'),
             'status_alumni' => $request->query('status_alumni'),
             'bidang_pekerjaan' => $request->query('bidang_pekerjaan'),
-            'wilayah' => $request->query('wilayah'),
+            'wilayah_id' => is_numeric($wilayahIdRaw) && (int) $wilayahIdRaw > 0 ? (int) $wilayahIdRaw : null,
         ];
 
         return view('admin.statistik.index', [
@@ -207,7 +425,6 @@ class StatistikController extends Controller
             'tahunLulusOptions' => $options['tahunLulusOptions'],
             'jenisKelaminOptions' => $options['jenisKelaminOptions'],
             'bidangOptions' => $options['bidangOptions'],
-            'wilayahOptions' => $options['wilayahOptions'],
             'initialFilters' => $initialFilters,
         ]);
     }
@@ -248,111 +465,24 @@ class StatistikController extends Controller
             ->filter(fn ($x) => $x !== '')
             ->values();
 
-        $wilayahOptions = LokasiPerusahaan::query()
-            ->select('kota')
-            ->whereNotNull('kota')
-            ->distinct()
-            ->orderBy('kota')
-            ->pluck('kota')
-            ->map(fn ($x) => trim((string) $x))
-            ->filter(fn ($x) => $x !== '')
-            ->values();
-
         return [
             'angkatanOptions' => $angkatanOptions,
             'tahunLulusOptions' => $tahunLulusOptions,
             'jenisKelaminOptions' => $jenisKelaminOptions,
             'bidangOptions' => $bidangOptions,
-            'wilayahOptions' => $wilayahOptions,
         ];
     }
 
     public function data(Request $request)
     {
-        $angkatan = $this->listFromRequest($request, 'angkatan');
-        $tahunLulus = $this->listFromRequest($request, 'tahun_lulus');
-        $jenisKelamin = $this->listFromRequest($request, 'jenis_kelamin');
-        $statusAlumni = $this->listFromRequest($request, 'status_alumni');
-        $bidangPekerjaan = $this->listFromRequest($request, 'bidang_pekerjaan');
-        $wilayah = $this->listFromRequest($request, 'wilayah');
+        $filters = $this->statistikFiltersFromRequest($request);
+        $wilayahId = $filters['wilayah_id'];
+        $wilayahLabel = $this->resolveWilayahLabel($wilayahId);
+        $topWilayahSubtitle = $this->buildTopWilayahSubtitle($wilayahLabel);
 
-        $query = Alumni::query()
-            ->with([
-                'akademik',
-                'alamat',
-                'pekerjaan.perusahaan.lokasiAktif',
-                'pekerjaan.perusahaan.lokasi',
-                'studiLanjut',
-            ]);
+        $alumniRows = $this->buildFilteredAlumniQuery($filters)->get();
 
-        if (!empty($jenisKelamin)) {
-            $query->whereIn('jenis_kelamin', $jenisKelamin);
-        }
-
-        if (!empty($angkatan)) {
-            $query->whereHas('akademik', function ($q) use ($angkatan) {
-                $q->whereIn('angkatan', $angkatan);
-            });
-        }
-
-        if (!empty($tahunLulus)) {
-            $query->whereHas('akademik', function ($q) use ($tahunLulus) {
-                $q->whereIn('tahun_lulus', $tahunLulus);
-            });
-        }
-
-        $alumniRows = $query->get();
-
-        $filtered = $alumniRows->filter(function ($alumni) use ($statusAlumni, $bidangPekerjaan, $wilayah) {
-            $jobs = $alumni->pekerjaan ?? collect();
-            $jobUtama = $this->pilihPekerjaanUtama($jobs);
-
-            $hasStudi = ($alumni->studiLanjut && $alumni->studiLanjut->isNotEmpty());
-
-            $workingAktif = $jobs->filter(function ($job) {
-                $status = strtolower(trim((string) ($job->status_kerja ?? '')));
-                if (!($status === 'bekerja' || $status === 'wirausaha')) {
-                    return false;
-                }
-                return $this->getStatusKarirLower($job->status_karir) === 'utama' || (bool) $job->is_current;
-            });
-
-            $isBekerja = $workingAktif->isNotEmpty();
-
-            $statusDerived = $hasStudi ? 'studi_lanjut' : ($isBekerja ? 'bekerja' : 'belum_bekerja');
-
-            if (!empty($statusAlumni) && !in_array($statusDerived, $statusAlumni, true)) {
-                return false;
-            }
-
-            if (!empty($bidangPekerjaan)) {
-                $jobBidang = $workingAktif->isNotEmpty()
-                    ? $this->pilihPekerjaanUtama($workingAktif)
-                    : $jobUtama;
-
-                $bidang = trim((string) ($jobBidang?->bidang_pekerjaan ?? ''));
-                $bidang = $bidang !== '' ? $bidang : 'Tidak diketahui';
-                if (!in_array($bidang, $bidangPekerjaan, true)) {
-                    return false;
-                }
-            }
-
-            if (!empty($wilayah)) {
-                $jobWilayah = $workingAktif->isNotEmpty()
-                    ? $this->pilihPekerjaanUtama($workingAktif)
-                    : $jobUtama;
-
-                $lokasi = $this->getLokasiPerusahaan($jobWilayah);
-                $kota = trim((string) ($lokasi?->kota ?? ''));
-                $provinsi = trim((string) ($lokasi?->provinsi ?? ''));
-                $wil = $kota !== '' ? $kota : ($provinsi !== '' ? $provinsi : 'Tidak diketahui');
-                if (!in_array($wil, $wilayah, true)) {
-                    return false;
-                }
-            }
-
-            return true;
-        })->values();
+        $filtered = $this->filterAlumniForStatistik($alumniRows, $filters);
 
         $totalAlumni = $filtered->count();
 
@@ -380,7 +510,6 @@ class StatistikController extends Controller
         ];
 
         $bidangCounts = [];
-        $wilayahCounts = [];
 
         $masaTungguBuckets = [
             '0–3 bulan' => 0,
@@ -519,13 +648,6 @@ class StatistikController extends Controller
                 $bidang = $bidang !== '' ? $bidang : 'Tidak diketahui';
                 $bidangCounts[$bidang] = ($bidangCounts[$bidang] ?? 0) + 1;
 
-                // Top wilayah kerja (dari lokasi perusahaan)
-                $lokasi = $this->getLokasiPerusahaan($jobUtamaAktif);
-                $kota = trim((string) ($lokasi?->kota ?? ''));
-                $provinsi = trim((string) ($lokasi?->provinsi ?? ''));
-                $wil = $kota !== '' ? $kota : ($provinsi !== '' ? $provinsi : 'Tidak diketahui');
-                $wilayahCounts[$wil] = ($wilayahCounts[$wil] ?? 0) + 1;
-
                 // Masa tunggu (bulan)
                 $masaTunggu = $jobUtamaAktif->masa_tunggu;
                 $masaTungguNum = is_numeric($masaTunggu) ? (float) $masaTunggu : null;
@@ -662,8 +784,7 @@ class StatistikController extends Controller
         arsort($bidangCounts);
         $topBidang = array_slice($bidangCounts, 0, 5, true);
 
-        arsort($wilayahCounts);
-        $topWilayah = array_slice($wilayahCounts, 0, 5, true);
+        $topWilayah = $this->buildTopWilayahCounts($filtered->pluck('id')->all(), 5);
 
         arsort($kampusCounts);
         $topKampus = array_slice($kampusCounts, 0, 5, true);
@@ -717,12 +838,16 @@ class StatistikController extends Controller
 
         return response()->json([
             'filters' => [
-                'angkatan' => $angkatan,
-                'tahun_lulus' => $tahunLulus,
-                'jenis_kelamin' => $jenisKelamin,
-                'status_alumni' => $statusAlumni,
-                'bidang_pekerjaan' => $bidangPekerjaan,
-                'wilayah' => $wilayah,
+                'angkatan' => $filters['angkatan'],
+                'tahun_lulus' => $filters['tahun_lulus'],
+                'jenis_kelamin' => $filters['jenis_kelamin'],
+                'status_alumni' => $filters['status_alumni'],
+                'bidang_pekerjaan' => $filters['bidang_pekerjaan'],
+                'wilayah_id' => $wilayahId,
+            ],
+            'meta' => [
+                'wilayah_filter_label' => $wilayahLabel,
+                'top_wilayah_subtitle' => $topWilayahSubtitle,
             ],
             'kpis' => [
                 'total_alumni' => $totalAlumni,
@@ -776,6 +901,7 @@ class StatistikController extends Controller
                 'top_wilayah' => [
                     'labels' => array_values(array_keys($topWilayah)),
                     'data' => array_values(array_map('intval', array_values($topWilayah))),
+                    'subtitle' => $topWilayahSubtitle,
                 ],
                 'masa_tunggu' => [
                     'labels' => array_values(array_keys($masaTungguBuckets)),
@@ -864,6 +990,7 @@ class StatistikController extends Controller
     {
         $k = (array) ($payload['kpis'] ?? []);
         $c = (array) ($payload['charts'] ?? []);
+        $meta = (array) ($payload['meta'] ?? []);
         $insights = [];
 
         $total = (int) ($k['total_alumni'] ?? 0);
@@ -903,8 +1030,37 @@ class StatistikController extends Controller
         $topBidang = $pickTop($c['top_bidang']['labels'] ?? [], $c['top_bidang']['data'] ?? []);
         if (!empty($topBidang['label'])) $insights[] = 'Bidang pekerjaan terbanyak adalah ' . $topBidang['label'] . '.';
 
-        $topWilayah = $pickTop($c['top_wilayah']['labels'] ?? [], $c['top_wilayah']['data'] ?? []);
-        if (!empty($topWilayah['label'])) $insights[] = 'Wilayah kerja terbanyak adalah ' . $topWilayah['label'] . '.';
+        $wilWLabels = array_values($c['top_wilayah']['labels'] ?? []);
+        $wilWData   = array_values($c['top_wilayah']['data'] ?? []);
+        $kalselWilLabels = [];
+        $kalselWilData   = [];
+        foreach ($wilWLabels as $i => $lbl) {
+            if (strtolower(trim((string) $lbl)) !== 'luar kalsel') {
+                $kalselWilLabels[] = $lbl;
+                $kalselWilData[]   = $wilWData[$i] ?? 0;
+            }
+        }
+        $topWilayah = $pickTop($kalselWilLabels, $kalselWilData);
+        if (!empty($topWilayah['label'])) {
+            $insights[] = 'Wilayah kerja terbanyak adalah ' . $topWilayah['label'] . '.';
+
+            $filterWilayah = trim((string) ($meta['wilayah_filter_label'] ?? ''));
+            if ($filterWilayah !== '') {
+                $normalizeWilayah = fn ($value) => Str::of((string) $value)
+                    ->lower()
+                    ->replaceMatches('/\s+/', ' ')
+                    ->trim()
+                    ->toString();
+
+                if ($normalizeWilayah($topWilayah['label']) === $normalizeWilayah($filterWilayah)) {
+                    $insights[] = 'Mayoritas alumni terkait ' . $filterWilayah . ' memang bekerja di wilayah tersebut.';
+                } else {
+                    $insights[] = 'Catatan: sebagian alumni terkait ' . $filterWilayah
+                        . ' bekerja di luar ' . $filterWilayah
+                        . ', dengan konsentrasi terbesar di ' . $topWilayah['label'] . '.';
+                }
+            }
+        }
 
         $masa = $k['rata_masa_tunggu'] ?? null;
         if (is_numeric($masa)) {
@@ -938,7 +1094,10 @@ class StatistikController extends Controller
         $jenisKelamin = $this->listFromRequest($request, 'jenis_kelamin');
         $statusAlumni = $this->listFromRequest($request, 'status_alumni');
         $bidangPekerjaan = $this->listFromRequest($request, 'bidang_pekerjaan');
-        $wilayah = $this->listFromRequest($request, 'wilayah');
+
+        $wilayahId = $request->input('wilayah_id');
+        $wilayahId = is_numeric($wilayahId) && (int) $wilayahId > 0 ? (int) $wilayahId : null;
+        $wilayahLabel = $this->resolveWilayahLabel($wilayahId) ?? 'Semua';
 
         $filterRows = [
             ['Filter' => 'Angkatan', 'Nilai' => empty($angkatan) ? 'Semua' : implode(', ', $angkatan)],
@@ -946,7 +1105,7 @@ class StatistikController extends Controller
             ['Filter' => 'Jenis Kelamin', 'Nilai' => empty($jenisKelamin) ? 'Semua' : implode(', ', $jenisKelamin)],
             ['Filter' => 'Status Alumni', 'Nilai' => empty($statusAlumni) ? 'Semua' : implode(', ', $statusAlumni)],
             ['Filter' => 'Bidang Pekerjaan', 'Nilai' => empty($bidangPekerjaan) ? 'Semua' : implode(', ', $bidangPekerjaan)],
-            ['Filter' => 'Wilayah Kerja', 'Nilai' => empty($wilayah) ? 'Semua' : implode(', ', $wilayah)],
+            ['Filter' => 'Wilayah Kerja', 'Nilai' => $wilayahLabel],
             ['Filter' => 'Mode Data Statistik', 'Nilai' => $showUnknown ? 'Semua data' : 'Hanya data valid'],
         ];
 
@@ -1005,7 +1164,10 @@ class StatistikController extends Controller
         $jenisKelamin = $this->listFromRequest($request, 'jenis_kelamin');
         $statusAlumni = $this->listFromRequest($request, 'status_alumni');
         $bidangPekerjaan = $this->listFromRequest($request, 'bidang_pekerjaan');
-        $wilayah = $this->listFromRequest($request, 'wilayah');
+
+        $wilayahId = $request->input('wilayah_id');
+        $wilayahId = is_numeric($wilayahId) && (int) $wilayahId > 0 ? (int) $wilayahId : null;
+        $wilayahLabel = $this->resolveWilayahLabel($wilayahId) ?? 'Semua';
 
         $filterRows = [
             ['Filter' => 'Angkatan', 'Nilai' => empty($angkatan) ? 'Semua' : implode(', ', $angkatan)],
@@ -1013,7 +1175,7 @@ class StatistikController extends Controller
             ['Filter' => 'Jenis Kelamin', 'Nilai' => empty($jenisKelamin) ? 'Semua' : implode(', ', $jenisKelamin)],
             ['Filter' => 'Status Alumni', 'Nilai' => empty($statusAlumni) ? 'Semua' : implode(', ', $statusAlumni)],
             ['Filter' => 'Bidang Pekerjaan', 'Nilai' => empty($bidangPekerjaan) ? 'Semua' : implode(', ', $bidangPekerjaan)],
-            ['Filter' => 'Wilayah Kerja', 'Nilai' => empty($wilayah) ? 'Semua' : implode(', ', $wilayah)],
+            ['Filter' => 'Wilayah Kerja', 'Nilai' => $wilayahLabel],
             ['Filter' => 'Mode Data Statistik', 'Nilai' => $showUnknown ? 'Semua data' : 'Hanya data valid'],
         ];
 
@@ -1028,7 +1190,7 @@ class StatistikController extends Controller
             'jenis_kelamin' => $jenisKelamin,
             'status_alumni' => $statusAlumni,
             'bidang_pekerjaan' => $bidangPekerjaan,
-            'wilayah' => $wilayah,
+            'wilayah_id' => $wilayahId,
             'data_mode' => $showUnknown ? 'all' : 'valid',
         ];
 
@@ -1052,89 +1214,9 @@ class StatistikController extends Controller
 
     protected function buildFilteredAlumniForExport(Request $request)
     {
-        $angkatan = $this->listFromRequest($request, 'angkatan');
-        $tahunLulus = $this->listFromRequest($request, 'tahun_lulus');
-        $jenisKelamin = $this->listFromRequest($request, 'jenis_kelamin');
-        $statusAlumni = $this->listFromRequest($request, 'status_alumni');
-        $bidangPekerjaan = $this->listFromRequest($request, 'bidang_pekerjaan');
-        $wilayah = $this->listFromRequest($request, 'wilayah');
+        $filters = $this->statistikFiltersFromRequest($request);
+        $alumniRows = $this->buildFilteredAlumniQuery($filters)->get();
 
-        $query = Alumni::query()
-            ->with([
-                'akademik',
-                'alamat',
-                'pekerjaan.perusahaan.lokasiAktif',
-                'pekerjaan.perusahaan.lokasi',
-                'studiLanjut',
-            ]);
-
-        if (!empty($jenisKelamin)) {
-            $query->whereIn('jenis_kelamin', $jenisKelamin);
-        }
-
-        if (!empty($angkatan)) {
-            $query->whereHas('akademik', function ($q) use ($angkatan) {
-                $q->whereIn('angkatan', $angkatan);
-            });
-        }
-
-        if (!empty($tahunLulus)) {
-            $query->whereHas('akademik', function ($q) use ($tahunLulus) {
-                $q->whereIn('tahun_lulus', $tahunLulus);
-            });
-        }
-
-        $alumniRows = $query->get();
-
-        return $alumniRows->filter(function ($alumni) use ($statusAlumni, $bidangPekerjaan, $wilayah) {
-            $jobs = $alumni->pekerjaan ?? collect();
-            $jobUtama = $this->pilihPekerjaanUtama($jobs);
-
-            $hasStudi = ($alumni->studiLanjut && $alumni->studiLanjut->isNotEmpty());
-
-            $workingAktif = $jobs->filter(function ($job) {
-                $status = strtolower(trim((string) ($job->status_kerja ?? '')));
-                if (!($status === 'bekerja' || $status === 'wirausaha')) {
-                    return false;
-                }
-                return $this->getStatusKarirLower($job->status_karir) === 'utama' || (bool) $job->is_current;
-            });
-
-            $isBekerja = $workingAktif->isNotEmpty();
-
-            $statusDerived = $hasStudi ? 'studi_lanjut' : ($isBekerja ? 'bekerja' : 'belum_bekerja');
-
-            if (!empty($statusAlumni) && !in_array($statusDerived, $statusAlumni, true)) {
-                return false;
-            }
-
-            if (!empty($bidangPekerjaan)) {
-                $jobBidang = $workingAktif->isNotEmpty()
-                    ? $this->pilihPekerjaanUtama($workingAktif)
-                    : $jobUtama;
-
-                $bidang = trim((string) ($jobBidang?->bidang_pekerjaan ?? ''));
-                $bidang = $bidang !== '' ? $bidang : 'Tidak diketahui';
-                if (!in_array($bidang, $bidangPekerjaan, true)) {
-                    return false;
-                }
-            }
-
-            if (!empty($wilayah)) {
-                $jobWilayah = $workingAktif->isNotEmpty()
-                    ? $this->pilihPekerjaanUtama($workingAktif)
-                    : $jobUtama;
-
-                $lokasi = $this->getLokasiPerusahaan($jobWilayah);
-                $kota = trim((string) ($lokasi?->kota ?? ''));
-                $provinsi = trim((string) ($lokasi?->provinsi ?? ''));
-                $wil = $kota !== '' ? $kota : ($provinsi !== '' ? $provinsi : 'Tidak diketahui');
-                if (!in_array($wil, $wilayah, true)) {
-                    return false;
-                }
-            }
-
-            return true;
-        })->values();
+        return $this->filterAlumniForStatistik($alumniRows, $filters);
     }
 }

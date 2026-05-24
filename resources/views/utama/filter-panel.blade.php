@@ -101,6 +101,13 @@
                 </div>
 
                 <div class="filter-section">
+                    <label class="filter-label">Kabupaten/Kota:</label>
+                    <select id="filter-wilayah" class="custom-select">
+                        <option value="">Semua Wilayah Kalsel</option>
+                    </select>
+                </div>
+
+                <div class="filter-section">
                     <label class="filter-label">Tahun Lulus:</label>
                     <select id="filter-tahun" class="custom-select">
                         <option value="semua">Semua Tahun</option>

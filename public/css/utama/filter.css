@@ -254,7 +254,7 @@
 }
 
 .map-page .leaflet-bottom.leaflet-left {
-    left: calc(var(--rail-left) + var(--rail-width) + 10px) !important;
+    left: 0 !important;
 }
 
 /* --- CSS ANIMASI FILTER YANG BENAR --- */

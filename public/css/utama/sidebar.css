@@ -79,6 +79,13 @@
     padding-right: 8px;
 }
 
+.sidebar-brand-link {
+    color: inherit;
+}
+.sidebar-brand-link:hover {
+    opacity: 0.82;
+}
+
 .sidebar-brand-icon {
     width: 42px;
     height: 42px;
