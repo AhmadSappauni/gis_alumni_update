@@ -304,7 +304,7 @@
                                 <div style="display: flex; align-items: center; gap: 10px;">
                                     @if ($alumni->foto_profil)
                                         <img src="{{ asset('storage/' . $alumni->foto_profil) }}"
-                                            style="width:30px; height:30px; border-radius:8px; object-fit:cover;">
+                                            style="width:32px; height:32px; min-width:32px; min-height:32px; flex-shrink:0; border-radius:8px; object-fit:cover;">
                                     @else
                                         <div class="avatar-small">{{ substr($alumni->nama_lengkap, 0, 1) }}</div>
                                     @endif

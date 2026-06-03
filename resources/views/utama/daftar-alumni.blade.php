@@ -11,7 +11,7 @@
 
         <div class="direktori-tools">
             <div class="search-box-modal">
-                <input type="text" id="search-direktori" placeholder="Cari nama alumni...">
+                <input type="text" id="search-direktori" placeholder="Cari nama atau NIM alumni...">
                 <span class="search-icon-modal">🔍</span>
             </div>
             </div>

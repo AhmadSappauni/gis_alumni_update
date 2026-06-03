@@ -465,6 +465,11 @@
     height: 320px;
 }
 .chart-card-wide .chart-body { height: 360px; }
+.chart-card-wilayah .chart-body,
+.chart-grid--3 .chart-card.chart-card-wilayah .chart-body {
+    height: auto;
+    min-height: 320px;
+}
 
 .chart-body canvas {
     width: 100% !important;

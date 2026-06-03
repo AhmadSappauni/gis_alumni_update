@@ -20,10 +20,8 @@ function switchView(viewType) {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-    const savedPref = localStorage.getItem("alumniViewPref");
-    if (savedPref) {
-        switchView(savedPref);
-    }
+    const savedPref = localStorage.getItem("alumniViewPref") || 'list';
+    switchView(savedPref);
 
     initLiveServerSearch();
 });

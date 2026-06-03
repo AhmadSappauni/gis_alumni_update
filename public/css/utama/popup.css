@@ -114,3 +114,143 @@
 
     .badge-linier { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
     .badge-tidak { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+/* ============ WILAYAH POLYGON POPUP ============ */
+.wilayah-popup-wrap .leaflet-popup-content-wrapper {
+    padding: 0 !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22) !important;
+    border: none !important;
+}
+
+.wilayah-popup-wrap .leaflet-popup-content {
+    margin: 0 !important;
+    width: auto !important;
+    min-width: 200px;
+}
+
+.wilayah-popup-wrap .leaflet-popup-tip {
+    background: #ffffff;
+}
+
+.wilayah-popup-wrap .leaflet-popup-close-button {
+    color: rgba(255, 255, 255, 0.9) !important;
+    top: 8px !important;
+    right: 8px !important;
+    font-size: 18px !important;
+    font-weight: 900 !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    z-index: 10;
+}
+
+.wilayah-popup {
+    font-family: 'Inter', sans-serif;
+}
+
+.wilayah-popup-header {
+    padding: 14px 42px 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.wilayah-popup-header-icon {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    background: rgba(255, 255, 255, 0.22);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.wilayah-popup-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1.25;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    word-break: break-word;
+}
+
+.wilayah-popup-body {
+    background: #ffffff;
+    padding: 12px 14px 14px;
+}
+
+.wilayah-popup-body--slim {
+    padding: 8px 16px 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.wilayah-popup-province {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    letter-spacing: 0.3px;
+}
+
+/* Stats grid (choropleth mode) */
+.wilayah-stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.wilayah-stat-item {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 9px 10px 8px;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+    transition: background 0.15s;
+}
+
+.wilayah-stat-item .stat-number {
+    display: block;
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.wilayah-stat-item .stat-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.wilayah-stat-item.stat-total  .stat-number { color: #004a87; }
+.wilayah-stat-item.stat-bekerja .stat-number { color: #16a34a; }
+.wilayah-stat-item.stat-belum  .stat-number { color: #f59e0b; }
+.wilayah-stat-item.stat-studi  .stat-number { color: #8b5cf6; }
+
+/* Wilayah search tooltip (muncul saat cari wilayah dari search bar) */
+#map .leaflet-tooltip.wilayah-search-tooltip {
+    background: rgba(0, 74, 135, 0.92);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 7px 14px;
+    border-radius: 10px;
+    border: none;
+    box-shadow: 0 6px 20px rgba(0, 74, 135, 0.35);
+    backdrop-filter: blur(6px);
+    letter-spacing: 0.2px;
+}
+
+#map .leaflet-tooltip.wilayah-search-tooltip::before {
+    border-top-color: rgba(0, 74, 135, 0.92);
+    border-bottom-color: rgba(0, 74, 135, 0.92);
+    border-left-color: rgba(0, 74, 135, 0.92);
+    border-right-color: rgba(0, 74, 135, 0.92);
+}

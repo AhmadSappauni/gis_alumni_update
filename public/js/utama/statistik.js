@@ -428,9 +428,9 @@ function updateBarChart(key, canvasId, labels, data, horizontal) {
         const wrap = qs(canvasId)?.closest('.stat-wilayah-chart-wrap');
         if (wrap) {
             const count = Array.isArray(labels) ? labels.length : 0;
-            const computed = Math.max(320, 80 + (count * 28));
-            wrap.style.height = `${Math.min(computed, 900)}px`;
-            wrap.style.overflowY = computed > 520 ? 'auto' : 'hidden';
+            const computed = Math.max(360, 96 + (count * 34));
+            wrap.style.height = `${Math.min(computed, 920)}px`;
+            wrap.style.overflowY = computed > 720 ? 'auto' : 'hidden';
         }
     }
 
@@ -479,7 +479,7 @@ function updateBarChart(key, canvasId, labels, data, horizontal) {
             ? this.getLabelForValue(idx)
             : null;
         const label = labelFromScale || chartLabels[idx] || value;
-        return truncate(label, isCompany ? 28 : 24);
+        return truncate(label, key === 'top_wilayah' ? 32 : (isCompany ? 28 : 24));
     };
 
     const config = {

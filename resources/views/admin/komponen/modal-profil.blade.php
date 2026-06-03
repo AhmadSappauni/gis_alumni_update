@@ -58,6 +58,20 @@
     border-radius:50%;
     object-fit:cover;
     border:4px solid rgba(255,255,255,.9);
+    flex-shrink:0;
+}
+
+.profil-avatar--initial{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(255,255,255,.22);
+    color:#fff;
+    font-size:38px;
+    font-weight:900;
+    letter-spacing:-1px;
+    flex-shrink:0;
+    user-select:none;
 }
 
 .profil-header-info h2{
@@ -241,8 +255,14 @@
         {{-- HEADER --}}
         <div class="profil-header">
 
-            <img src="{{ $alumni->foto_profil ? asset('storage/' . $alumni->foto_profil) : asset('images/default-user.png') }}"
-                class="profil-avatar">
+            @if($alumni->foto_profil)
+                <img src="{{ asset('storage/' . $alumni->foto_profil) }}"
+                     class="profil-avatar"
+                     alt="Foto {{ $alumni->nama_lengkap }}"
+                     onerror="this.onerror=null;this.src='{{ asset('img/default-user.svg') }}';">
+            @else
+                <div class="profil-avatar profil-avatar--initial">{{ substr($alumni->nama_lengkap, 0, 1) }}</div>
+            @endif
 
             <div class="profil-header-info">
 

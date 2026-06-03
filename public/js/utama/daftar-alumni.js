@@ -60,15 +60,16 @@ document.addEventListener("DOMContentLoaded", function() {
         for (let i = 0; i < data.length; i++) {
             const alumni = data[i] || {};
             const namaAlumni = (alumni.nama || '').toString();
+            const nimAlumni  = (alumni.nim  || '').toString();
 
-            if (!keyword || namaAlumni.toLowerCase().includes(keyword)) {
+            if (!keyword || namaAlumni.toLowerCase().includes(keyword) || nimAlumni.toLowerCase().includes(keyword)) {
                 indices.push(i);
             }
         }
 
         if (!indices.length) {
             listContainer.innerHTML =
-                `<p style="text-align:center; color:#ef4444; margin-top:20px;">Nama "${kataKunci}" tidak ditemukan.</p>`;
+                `<p style="text-align:center; color:#ef4444; margin-top:20px;">Alumni dengan nama/NIM "${kataKunci}" tidak ditemukan.</p>`;
             return;
         }
 

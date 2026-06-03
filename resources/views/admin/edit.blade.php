@@ -121,11 +121,19 @@
                     <div style="margin-top: 20px; background: rgba(0,74,135,0.03); padding: 20px; border-radius: 15px;">
                         <label class="label-admin">Foto Profil</label>
                         <div class="foto-edit-preview">
+                            @php
+                                $fotoEditSrc = $alumni->foto_profil
+                                    ? (\Illuminate\Support\Str::startsWith($alumni->foto_profil, ['http://', 'https://'])
+                                        ? $alumni->foto_profil
+                                        : asset('storage/' . $alumni->foto_profil))
+                                    : asset('img/default-user.svg');
+                            @endphp
                             <img
                                 id="edit-preview-foto"
                                 class="foto-edit-thumbnail"
-                                src="{{ $alumni->foto_profil ? (\Illuminate\Support\Str::startsWith($alumni->foto_profil, ['http://', 'https://']) ? $alumni->foto_profil : asset('storage/' . $alumni->foto_profil)) : '/default.png' }}"
-                                data-default-src="{{ $alumni->foto_profil ? (\Illuminate\Support\Str::startsWith($alumni->foto_profil, ['http://', 'https://']) ? $alumni->foto_profil : asset('storage/' . $alumni->foto_profil)) : '/default.png' }}"
+                                src="{{ $fotoEditSrc }}"
+                                data-default-src="{{ $fotoEditSrc }}"
+                                onerror="this.onerror=null;this.src='{{ asset('img/default-user.svg') }}';"
                                 alt="Foto profil alumni">
                             <div class="foto-edit-actions">
                                 <input type="file" name="foto" id="edit-foto" class="custom-input-admin" accept="image/*">

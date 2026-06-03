@@ -451,6 +451,11 @@ body {
 .stat-card-wide .stat-card-body { height: 360px; }
 .stat-card-body canvas { width: 100% !important; height: 100% !important; }
 .stat-card-wilayah { min-height: 420px; }
+.stat-card-wilayah .stat-card-body,
+.stat-chart-grid--3 .stat-card.stat-card-wilayah .stat-card-body {
+    height: auto;
+    min-height: 320px;
+}
 .stat-card-title-center { text-align: center; }
 .stat-card-sub-center { text-align: center; }
 

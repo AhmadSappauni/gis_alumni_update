@@ -336,32 +336,36 @@ class StatistikController extends Controller
             . ' (bekerja atau berdomisili di ' . $wilayahLabel . ')';
     }
 
-    protected function buildTopWilayahCounts(array $alumniIds, int $limit = 5): array
+    protected function buildTopWilayahCounts(array $alumniIds): array
     {
-        $ids = array_values(array_unique(array_filter(array_map('intval', $alumniIds), fn ($id) => $id > 0)));
-        if (empty($ids)) {
-            return [];
+        $wilayahRows = DB::table('wilayah_kalsel')
+            ->select(['id', 'nama', 'level'])
+            ->orderByRaw("CASE WHEN level = 'kota' THEN 0 ELSE 1 END")
+            ->orderBy('nama')
+            ->get();
+
+        $labelsById = [];
+        $counts = [];
+        foreach ($wilayahRows as $row) {
+            $label = ($row->level === 'kota' ? 'Kota ' : 'Kab. ') . $row->nama;
+            $labelsById[(int) $row->id] = $label;
+            $counts[$label] = 0;
         }
 
-        $limit = max(1, min(50, (int) $limit));
+        $ids = array_values(array_unique(array_filter(array_map('intval', $alumniIds), fn ($id) => $id > 0)));
+        if (empty($ids)) {
+            return $counts;
+        }
+
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
 
         $rows = DB::select(
             "
-            SELECT work_wilayah.wilayah, COUNT(DISTINCT work_wilayah.alumni_id) AS total
+            SELECT work_wilayah.wilayah_id, COUNT(DISTINCT work_wilayah.alumni_id) AS total
             FROM (
                 SELECT
                     ranked_jobs.alumni_id,
-                    COALESCE(
-                        MAX(
-                            CASE
-                                WHEN w.level = 'kota' THEN 'Kota ' || w.nama
-                                WHEN w.nama IS NOT NULL THEN 'Kab. ' || w.nama
-                                ELSE NULL
-                            END
-                        ),
-                        'Luar Kalsel'
-                    ) AS wilayah
+                    MAX(w.id) AS wilayah_id
                 FROM (
                     SELECT
                         rp.alumni_id,
@@ -389,18 +393,25 @@ class StatistikController extends Controller
                 WHERE ranked_jobs.rn = 1
                 GROUP BY ranked_jobs.alumni_id
             ) work_wilayah
-            GROUP BY work_wilayah.wilayah
-            ORDER BY total DESC, work_wilayah.wilayah ASC
-            LIMIT {$limit}
+            GROUP BY work_wilayah.wilayah_id
             ",
             $ids
         );
 
-        $counts = [];
+        $outsideKalsel = 0;
         foreach ($rows as $row) {
-            $label = trim((string) ($row->wilayah ?? ''));
-            $label = $label !== '' ? $label : 'Luar Kalsel';
-            $counts[$label] = (int) ($row->total ?? 0);
+            $total = (int) ($row->total ?? 0);
+            $wilayahId = $row->wilayah_id !== null ? (int) $row->wilayah_id : null;
+
+            if ($wilayahId !== null && isset($labelsById[$wilayahId])) {
+                $counts[$labelsById[$wilayahId]] = $total;
+            } else {
+                $outsideKalsel += $total;
+            }
+        }
+
+        if ($outsideKalsel > 0) {
+            $counts['Luar Kalsel'] = $outsideKalsel;
         }
 
         return $counts;
@@ -780,11 +791,11 @@ class StatistikController extends Controller
             }
         }
 
-        // Top 5 helpers
+        // Top/count helpers
         arsort($bidangCounts);
         $topBidang = array_slice($bidangCounts, 0, 5, true);
 
-        $topWilayah = $this->buildTopWilayahCounts($filtered->pluck('id')->all(), 5);
+        $topWilayah = $this->buildTopWilayahCounts($filtered->pluck('id')->all());
 
         arsort($kampusCounts);
         $topKampus = array_slice($kampusCounts, 0, 5, true);

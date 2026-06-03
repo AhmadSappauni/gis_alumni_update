@@ -952,6 +952,7 @@ fetch('/data/data_kalsel.geojson')
                         const mode = (window.visualizationMode || 'marker').toString();
                         const namaWilayah = getNamaWilayah(feature);
                         const key = getKeyWilayah(namaWilayah);
+                        const color = getColor(namaWilayah) || '#004a87';
 
                         let html = '';
 
@@ -964,29 +965,57 @@ fetch('/data/data_kalsel.geojson')
                             const studi = stats?.studi_lanjut ?? 0;
 
                             html = `
-                                <div style="font-family: Inter, sans-serif; min-width: 200px;">
-                                    <div style="font-weight: 900; font-size: 14px; margin-bottom: 8px; color:#0f172a;">
-                                        ${namaWilayah || '-'}
+                                <div class="wilayah-popup">
+                                    <div class="wilayah-popup-header" style="background: linear-gradient(135deg, ${color} 0%, ${color}bb 100%);">
+                                        <div class="wilayah-popup-header-icon">
+                                            <svg width="18" height="18" fill="none" stroke="#fff" stroke-width="2.5" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                            </svg>
+                                        </div>
+                                        <div class="wilayah-popup-title">${namaWilayah || '-'}</div>
                                     </div>
-                                    <div style="display:grid; gap:4px; font-size: 13px; color:#0f172a;">
-                                        <div><b>Total Alumni:</b> ${total}</div>
-                                        <div><b>Bekerja:</b> ${bekerja}</div>
-                                        <div><b>Belum Bekerja:</b> ${belum}</div>
-                                        <div><b>Studi Lanjut:</b> ${studi}</div>
+                                    <div class="wilayah-popup-body">
+                                        <div class="wilayah-stat-grid">
+                                            <div class="wilayah-stat-item stat-total">
+                                                <span class="stat-number">${total}</span>
+                                                <span class="stat-label">Total Alumni</span>
+                                            </div>
+                                            <div class="wilayah-stat-item stat-bekerja">
+                                                <span class="stat-number">${bekerja}</span>
+                                                <span class="stat-label">Bekerja</span>
+                                            </div>
+                                            <div class="wilayah-stat-item stat-belum">
+                                                <span class="stat-number">${belum}</span>
+                                                <span class="stat-label">Belum Bekerja</span>
+                                            </div>
+                                            <div class="wilayah-stat-item stat-studi">
+                                                <span class="stat-number">${studi}</span>
+                                                <span class="stat-label">Studi Lanjut</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             `;
                         } else {
                             html = `
-                                <div style="font-family: Inter, sans-serif; min-width: 160px;">
-                                    <div style="font-weight: 900; font-size: 14px; color:#0f172a;">
-                                        ${namaWilayah || '-'}
+                                <div class="wilayah-popup">
+                                    <div class="wilayah-popup-header" style="background: linear-gradient(135deg, ${color} 0%, ${color}bb 100%);">
+                                        <div class="wilayah-popup-header-icon">
+                                            <svg width="18" height="18" fill="none" stroke="#fff" stroke-width="2.5" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            </svg>
+                                        </div>
+                                        <div class="wilayah-popup-title">${namaWilayah || '-'}</div>
+                                    </div>
+                                    <div class="wilayah-popup-body wilayah-popup-body--slim">
+                                        <span class="wilayah-popup-province">Kalimantan Selatan</span>
                                     </div>
                                 </div>
                             `;
                         }
 
-                        L.popup({ autoPan: true })
+                        L.popup({ autoPan: true, className: 'wilayah-popup-wrap' })
                             .setLatLng(e.latlng)
                             .setContent(html)
                             .openOn(map);
