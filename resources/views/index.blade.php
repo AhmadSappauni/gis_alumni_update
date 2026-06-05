@@ -38,6 +38,7 @@
             <div class="status-legend-summary-text">
                 <div class="status-legend-summary-label">Jumlah Alumni</div>
                 <div class="status-legend-summary-count" id="legend-total-count">0 orang</div>
+                <div class="status-legend-filter-summary" id="legend-active-filter-summary" hidden></div>
             </div>
         </div>
         <div class="status-legend-item">
@@ -63,6 +64,15 @@
             <img src="https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/Icon%20studi%20lanjut.png" alt="Studi Lanjut">
             <span>Studi Lanjut</span>
             <b id="legend-studi-count">0</b>
+        </div>
+        <div class="status-legend-item status-legend-item--stack">
+            <span class="status-legend-stack-marker" aria-hidden="true">
+                <span>n</span>
+            </span>
+            <span class="status-legend-stack-text">
+                <span>Titik Lokasi Sama</span>
+                <small>n = jumlah alumni di titik tersebut</small>
+            </span>
         </div>
     </div>
 

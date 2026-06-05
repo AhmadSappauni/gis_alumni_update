@@ -653,7 +653,7 @@
     }
 
     /* Load polygon Kalsel — letakkan di bawah marker */
-    fetch('/data/data_kalsel.geojson')
+    fetch('/data/data_kalsel_simplified.geojson')
         .then(function (r) { return r.json(); })
         .then(function (data) {
             L.geoJSON(data, {

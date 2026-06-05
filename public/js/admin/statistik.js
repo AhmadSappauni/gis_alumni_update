@@ -1041,7 +1041,7 @@ function ensureKalselPolygonLayer() {
     if (!__heatMap || __kalselPolygonLayer || __kalselPolygonLoading || typeof L === 'undefined') return;
     __kalselPolygonLoading = true;
 
-    fetch('/data/data_kalsel.geojson')
+    fetch('/data/data_kalsel_simplified.geojson')
         .then((r) => r.json())
         .then((geojson) => {
             if (!__heatMap) return;

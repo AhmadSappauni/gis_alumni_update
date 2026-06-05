@@ -64,6 +64,7 @@
                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
                 </svg>
+                <span id="active-filter-count" class="map-filter-count" hidden>0</span>
             </button>
 
             <button id="collapse-filter-panel" type="button" class="map-collapse-btn" title="Tutup/Buka Panel" aria-expanded="true" aria-label="Tutup/Buka Panel">
@@ -82,6 +83,19 @@
     <div class="scrollable-content">
         <div id="filter-body" class="filter-body hidden">
             <div class="filter-body-inner">
+                <div id="active-filter-summary" class="active-filter-summary" hidden aria-live="polite">
+                    <div class="active-filter-summary-head">
+                        <span>Filter Aktif</span>
+                        <b id="active-filter-total">0</b>
+                    </div>
+                    <div id="active-filter-list" class="active-filter-chip-list"></div>
+                </div>
+
+                <div class="filter-actions">
+                    <button id="btn-reset-filter" type="button" class="reset-filter-btn">
+                        Reset Filter
+                    </button>
+                </div>
 
                 <div class="filter-section">
                     <label class="filter-label">Cari Berdasarkan:</label>
@@ -161,11 +175,6 @@
                     </div>
                 </div>
 
-                <div class="filter-actions">
-                    <button id="btn-reset-filter" type="button" class="reset-filter-btn">
-                        Reset Filter
-                    </button>
-                </div>
             </div>
         </div>
         <div id="search-results" class="results-container"></div>

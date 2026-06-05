@@ -26,6 +26,170 @@ body {
     background: rgba(124, 58, 237, 0.3);
 }
 
+#map .coordinate-stack-marker {
+    background: transparent;
+    border: 0;
+}
+
+#map .coordinate-stack-pin {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50% 50% 50% 0;
+    background: #005a9c;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1;
+    transform: rotate(-45deg);
+    border: 2px solid rgba(255, 255, 255, 0.95);
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.22);
+}
+
+#map .coordinate-stack-pin span {
+    transform: rotate(45deg);
+}
+
+.coordinate-stack-popup {
+    width: min(300px, calc(100vw - 48px));
+    font-family: 'Inter', sans-serif;
+    color: #0f172a;
+}
+
+.coordinate-stack-popup-wrap .leaflet-popup-content {
+    width: auto !important;
+}
+
+.coordinate-stack-popup-wrap .leaflet-popup-content-wrapper {
+    border-radius: 10px !important;
+}
+
+.leaflet-container .coordinate-stack-popup-wrap a.leaflet-popup-close-button {
+    color: #ffffff !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.28) !important;
+}
+
+.coordinate-stack-header {
+    padding: 10px 34px 8px 12px;
+    background: linear-gradient(135deg, #005a9c 0%, #0f7c9c 100%);
+    border-bottom: 1px solid rgba(0, 90, 156, 0.18);
+    color: #ffffff;
+}
+
+.coordinate-stack-title {
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+.coordinate-stack-summary {
+    margin-top: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.86);
+}
+
+.coordinate-stack-list {
+    max-height: 260px;
+    overflow-y: auto;
+    background: #ffffff;
+}
+
+.coordinate-stack-item {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.95);
+}
+
+.coordinate-stack-item:last-child {
+    border-bottom: 0;
+}
+
+.coordinate-stack-item-body {
+    min-width: 0;
+}
+
+.coordinate-stack-name {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    color: #0f172a;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1.25;
+    text-align: left;
+    cursor: pointer;
+}
+
+.coordinate-stack-name:hover {
+    color: #005a9c;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.coordinate-stack-name--static {
+    cursor: default;
+}
+
+.coordinate-stack-name--static:hover {
+    color: #0f172a;
+    text-decoration: none;
+}
+
+.coordinate-stack-subtitle,
+.coordinate-stack-meta {
+    margin-top: 3px;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.coordinate-stack-meta {
+    color: #64748b;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.coordinate-stack-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.coordinate-stack-status--bekerja {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.coordinate-stack-status--belum-bekerja {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.coordinate-stack-status--studi-lanjut {
+    background: #ede9fe;
+    color: #5b21b6;
+}
+
+.coordinate-stack-detail {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+}
+
 .is-hidden {
     display: none !important;
 }
@@ -163,6 +327,18 @@ body {
     line-height: 1.15;
 }
 
+.status-legend-filter-summary {
+    margin-top: 2px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.status-legend-filter-summary[hidden] {
+    display: none !important;
+}
+
 .status-legend-item {
     display: grid;
     grid-template-columns: 28px 1fr auto;
@@ -185,6 +361,51 @@ body {
     font-size: 14px;
     font-weight: 900;
     color: #004a87;
+}
+
+.status-legend-item--stack {
+    grid-template-columns: 28px 1fr;
+}
+
+.status-legend-stack-marker {
+    position: relative;
+    width: 22px;
+    height: 22px;
+    justify-self: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50% 50% 50% 0;
+    background: #005a9c;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 1;
+    transform: rotate(-45deg);
+    border: 2px solid rgba(255, 255, 255, 0.95);
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);
+}
+
+.status-legend-stack-marker span {
+    transform: rotate(45deg);
+}
+
+.status-legend-stack-text {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.status-legend-stack-text > span {
+    font-size: 14px;
+    color: #0f172a;
+}
+
+.status-legend-stack-text small {
+    color: #475569;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.25;
 }
 
 .choropleth-legend {

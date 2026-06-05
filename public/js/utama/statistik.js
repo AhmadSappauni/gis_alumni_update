@@ -1166,7 +1166,7 @@ function ensureKalselPolygonLayer() {
     __kalselPolygonLoading = true;
     __kalselPolygonLoaded = false;
 
-    const url = '/data/data_kalsel.geojson';
+    const url = '/data/data_kalsel_simplified.geojson';
     polyDebug('loading geojson:', url);
     syncHeatStatus();
 

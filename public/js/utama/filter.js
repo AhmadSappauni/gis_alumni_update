@@ -358,8 +358,8 @@ function initMarkerGroups() {
     window.wadahCluster = window.mainAlumniClusterGroup;
 }
 
-// Default: cluster aktif saat peta dibuka
-window.statusClusterAktif = true;
+// Default: tampilkan marker langsung; koordinat yang sama ditangani sebagai stack marker.
+window.statusClusterAktif = false;
 
 let mapMarkerFetchController = null;
 let mapMarkerFetchSequence = 0;
@@ -703,8 +703,8 @@ function toggleMultiJobLayers(alumniId) {
     const sideIcon = L.icon({
         // iconUrl: '/img/icon sampingan.png',
         iconUrl: 'https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/icon%20sampingan.png',
-        iconSize: [34, 48],
-        iconAnchor: [17, 48],
+        iconSize: [24, 38],
+        iconAnchor: [12, 38],
         popupAnchor: [0, -42]
     });
 
@@ -818,6 +818,271 @@ function getCariBerdasarkanScopes() {
     };
 }
 
+function syncSearchClearButtonState() {
+    const clearBtnEl = document.getElementById('btn-clear-search');
+    if (!clearBtnEl) {
+        return;
+    }
+
+    const val = document.getElementById('search-input')?.value ?? '';
+    clearBtnEl.hidden = String(val).trim().length === 0;
+}
+
+function getSelectedFilterLabels(selectId, values) {
+    const select = document.getElementById(selectId);
+    const options = Array.from(select?.options || []);
+    const selectedValues = Array.isArray(values) ? values : getSelectedFilterValues(selectId);
+
+    return selectedValues
+        .map(value => {
+            const option = options.find(o => o.value === value);
+            return (option?.textContent || value || '').toString().trim();
+        })
+        .filter(Boolean);
+}
+
+function getActiveSelectValue(selectId, fallback) {
+    const select = document.getElementById(selectId);
+    if (!select) {
+        return fallback;
+    }
+
+    return (select.value ?? fallback).toString();
+}
+
+function isDefaultStatusFilter(values) {
+    const cleanValues = (values || [])
+        .map(value => (value || '').toString())
+        .filter(value => value !== '' && value !== 'semua');
+
+    return cleanValues.length === 2 &&
+        cleanValues.includes('bekerja') &&
+        cleanValues.includes('belum_bekerja');
+}
+
+function getActiveFilterItems() {
+    const items = [];
+    const searchInput = document.getElementById('search-input');
+    const keyword = (searchInput?.value ?? '').toString().trim();
+    const hasActiveKeyword = keyword.length >= 2;
+
+    if (hasActiveKeyword) {
+        items.push({
+            key: 'search',
+            label: 'Pencarian',
+            value: keyword
+        });
+    }
+
+    const searchScopeValues = getSelectedFilterValues('search-category')
+        .filter(value => value !== 'semua');
+    if (hasActiveKeyword && searchScopeValues.length) {
+        items.push({
+            key: 'search_scope',
+            label: 'Cari Berdasarkan',
+            value: getSelectedFilterLabels('search-category', searchScopeValues).join(', ')
+        });
+    }
+
+    const bidangValues = getSelectedFilterValues('filter-bidang')
+        .filter(value => value !== 'semua');
+    if (bidangValues.length) {
+        items.push({
+            key: 'bidang',
+            label: 'Bidang Kerja',
+            value: getSelectedFilterLabels('filter-bidang', bidangValues).join(', ')
+        });
+    }
+
+    const wilayahValue = getActiveSelectValue('filter-wilayah', '');
+    if (wilayahValue !== '' && wilayahValue !== '0') {
+        const wilayahLabel = getSelectedFilterLabels('filter-wilayah', [wilayahValue])[0] || wilayahValue;
+        items.push({
+            key: 'wilayah',
+            label: 'Kabupaten/Kota',
+            value: wilayahLabel
+        });
+    }
+
+    const tahunValue = getActiveSelectValue('filter-tahun', 'semua');
+    if (tahunValue !== 'semua') {
+        items.push({
+            key: 'tahun',
+            label: 'Tahun Lulus',
+            value: getSelectedFilterLabels('filter-tahun', [tahunValue])[0] || tahunValue
+        });
+    }
+
+    const linearitasValue = getActiveSelectValue('filter-linearitas', 'semua');
+    if (linearitasValue !== 'semua') {
+        items.push({
+            key: 'linearitas',
+            label: 'Kesesuaian Bidang',
+            value: linearitasValue
+        });
+    }
+
+    const statusSelect = document.getElementById('filter-status-kerja');
+    if (statusSelect) {
+        const statusValues = getSelectedFilterValues('filter-status-kerja');
+        if (statusValues.includes('semua') || statusValues.length === 0) {
+            items.push({
+                key: 'status',
+                label: 'Status Kerja',
+                value: 'Semua Status'
+            });
+        } else if (!isDefaultStatusFilter(statusValues)) {
+            const cleanStatusValues = statusValues.filter(value => value !== 'semua');
+            items.push({
+                key: 'status',
+                label: 'Status Kerja',
+                value: getSelectedFilterLabels('filter-status-kerja', cleanStatusValues).join(', ')
+            });
+        }
+    }
+
+    const angkatanValue = getActiveSelectValue('filter-angkatan', 'semua');
+    if (angkatanValue !== 'semua') {
+        items.push({
+            key: 'angkatan',
+            label: 'Angkatan',
+            value: getSelectedFilterLabels('filter-angkatan', [angkatanValue])[0] || angkatanValue
+        });
+    }
+
+    return items.filter(item => (item.value || '').toString().trim() !== '');
+}
+
+function setFilterSelectValue(selectId, value) {
+    if (typeof window.syncCustomSelectValue === 'function') {
+        window.syncCustomSelectValue(selectId, value);
+        return;
+    }
+
+    const select = document.getElementById(selectId);
+    if (!select) {
+        return;
+    }
+
+    if (select.multiple) {
+        const values = Array.isArray(value) ? value : [value];
+        Array.from(select.options || []).forEach(function (option) {
+            option.selected = values.includes(option.value);
+        });
+        return;
+    }
+
+    select.value = value;
+}
+
+function resetActiveFilterByKey(key) {
+    switch (key) {
+        case 'search': {
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            if (typeof window.resetHighlightWilayah === 'function') {
+                window.resetHighlightWilayah();
+            }
+            break;
+        }
+        case 'search_scope':
+            setFilterSelectValue('search-category', 'semua');
+            break;
+        case 'bidang':
+            setFilterSelectValue('filter-bidang', 'semua');
+            break;
+        case 'wilayah':
+            setFilterSelectValue('filter-wilayah', '');
+            break;
+        case 'tahun':
+            setFilterSelectValue('filter-tahun', 'semua');
+            break;
+        case 'linearitas':
+            setFilterSelectValue('filter-linearitas', 'semua');
+            break;
+        case 'status':
+            setFilterSelectValue('filter-status-kerja', ['bekerja', 'belum_bekerja']);
+            break;
+        case 'angkatan':
+            setFilterSelectValue('filter-angkatan', 'semua');
+            break;
+        default:
+            return;
+    }
+
+    syncSearchClearButtonState();
+    filterDanTampilkanMarker();
+    updateActiveFilterUI();
+}
+
+function updateActiveFilterUI() {
+    const items = getActiveFilterItems();
+    const count = items.length;
+    const filterButton = document.getElementById('toggle-filter');
+    const countBadge = document.getElementById('active-filter-count');
+    const summary = document.getElementById('active-filter-summary');
+    const total = document.getElementById('active-filter-total');
+    const list = document.getElementById('active-filter-list');
+    const legendSummary = document.getElementById('legend-active-filter-summary');
+
+    if (filterButton) {
+        filterButton.classList.toggle('has-active-filters', count > 0);
+        filterButton.setAttribute('title', count > 0 ? `Filter (${count} aktif)` : 'Filter');
+        filterButton.setAttribute('aria-label', count > 0 ? `Filter, ${count} aktif` : 'Filter');
+    }
+
+    if (countBadge) {
+        countBadge.hidden = count === 0;
+        countBadge.textContent = String(count);
+    }
+
+    if (summary) {
+        summary.hidden = count === 0;
+        summary.classList.toggle('has-active-filters', count > 0);
+    }
+
+    if (total) {
+        total.textContent = String(count);
+    }
+
+    if (list) {
+        if (count === 0) {
+            list.innerHTML = '';
+        } else {
+            list.innerHTML = items.map(function (item) {
+                const key = escapeHtml(item.key);
+                const label = escapeHtml(item.label);
+                const value = escapeHtml(item.value);
+
+                return `
+                    <span class="active-filter-chip" title="${label}: ${value}">
+                        <span><b>${label}:</b> ${value}</span>
+                        <button type="button" class="active-filter-remove" data-filter-key="${key}" aria-label="Hapus filter ${label}">&times;</button>
+                    </span>
+                `;
+            }).join('');
+        }
+    }
+
+    if (legendSummary) {
+        if (count === 0) {
+            legendSummary.hidden = true;
+            legendSummary.textContent = '';
+            legendSummary.removeAttribute('title');
+        } else {
+            const previewLabels = items.slice(0, 2).map(item => item.label).join(', ');
+            const remaining = count > 2 ? ` +${count - 2}` : '';
+            const detail = items.map(item => `${item.label}: ${item.value}`).join(' | ');
+
+            legendSummary.hidden = false;
+            legendSummary.textContent = `Filter aktif: ${previewLabels}${remaining}`;
+            legendSummary.setAttribute('title', detail);
+        }
+    }
+}
+
 // ======================================================
 // EVENT FILTER
 // ======================================================
@@ -878,10 +1143,7 @@ function bindFilterEvents() {
     };
 
     const syncClearButton = () => {
-        if (!clearBtnEl) return;
-        const val = document.getElementById('search-input')?.value ?? '';
-        const hasText = String(val).trim().length > 0;
-        clearBtnEl.hidden = !hasText;
+        syncSearchClearButtonState();
     };
 
     const clearSearch = () => {
@@ -1054,6 +1316,18 @@ function bindFilterEvents() {
     document.getElementById('btn-reset-filter')
         ?.addEventListener('click', resetSemuaFilter);
 
+    document.getElementById('active-filter-list')
+        ?.addEventListener('click', function (e) {
+            const button = e.target?.closest?.('.active-filter-remove[data-filter-key]');
+            if (!button) {
+                return;
+            }
+
+            e.preventDefault();
+            e.stopPropagation();
+            resetActiveFilterByKey(button.dataset.filterKey || '');
+        });
+
     // Buat panel tetap compact jika filter & hasil masih kosong.
     const sinkronkanKontenPanel = () => {
         const scrollable = document.querySelector('.filter-panel .scrollable-content');
@@ -1088,6 +1362,7 @@ function bindFilterEvents() {
 
     // Initial state: kalau keyword kosong, panel hasil ditutup & tombol clear disembunyikan.
     syncClearButton();
+    updateActiveFilterUI();
     const initialKeyword = (document.getElementById('search-input')?.value ?? '').toString().trim();
     if (initialKeyword.length === 0) {
         closeSearchPanel({ clearResults: true });
@@ -1629,11 +1904,14 @@ window.resetSemuaFilter = function () {
         searchInput.value = '';
     }
 
+    syncSearchClearButtonState();
+
     if (typeof window.resetHighlightWilayah === 'function') {
         window.resetHighlightWilayah();
     }
 
     filterDanTampilkanMarker();
+    updateActiveFilterUI();
 };
 
 // ======================================================
@@ -1730,7 +2008,7 @@ function bindTooltipDenganDelay(marker, tooltipHtml) {
         tooltipHtml,
         {
             direction: 'right',
-            sticky: true,
+            sticky: false,
             opacity: 0.95,
             offset: [12, 10],
             className: 'alumni-tooltip'
@@ -1740,11 +2018,8 @@ function bindTooltipDenganDelay(marker, tooltipHtml) {
     // Delay tooltip supaya tidak langsung muncul saat kursor lewat marker
     const TOOLTIP_DELAY_MS = 650;
     let tooltipTimer = null;
-    let lastMouseLatLng = null;
-    let lastOriginalEvent = null;
 
-    // Matikan open/close tooltip bawaan Leaflet agar bisa pakai delay,
-    // tapi tetap biarkan mekanisme follow-mouse (sticky) Leaflet berjalan setelah tooltip terbuka.
+    // Matikan open/close tooltip bawaan Leaflet agar bisa pakai delay hover.
     if (typeof marker._openTooltip === 'function') {
         marker.off('mouseover', marker._openTooltip, marker);
     }
@@ -1752,40 +2027,11 @@ function bindTooltipDenganDelay(marker, tooltipHtml) {
         marker.off('mouseout', marker._closeTooltip, marker);
     }
 
-    marker.on('mousemove', function (e) {
-        if (!e || !e.originalEvent || typeof map === 'undefined' || !map) {
-            return;
-        }
-
-        lastOriginalEvent = e.originalEvent;
-
-        if (typeof map.mouseEventToLatLng === 'function') {
-            lastMouseLatLng = map.mouseEventToLatLng(lastOriginalEvent);
-        }
-    });
-
-    marker.on('mouseover', function (e) {
+    marker.on('mouseover', function () {
         clearTimeout(tooltipTimer);
 
-        if (e && e.originalEvent && typeof map !== 'undefined' && map && typeof map.mouseEventToLatLng === 'function') {
-            lastOriginalEvent = e.originalEvent;
-            lastMouseLatLng = map.mouseEventToLatLng(lastOriginalEvent);
-        }
-
         tooltipTimer = setTimeout(function () {
-            if (lastMouseLatLng) {
-                marker.openTooltip(lastMouseLatLng);
-            } else if (e && e.originalEvent && typeof map !== 'undefined' && map && typeof map.mouseEventToLatLng === 'function') {
-                marker.openTooltip(map.mouseEventToLatLng(e.originalEvent));
-            } else {
-                marker.openTooltip();
-            }
-
-            // Paksa posisi tooltip langsung di lokasi kursor (tanpa harus menunggu mousemove berikutnya)
-            const tooltip = marker.getTooltip && marker.getTooltip();
-            if (tooltip && typeof tooltip._move === 'function' && lastOriginalEvent) {
-                tooltip._move({ originalEvent: lastOriginalEvent });
-            }
+            marker.openTooltip();
         }, TOOLTIP_DELAY_MS);
     });
 
@@ -1795,10 +2041,213 @@ function bindTooltipDenganDelay(marker, tooltipHtml) {
     });
 }
 
+function escapeHtml(value) {
+    return (value ?? '').toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function getCoordinateStackKey(latitude, longitude) {
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return '';
+    }
+
+    return `${lat.toFixed(7)},${lng.toFixed(7)}`;
+}
+
+function getCoordinateStackCounts(entries) {
+    return entries.reduce(function (counts, entry) {
+        const key = entry.statusKey || 'lainnya';
+        counts[key] = (counts[key] || 0) + 1;
+        return counts;
+    }, {});
+}
+
+function getCoordinateStackVariant(entries) {
+    const keys = Array.from(new Set(entries.map(entry => entry.statusKey || 'lainnya')));
+
+    if (keys.length === 1) {
+        return keys[0].replace(/_/g, '-');
+    }
+
+    return 'campuran';
+}
+
+function buildCoordinateStackSummary(counts) {
+    const parts = [];
+
+    if (counts.bekerja) {
+        parts.push(`${counts.bekerja} bekerja`);
+    }
+
+    if (counts.belum_bekerja) {
+        parts.push(`${counts.belum_bekerja} belum bekerja`);
+    }
+
+    if (counts.studi_lanjut) {
+        parts.push(`${counts.studi_lanjut} studi lanjut`);
+    }
+
+    return parts.length ? parts.join(' | ') : 'Beberapa alumni di titik yang sama';
+}
+
+function buildCoordinateStackPopup(entries) {
+    const counts = getCoordinateStackCounts(entries);
+    const total = entries.length;
+    const summary = buildCoordinateStackSummary(counts);
+
+    const rows = entries.map(function (entry) {
+        const statusClass = (entry.statusKey || 'lainnya').replace(/_/g, '-');
+        const alumniId = escapeHtml(entry.alumniId || '');
+        const name = escapeHtml(entry.nama || '-');
+        const subtitle = escapeHtml(entry.subtitle || '-');
+        const statusLabel = escapeHtml(entry.statusLabel || 'Alumni');
+        const tahunLulus = escapeHtml(entry.tahunLulus || '-');
+        const detailParts = [];
+
+        if (tahunLulus && tahunLulus !== '-') {
+            detailParts.push(`Lulusan ${tahunLulus}`);
+        }
+
+        if (entry.multiJobCount > 0) {
+            detailParts.push(`Multi-job ${entry.multiJobCount}`);
+        }
+
+        const detailText = escapeHtml(detailParts.join(' | '));
+
+        const nameEl = entry.alumniId
+            ? `<button type="button" class="coordinate-stack-name clickable-profile" data-alumni-id="${alumniId}">${name}</button>`
+            : `<div class="coordinate-stack-name coordinate-stack-name--static">${name}</div>`;
+
+        return `
+            <div class="coordinate-stack-item">
+                <div class="coordinate-stack-item-body">
+                    ${nameEl}
+                    <div class="coordinate-stack-subtitle">${subtitle}</div>
+                    <div class="coordinate-stack-meta">
+                        <span class="coordinate-stack-status coordinate-stack-status--${statusClass}">${statusLabel}</span>
+                        ${detailText ? `<span class="coordinate-stack-detail">${detailText}</span>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    return `
+        <div class="coordinate-stack-popup">
+            <div class="coordinate-stack-header">
+                <div class="coordinate-stack-title">${total} alumni di lokasi ini</div>
+                <div class="coordinate-stack-summary">${escapeHtml(summary)}</div>
+            </div>
+            <div class="coordinate-stack-list">
+                ${rows}
+            </div>
+        </div>
+    `;
+}
+
+function createCoordinateStackMarker(stack) {
+    const entries = stack.entries || [];
+    const total = entries.length;
+    const variant = getCoordinateStackVariant(entries);
+
+    const icon = L.divIcon({
+        html: `<div class="coordinate-stack-pin"><span>${total}</span></div>`,
+        className: `coordinate-stack-marker coordinate-stack-marker--${variant}`,
+        iconSize: [32, 38],
+        iconAnchor: [16, 36],
+        popupAnchor: [0, -34]
+    });
+
+    const marker = L.marker([stack.latitude, stack.longitude], {
+        icon,
+        zIndexOffset: 700
+    });
+
+    marker.bindPopup(buildCoordinateStackPopup(entries), {
+        className: 'coordinate-stack-popup-wrap',
+        maxWidth: 330,
+        minWidth: 260
+    });
+
+    bindTooltipDenganDelay(marker, `${total} alumni di lokasi ini`);
+
+    return marker;
+}
+
+function createCoordinateStackManager(targetLayer, options) {
+    const stacks = new Map();
+    const config = options || {};
+
+    function registerEntryMarker(entry, marker) {
+        if (Number.isInteger(entry.index)) {
+            arrayMarker[entry.index] = marker;
+        }
+
+        if (config.registerMainMarkers && entry.alumniId) {
+            window.mainAlumniMarkersById[entry.alumniId] = marker;
+        }
+    }
+
+    return {
+        add: function (entry) {
+            if (!entry || !entry.marker || !targetLayer) {
+                return;
+            }
+
+            const key = getCoordinateStackKey(entry.latitude, entry.longitude);
+            if (!key) {
+                targetLayer.addLayer(entry.marker);
+                registerEntryMarker(entry, entry.marker);
+                return;
+            }
+
+            if (!stacks.has(key)) {
+                stacks.set(key, {
+                    latitude: entry.latitude,
+                    longitude: entry.longitude,
+                    entries: []
+                });
+            }
+
+            stacks.get(key).entries.push(entry);
+        },
+        flush: function () {
+            stacks.forEach(function (stack) {
+                if (!stack.entries.length) {
+                    return;
+                }
+
+                if (stack.entries.length === 1) {
+                    const entry = stack.entries[0];
+                    targetLayer.addLayer(entry.marker);
+                    registerEntryMarker(entry, entry.marker);
+                    return;
+                }
+
+                const stackMarker = createCoordinateStackMarker(stack);
+                targetLayer.addLayer(stackMarker);
+
+                stack.entries.forEach(function (entry) {
+                    registerEntryMarker(entry, stackMarker);
+                });
+            });
+        }
+    };
+}
+
 // ======================================================
 // FILTER UTAMA
 // ======================================================
 function filterDanTampilkanMarker() {
+
+    updateActiveFilterUI();
 
     if ((window.mapDataUrl || window.__MAP_MARKER_ENDPOINT__) && !window.__RENDERING_FETCHED_MARKERS__) {
         fetchMapMarkersAndRender();
@@ -2209,6 +2658,10 @@ function filterDanTampilkanMarker() {
     const mainTarget = window.statusClusterAktif
         ? window.mainAlumniClusterGroup
         : window.mainAlumniLayerGroup;
+    const gunakanStackKoordinat = markerMode && !window.statusClusterAktif;
+    const mainCoordinateStack = gunakanStackKoordinat
+        ? createCoordinateStackManager(mainTarget, { registerMainMarkers: true })
+        : null;
 
     const isDefaultState =
         keyword === '' &&
@@ -2355,8 +2808,8 @@ function filterDanTampilkanMarker() {
             iconUrl: statusKerja === 'Belum Bekerja'
                 ? 'https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/icon%20alumni%20nganggur.png'
                 : 'https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/icon%20alumni%20kerja.png',
-            iconSize: [34, 48],
-            iconAnchor: [17, 48],
+            iconSize: [24, 38],
+            iconAnchor: [12, 38],
             popupAnchor: [0, -42]
         });
 
@@ -2460,77 +2913,33 @@ function filterDanTampilkanMarker() {
                 ? 'Belum Bekerja'
                 : (perusahaan && perusahaan.trim() ? perusahaan : 'Tempat kerja belum diisi');
 
-        marker.bindTooltip(
-            `${nama} - ${tooltipTempat}`,
-            {
-                direction: 'right',
-                sticky: true,
-                opacity: 0.95,
-                offset: [12, 10],
-                className: 'alumni-tooltip'
-            }
-        );
+        bindTooltipDenganDelay(marker, `${nama} - ${tooltipTempat}`);
 
-        // Delay tooltip supaya tidak langsung muncul saat kursor lewat marker
-        const TOOLTIP_DELAY_MS = 650;
-        let tooltipTimer = null;
-        let lastMouseLatLng = null;
-        let lastOriginalEvent = null;
+        const markerEntry = {
+            marker,
+            index,
+            alumniId,
+            latitude,
+            longitude,
+            nama,
+            tahunLulus,
+            statusKey,
+            statusLabel: statusKerja === 'Belum Bekerja' ? 'Belum Bekerja' : 'Bekerja',
+            subtitle: statusKerja === 'Belum Bekerja'
+                ? `Domisili: ${alamatLengkap || '-'}`
+                : `${perusahaan || '-'} - ${jabatan || '-'}`,
+            meta: statusKerja === 'Belum Bekerja'
+                ? ''
+                : `Linearitas: ${linearitas || '-'}`,
+            multiJobCount
+        };
 
-        // Matikan open/close tooltip bawaan Leaflet agar bisa pakai delay,
-        // tapi tetap biarkan mekanisme follow-mouse (sticky) Leaflet berjalan setelah tooltip terbuka.
-        if (typeof marker._openTooltip === 'function') {
-            marker.off('mouseover', marker._openTooltip, marker);
+        if (mainCoordinateStack) {
+            mainCoordinateStack.add(markerEntry);
+        } else {
+            mainTarget.addLayer(marker);
+            arrayMarker[index] = marker;
         }
-        if (typeof marker._closeTooltip === 'function') {
-            marker.off('mouseout', marker._closeTooltip, marker);
-        }
-
-        marker.on('mousemove', function (e) {
-            if (!e || !e.originalEvent || typeof map === 'undefined' || !map) {
-                return;
-            }
-
-            lastOriginalEvent = e.originalEvent;
-
-            if (typeof map.mouseEventToLatLng === 'function') {
-                lastMouseLatLng = map.mouseEventToLatLng(lastOriginalEvent);
-            }
-        });
-
-        marker.on('mouseover', function (e) {
-            clearTimeout(tooltipTimer);
-
-            if (e && e.originalEvent && typeof map !== 'undefined' && map && typeof map.mouseEventToLatLng === 'function') {
-                lastOriginalEvent = e.originalEvent;
-                lastMouseLatLng = map.mouseEventToLatLng(lastOriginalEvent);
-            }
-
-            tooltipTimer = setTimeout(function () {
-                if (lastMouseLatLng) {
-                    marker.openTooltip(lastMouseLatLng);
-                } else if (e && e.originalEvent && typeof map !== 'undefined' && map && typeof map.mouseEventToLatLng === 'function') {
-                    marker.openTooltip(map.mouseEventToLatLng(e.originalEvent));
-                } else {
-                    marker.openTooltip();
-                }
-
-                // Paksa posisi tooltip langsung di lokasi kursor (tanpa harus menunggu mousemove berikutnya)
-                const tooltip = marker.getTooltip && marker.getTooltip();
-                if (tooltip && typeof tooltip._move === 'function' && lastOriginalEvent) {
-                    tooltip._move({ originalEvent: lastOriginalEvent });
-                }
-            }, TOOLTIP_DELAY_MS);
-        });
-
-        marker.on('mouseout', function () {
-            clearTimeout(tooltipTimer);
-            marker.closeTooltip();
-        });
-
-        mainTarget.addLayer(marker);
-
-        arrayMarker[index] = marker;
         }
 
         if (alumniId) {
@@ -2586,6 +2995,10 @@ function filterDanTampilkanMarker() {
 
     });
 
+    if (mainCoordinateStack) {
+        mainCoordinateStack.flush();
+    }
+
     const studiLanjutData =
         (window.mapPayload && Array.isArray(window.mapPayload.studi_lanjut_markers) && window.mapPayload.studi_lanjut_markers) ||
         (Array.isArray(window.studiLanjutData) && window.studiLanjutData) ||
@@ -2599,6 +3012,9 @@ function filterDanTampilkanMarker() {
     const studiTarget = window.statusClusterAktif
         ? window.studiLanjutClusterGroup
         : window.studiLanjutLayerGroup;
+    const studiCoordinateStack = gunakanStackKoordinat
+        ? createCoordinateStackManager(studiTarget, { registerMainMarkers: false })
+        : null;
 
     if (Array.isArray(studiLanjutData)) {
         studiLanjutData.forEach(function (row) {
@@ -2713,8 +3129,8 @@ function filterDanTampilkanMarker() {
             const icon = L.icon({
                 // iconUrl: '/img/Icon studi lanjut.png',
                 iconUrl: 'https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/Icon%20studi%20lanjut.png',
-                iconSize: [34, 48],
-                iconAnchor: [17, 48],
+                iconSize: [24, 38],
+                iconAnchor: [12, 38],
                 popupAnchor: [0, -42]
             });
 
@@ -2787,7 +3203,26 @@ function filterDanTampilkanMarker() {
                 <div>${jenjang} - ${programStudi}</div>
             `);
 
-            studiTarget.addLayer(marker);
+            const studiEntry = {
+                marker,
+                index: null,
+                alumniId,
+                latitude,
+                longitude,
+                nama,
+                tahunLulus,
+                statusKey: 'studi_lanjut',
+                statusLabel: 'Studi Lanjut',
+                subtitle: `${kampus} - ${jenjang}`,
+                meta: programStudi,
+                multiJobCount: 0
+            };
+
+            if (studiCoordinateStack) {
+                studiCoordinateStack.add(studiEntry);
+            } else {
+                studiTarget.addLayer(marker);
+            }
             }
 
             if (alumniId) {
@@ -2795,6 +3230,10 @@ function filterDanTampilkanMarker() {
                 alumniIdsStudiLanjut.add(alumniId);
             }
         });
+    }
+
+    if (studiCoordinateStack) {
+        studiCoordinateStack.flush();
     }
 
     const heatmapPoints = Array.from(heatBuckets.values()).map(function (item) {
@@ -2829,6 +3268,7 @@ function filterDanTampilkanMarker() {
         multiJobAlumniIds.size,
         alumniIdsStudiLanjutMatched.size
     );
+    updateActiveFilterUI();
     window.perbaruiTampilanPeta();
 
     const container =

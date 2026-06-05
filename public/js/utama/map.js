@@ -893,8 +893,8 @@ document.addEventListener('wilayah-panel-hover', function (e) {
     window.previewHighlightWilayah(key, hover);
 });
 
-// 2. Load GeoJSON Kalsel
-fetch('/data/data_kalsel.geojson')
+// 2. Load GeoJSON Kalsel versi ringan untuk render visual.
+fetch('/data/data_kalsel_simplified.geojson')
     .then(response => response.json())
     .then(geojsonData => {
         const __loggedPolygonKeys = new Set();
