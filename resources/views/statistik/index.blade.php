@@ -8,7 +8,7 @@
 
     <link rel="stylesheet" href="{{ asset('css/utama/statistik.css') }}">
 </head>
-<body>
+<body class="stat-is-loading">
     <header class="stat-topbar">
         <div class="stat-topbar-inner stat-container">
             <a class="stat-back" href="{{ route('peta') }}" aria-label="Kembali ke Peta">
@@ -110,7 +110,7 @@
             <div class="stat-filter-actions">
                 <button id="stat-apply" class="stat-btn stat-btn-primary" type="button">Terapkan</button>
                 <button id="stat-reset" class="stat-btn" type="button">Reset</button>
-                <div id="stat-loading" class="stat-loading" aria-live="polite" style="display:none;">Memuat data…</div>
+                <div id="stat-loading" class="stat-loading" aria-live="polite" style="display:none;">Memuat data...</div>
             </div>
         </div>
         </section>

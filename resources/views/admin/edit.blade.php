@@ -46,7 +46,14 @@
     <header class="top-header glass-panel">
         <h1>Edit Data Alumni</h1>
         <div style="display: flex; align-items: center; gap: 15px;">
-            <a href="{{ route('admin.alumni.index') }}" class="btn-batal">← Kembali</a>
+            <a href="{{ route('admin.alumni.index') }}" class="btn-batal btn-batal-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="m12 19-7-7 7-7"></path>
+                    <path d="M19 12H5"></path>
+                </svg>
+                <span>Kembali</span>
+            </a>
         </div>
     </header>
 
@@ -188,8 +195,13 @@
                     <h3 style="color: #004a87; margin: 0; font-size: 22px; font-weight: 800;">Manajemen Riwayat Karir</h3>
                     <p style="margin: 5px 0 0; font-size: 13px; color: #64748b;">Data ini akan ditampilkan di Peta Sebaran Pekerjaan Alumni.</p>
                 </div>
-                <button type="button" onclick="openModalKerja()" class="btn-tambah" style="width: auto; padding: 12px 24px; font-size: 14px; background: #004a87;">
-                    + Tambah Pekerjaan
+                <button type="button" onclick="openModalKerja()" class="btn-tambah btn-karir-add">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 5v14"></path>
+                        <path d="M5 12h14"></path>
+                    </svg>
+                    <span>Tambah Pekerjaan</span>
                 </button>
             </div>
 
@@ -197,7 +209,7 @@
                 <div style="text-align: center; padding: 40px; background: rgba(0,74,135,0.03); border-radius: 16px; border: 2px dashed rgba(0,74,135,0.2);">
                     <svg width="40" height="40" fill="none" stroke="#94a3b8" viewBox="0 0 24 24" style="margin-bottom: 10px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                     <h4 style="color: #475569; margin:0;">Belum Ada Riwayat Pekerjaan</h4>
-                    <p style="color: #94a3b8; font-size: 13px; margin-top:5px;">Klik tombol + Tambah Pekerjaan di atas untuk menambahkan data.</p>
+                    <p style="color: #94a3b8; font-size: 13px; margin-top:5px;">Klik tombol Tambah Pekerjaan di atas untuk menambahkan data.</p>
                 </div>
             @else
                 <div style="overflow-x: auto;">

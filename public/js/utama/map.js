@@ -128,7 +128,7 @@ if (L.Control && L.Control.MiniMap) {
 }
 
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: '&copy; OpenStreetMap contributors',
+    attribution: '',
 }).addTo(map);
 
 // Hapus teks "Leaflet" di attribution (attribution OSM tetap wajib ditampilkan)

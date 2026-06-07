@@ -155,8 +155,17 @@ function setLoading(isLoading) {
     const el = qs('stat-loading');
     const btnApply = qs('stat-apply');
     const btnReset = qs('stat-reset');
+    const busyTargets = document.querySelectorAll('.stat-kpis, .stat-charts');
 
-    if (el) el.style.display = isLoading ? 'block' : 'none';
+    document.body.classList.toggle('stat-is-loading', isLoading);
+    busyTargets.forEach((target) => {
+        target.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+    });
+
+    if (el) {
+        el.style.display = isLoading ? 'block' : 'none';
+        el.textContent = 'Memuat data...';
+    }
     if (btnApply) btnApply.disabled = isLoading;
     if (btnReset) btnReset.disabled = isLoading;
 }
@@ -679,14 +688,9 @@ async function fetchStatistik(params) {
     const qsText = buildQuery(params);
     const url = endpoint + (qsText ? `?${qsText}` : '');
 
-    setLoading(true);
-    try {
-        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return await res.json();
-    } finally {
-        setLoading(false);
-    }
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
 }
 
 function applyData(payload) {
@@ -1691,8 +1695,13 @@ function resetFilters() {
 }
 
 async function refresh() {
-    const payload = await fetchStatistik(getFiltersFromUi());
-    applyData(payload);
+    setLoading(true);
+    try {
+        const payload = await fetchStatistik(getFiltersFromUi());
+        applyData(payload);
+    } finally {
+        setLoading(false);
+    }
 }
 
 function initDataModeControl() {
@@ -1722,6 +1731,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     initFilterToggle();
     initDataModeControl();
+    setLoading(true);
     qs('stat-apply')?.addEventListener('click', refresh);
     qs('stat-reset')?.addEventListener('click', async function () {
         resetFilters();

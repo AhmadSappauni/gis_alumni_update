@@ -35,6 +35,25 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
+    function setEditDataLink(alumni) {
+        const editLinkEl = document.getElementById('btn-edit-data-alumni');
+        if (!editLinkEl) {
+            return;
+        }
+
+        const alumniId = (alumni?.alumni_id ?? alumni?.id ?? '').toString().trim();
+        const urlTemplate = editLinkEl.dataset.editUrlTemplate || '';
+
+        if (!alumniId || !urlTemplate) {
+            editLinkEl.href = '#';
+            setHidden(editLinkEl, true);
+            return;
+        }
+
+        editLinkEl.href = urlTemplate.replace('__ALUMNI_ID__', encodeURIComponent(alumniId));
+        setHidden(editLinkEl, false);
+    }
+
     function isiModalProfil(alumni) {
         const data = alumni || {};
 
@@ -136,6 +155,7 @@ document.addEventListener("DOMContentLoaded", function() {
         setHidden(skripsiCardEl, !judulSkripsi);
         setHidden(linkedInCardEl, !linkLinkedIn);
         setHidden(extraInfoEl, !judulSkripsi && !linkLinkedIn);
+        setEditDataLink(data);
 
         // Buat avatar berdasarkan nama
         let avatarUrl = 'https://ui-avatars.com/api/?name=' + namaAlumni.replace(/\s+/g, '+') + '&background=004a87&color=fff&size=100';

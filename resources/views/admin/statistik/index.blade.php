@@ -5,6 +5,10 @@
 @endpush
 
 @section('content')
+    <script>
+        document.body.classList.add('stat-is-loading');
+    </script>
+
     <header class="top-header glass-panel statistik-header">
         <div class="header-left">
             <h1>Statistik Alumni</h1>
@@ -104,7 +108,7 @@
         <div class="filter-actions">
             <button id="stat-apply" class="btn-apply" type="button">Terapkan Filter</button>
             <button id="stat-reset" class="btn-reset" type="button">Reset</button>
-            <div id="stat-loading" class="stat-loading" aria-live="polite" style="display:none;">Memuat data…</div>
+            <div id="stat-loading" class="stat-loading" aria-live="polite" style="display:none;">Memuat data...</div>
         </div>
         </div>
     </section>

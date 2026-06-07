@@ -223,19 +223,52 @@
 /* Bagian Footer & Tombol Tutup */
 .profil-modal-footer {
     padding: 15px 30px 25px 30px;
+    display: grid;
+    gap: 10px;
 }
+.btn-edit-data,
 .btn-tutup-bawah {
     width: 100%;
     padding: 12px;
-    background: #f8fafc;
-    border: 1px solid #cbd5e1;
     border-radius: 8px;
-    color: #475569;
     font-weight: 600;
     font-family: 'Plus Jakarta Sans', sans-serif;
     cursor: pointer;
     transition: all 0.2s ease;
 }
+
+.btn-edit-data {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-sizing: border-box;
+    background: #004a87;
+    border: 1px solid #004a87;
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.btn-edit-data:hover {
+    background: #075985;
+    border-color: #075985;
+    color: #ffffff;
+}
+
+.btn-edit-data[hidden] {
+    display: none !important;
+}
+
+.btn-edit-data-icon {
+    flex: 0 0 auto;
+}
+
+.btn-tutup-bawah {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+}
+
 .btn-tutup-bawah:hover {
     background: #e2e8f0;
     color: #1e293b;

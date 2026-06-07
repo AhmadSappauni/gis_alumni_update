@@ -193,12 +193,9 @@
                 </div>
                 <div>
                     <label class="label-admin">Kategori Bidang</label>
-                    <select name="bidang_pekerjaan" class="custom-input-admin">
-                        <option>IT & Software</option>
-                        <option>Pendidikan / Guru</option>
-                        <option>Pemerintahan</option>
-                        <option>Wiraswasta</option>
-                    </select>
+                    <input type="text" name="bidang_pekerjaan" class="custom-input-admin"
+                        list="bidang-pekerjaan-options" value="{{ old('bidang_pekerjaan') }}"
+                        placeholder="Pilih atau tulis bidang pekerjaan">
                 </div>
                 <div>
                     <label class="label-admin">Linearitas</label>
@@ -319,6 +316,13 @@
             <button type="button" class="btn-tambah" id="prevBtn" onclick="nextPrev(-1)">Sebelumnya</button>
             <button type="button" class="btn-tambah" id="nextBtn" onclick="nextPrev(1)">Lanjut</button>
         </div>
+
+        <datalist id="bidang-pekerjaan-options">
+            <option value="IT & Software">
+            <option value="Pendidikan / Guru">
+            <option value="Pemerintahan">
+            <option value="Wiraswasta">
+        </datalist>
     </form>
 </div>
 @endsection

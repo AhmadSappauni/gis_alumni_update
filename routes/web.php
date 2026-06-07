@@ -63,6 +63,9 @@ Route::redirect('/welcome', '/', 301);
 
 Route::prefix('admin')->group(function () {
 
+    Route::redirect('/', '/admin/statistik')
+        ->name('admin.index');
+
     Route::get('/geocode', [AdminAlumniController::class, 'geocode'])
         ->name('admin.geocode');
     /*

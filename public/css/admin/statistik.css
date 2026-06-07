@@ -192,6 +192,89 @@
     color: var(--text-secondary);
 }
 
+body.stat-is-loading .stat-loading {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 8px;
+}
+
+body.stat-is-loading .stat-loading::before {
+    content: "";
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(0, 74, 135, 0.18);
+    border-top-color: var(--pilkom-blue-dark);
+    animation: statSpin 0.8s linear infinite;
+}
+
+body.stat-is-loading .kpi-card {
+    pointer-events: none;
+}
+
+body.stat-is-loading .kpi-card .kpi-value,
+body.stat-is-loading .kpi-card .kpi-unit,
+body.stat-is-loading .kpi-card .kpi-sub,
+body.stat-is-loading .kpi-card .kpi-meta {
+    color: transparent !important;
+}
+
+body.stat-is-loading .kpi-card::after {
+    content: "";
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 18px;
+    height: 54px;
+    border-radius: 14px;
+    background:
+        linear-gradient(90deg, rgba(226, 232, 240, 0.62), rgba(255, 255, 255, 0.88), rgba(226, 232, 240, 0.62));
+    background-size: 220% 100%;
+    animation: statShimmer 1.1s ease-in-out infinite;
+}
+
+body.stat-is-loading .chart-body {
+    position: relative;
+}
+
+body.stat-is-loading .chart-body canvas {
+    opacity: 0.08;
+}
+
+body.stat-is-loading .chart-body::before {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    border-radius: 16px;
+    background:
+        linear-gradient(90deg, rgba(226, 232, 240, 0.56), rgba(255, 255, 255, 0.9), rgba(226, 232, 240, 0.56));
+    background-size: 220% 100%;
+    animation: statShimmer 1.1s ease-in-out infinite;
+    z-index: 2;
+}
+
+body.stat-is-loading .chart-body::after {
+    content: "Memuat data statistik...";
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--pilkom-blue-dark);
+    font-size: 12px;
+    font-weight: 900;
+    z-index: 3;
+}
+
+@keyframes statShimmer {
+    0% { background-position: 120% 0; }
+    100% { background-position: -120% 0; }
+}
+
+@keyframes statSpin {
+    to { transform: rotate(360deg); }
+}
+
 .statistik-insight {
     padding: 14px 16px 10px 16px;
     margin-bottom: 18px;

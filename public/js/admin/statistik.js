@@ -163,10 +163,23 @@ function setLoading(isLoading) {
     const el = qs('stat-loading');
     const btnApply = qs('stat-apply');
     const btnReset = qs('stat-reset');
+    const btnPdf = qs('stat-export-pdf');
+    const btnExcel = qs('stat-export-excel');
+    const busyTargets = document.querySelectorAll('.statistik-kpi, .statistik-charts');
 
-    if (el) el.style.display = isLoading ? 'block' : 'none';
+    document.body.classList.toggle('stat-is-loading', isLoading);
+    busyTargets.forEach((target) => {
+        target.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+    });
+
+    if (el) {
+        el.style.display = isLoading ? 'block' : 'none';
+        el.textContent = 'Memuat data...';
+    }
     if (btnApply) btnApply.disabled = isLoading;
     if (btnReset) btnReset.disabled = isLoading;
+    if (btnPdf) btnPdf.disabled = isLoading;
+    if (btnExcel) btnExcel.disabled = isLoading;
 }
 
 function setKpi(id, value) {
@@ -689,16 +702,11 @@ async function fetchStatistik(params) {
     const endpoint = window.__STATISTIK_ENDPOINT__ || '';
     const url = endpoint + (buildQuery(params) ? `?${buildQuery(params)}` : '');
 
-    setLoading(true);
-    try {
-        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-        if (!res.ok) {
-            throw new Error(`HTTP ${res.status}`);
-        }
-        return await res.json();
-    } finally {
-        setLoading(false);
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
     }
+    return await res.json();
 }
 
 function applyData(payload) {
@@ -1366,9 +1374,14 @@ function updateHeatmap(payload) {
 }
 
 async function refresh() {
-    const params = getFiltersFromUi();
-    const payload = await fetchStatistik(params);
-    applyData(payload);
+    setLoading(true);
+    try {
+        const params = getFiltersFromUi();
+        const payload = await fetchStatistik(params);
+        applyData(payload);
+    } finally {
+        setLoading(false);
+    }
 }
 
 function exportPdf() {
@@ -1472,6 +1485,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     initFilterToggle();
     initDataModeControl();
+    setLoading(true);
     qs('stat-apply')?.addEventListener('click', refresh);
     qs('stat-export-pdf')?.addEventListener('click', exportPdf);
     qs('stat-export-excel')?.addEventListener('click', exportExcel);

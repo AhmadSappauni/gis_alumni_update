@@ -181,7 +181,7 @@ function updateReview() {
     let jabatan = document.querySelector("input[name='jabatan']")?.value || '';
 
     let bidang =
-        document.querySelector("select[name='bidang_pekerjaan']")?.value || '';
+        document.querySelector("[name='bidang_pekerjaan']")?.value || '';
 
     let kota = document.getElementById("kota")?.value || '';
     let lat = document.getElementById("lat")?.value || '';
