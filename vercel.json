@@ -15,6 +15,10 @@
       "dest": "/public/assets/$1"
     },
     {
+      "src": "/img/(.*)",
+      "dest": "/public/img/$1"
+    },
+    {
       "src": "/css/(.*)",
       "dest": "/public/css/$1"
     },
