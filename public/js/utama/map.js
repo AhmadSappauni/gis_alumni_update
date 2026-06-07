@@ -139,6 +139,7 @@ window.layerWilayahKalsel = null;
 window.highlightWilayah = null;
 window.tooltipWilayahAktif = null;
 window.statusPolygonAktif = true;
+window.statusHoverPolygonAktif = false;
 window.statusPolygonWilayah = {};
 window.defaultStatusPolygonWilayah = true;
 
@@ -833,6 +834,10 @@ window.sinkronkanKontrolPolygonWilayah = function () {
 };
 
 window.previewHighlightWilayah = function (key, hover) {
+    if (!window.statusHoverPolygonAktif) {
+        return;
+    }
+
     if (!window.layerWilayahKalsel) {
         return;
     }
@@ -913,41 +918,7 @@ fetch('/data/data_kalsel_simplified.geojson')
                     }
                 }
 
-                // Efek hover: warna sedikit lebih terang saat mouse di atas wilayah
-                layer.on({
-                    mouseover: function (e) {
-                        var layer = e.target;
-                        const namaWilayah = getNamaWilayah(layer.feature);
-                        const key = getKeyWilayah(namaWilayah);
-
-                        document.dispatchEvent(new CustomEvent('wilayah-map-hover', {
-                            detail: { key, hover: true }
-                        }));
-
-                         if (window.highlightWilayah === layer) {
-                             return;
-                         }
-
-                        layer.setStyle({
-                            fillOpacity: 0.7,
-                            weight: 1
-                        });
-                    },
-                    mouseout: function (e) {
-                        var layer = e.target;
-                        const namaWilayah = getNamaWilayah(layer.feature);
-                        const key = getKeyWilayah(namaWilayah);
-
-                        document.dispatchEvent(new CustomEvent('wilayah-map-hover', {
-                            detail: { key, hover: false }
-                        }));
-
-                        if (window.highlightWilayah === layer) {
-                            return;
-                        }
-
-                        window.layerWilayahKalsel.resetStyle(layer);
-                    },
+                const polygonEvents = {
                     click: function (e) {
                         const mode = (window.visualizationMode || 'marker').toString();
                         const namaWilayah = getNamaWilayah(feature);
@@ -1020,7 +991,46 @@ fetch('/data/data_kalsel_simplified.geojson')
                             .setContent(html)
                             .openOn(map);
                     }
-                });
+                };
+
+                if (window.statusHoverPolygonAktif) {
+                    polygonEvents.mouseover = function (e) {
+                        var layer = e.target;
+                        const namaWilayah = getNamaWilayah(layer.feature);
+                        const key = getKeyWilayah(namaWilayah);
+
+                        document.dispatchEvent(new CustomEvent('wilayah-map-hover', {
+                            detail: { key, hover: true }
+                        }));
+
+                        if (window.highlightWilayah === layer) {
+                            return;
+                        }
+
+                        layer.setStyle({
+                            fillOpacity: 0.7,
+                            weight: 1
+                        });
+                    };
+
+                    polygonEvents.mouseout = function (e) {
+                        var layer = e.target;
+                        const namaWilayah = getNamaWilayah(layer.feature);
+                        const key = getKeyWilayah(namaWilayah);
+
+                        document.dispatchEvent(new CustomEvent('wilayah-map-hover', {
+                            detail: { key, hover: false }
+                        }));
+
+                        if (window.highlightWilayah === layer) {
+                            return;
+                        }
+
+                        window.layerWilayahKalsel.resetStyle(layer);
+                    };
+                }
+
+                layer.on(polygonEvents);
             }
         });
 

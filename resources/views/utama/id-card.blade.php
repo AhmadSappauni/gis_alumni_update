@@ -52,6 +52,34 @@
                     <div id="modal-linearitas" class="status-badge status-linier">Linier</div>
                 </div>
             </div>
+
+            <div id="modal-extra-info" class="profile-extra-info" hidden>
+                <div id="modal-skripsi-card" class="profile-extra-card profile-extra-card--skripsi" hidden>
+                    <span class="profile-extra-icon" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20"></path>
+                            <path d="M20 2H6.5A2.5 2.5 0 0 0 4 4.5v15"></path>
+                            <path d="M8 6h8"></path>
+                            <path d="M8 10h8"></path>
+                            <path d="M8 14h5"></path>
+                        </svg>
+                    </span>
+                    <div>
+                        <span class="profile-extra-label">Judul Skripsi</span>
+                        <p id="modal-judul-skripsi" class="profile-extra-title"></p>
+                    </div>
+                </div>
+
+                <a id="modal-linkedin-card" class="profile-extra-card profile-extra-card--linkedin" href="#" target="_blank"
+                    rel="noopener noreferrer" hidden>
+                    <span class="profile-extra-icon profile-extra-icon--linkedin" aria-hidden="true">in</span>
+                    <div>
+                        <span class="profile-extra-label">LinkedIn</span>
+                        <strong class="profile-extra-title">Lihat profil profesional</strong>
+                    </div>
+                </a>
+            </div>
         </div>
 
         <div class="profil-modal-footer">

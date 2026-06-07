@@ -7,10 +7,13 @@ use App\Models\RiwayatPekerjaan;
 use App\Models\StudiLanjut;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
 
 class MapController extends Controller
 {
+    private array $wilayahKeywordIdCache = [];
+
     private function normalisasiWilayahKey(?string $value): string
     {
         $text = strtolower(trim((string) $value));
@@ -117,6 +120,7 @@ class MapController extends Controller
                 'nama'          => $job->alumni?->nama_lengkap,
                 'tahun_lulus'   => $job->alumni?->akademik?->tahun_lulus,
                 'angkatan'      => $job->alumni?->akademik?->angkatan,
+                'judul_skripsi' => $job->alumni?->akademik?->judul_skripsi,
 
                 'status'        => 'Bekerja',
 
@@ -132,6 +136,7 @@ class MapController extends Controller
                 'jabatan'       => $job->jabatan,
                 'bidang'        => $job->bidang_pekerjaan,
                 'linearitas'    => $job->perusahaan?->linearitas,
+                'link_linkedin' => $job->perusahaan?->link_linkedin,
 
                 'pekerjaan_lainnya' => $pekerjaanLainnya,
             ]);
@@ -183,6 +188,7 @@ class MapController extends Controller
                     'nama'          => $alumni->nama_lengkap,
                     'tahun_lulus'   => $alumni->akademik?->tahun_lulus,
                     'angkatan'      => $alumni->akademik?->angkatan,
+                    'judul_skripsi' => $alumni->akademik?->judul_skripsi,
 
                     'status'        => 'Belum Bekerja',
 
@@ -198,6 +204,7 @@ class MapController extends Controller
                     'jabatan'       => null,
                     'bidang'        => null,
                     'linearitas'    => null,
+                    'link_linkedin' => null,
 
                     'pekerjaan_lainnya' => [],
                 ]);
@@ -396,7 +403,7 @@ class MapController extends Controller
     {
         return [
             'akademik' => function ($q) {
-                $q->select(['id', 'alumni_id', 'angkatan', 'tahun_lulus']);
+                $q->select(['id', 'alumni_id', 'angkatan', 'tahun_lulus', 'judul_skripsi']);
             },
             'alamat' => function ($q) {
                 $q->select(['id', 'alumni_id', 'alamat_lengkap', 'kota', 'provinsi', 'latitude', 'longitude', 'is_current']);
@@ -411,13 +418,13 @@ class MapController extends Controller
                 $q->select(['id', 'nim', 'nama_lengkap']);
             },
             'alumni.akademik' => function ($q) {
-                $q->select(['id', 'alumni_id', 'angkatan', 'tahun_lulus']);
+                $q->select(['id', 'alumni_id', 'angkatan', 'tahun_lulus', 'judul_skripsi']);
             },
             'alumni.alamat' => function ($q) {
                 $q->select(['id', 'alumni_id', 'alamat_lengkap', 'kota', 'provinsi', 'latitude', 'longitude', 'is_current']);
             },
             'perusahaan' => function ($q) {
-                $q->select(['id', 'nama_perusahaan', 'linearitas']);
+                $q->select(['id', 'nama_perusahaan', 'linearitas', 'link_linkedin']);
             },
             'perusahaan.lokasiAktif' => function ($q) {
                 $q->select([
@@ -684,13 +691,30 @@ class MapController extends Controller
                     $this->whereAnyLike($perusahaan, ['nama_perusahaan'], $pattern);
                 });
             },
-            'wilayah' => function ($q, string $pattern) {
-                $q->where(function ($wilayah) use ($pattern) {
-                    $wilayah->whereHas('perusahaan.lokasi', function ($lokasi) use ($pattern) {
-                        $this->whereAnyLike($lokasi, ['kota', 'provinsi', 'alamat_lengkap'], $pattern);
+            'wilayah' => function ($q) use ($filters) {
+                $keywordWilayahIds = $this->resolveWilayahIdsFromKeyword($filters['keyword'] ?? '');
+
+                $q->where(function ($wilayah) use ($keywordWilayahIds) {
+                    $wilayah->whereHas('perusahaan.lokasiAktif', function ($lokasi) use ($keywordWilayahIds) {
+                        $this->wherePointWithinWilayahIds(
+                            $lokasi,
+                            'lokasi_perusahaan.geom::geometry',
+                            $keywordWilayahIds
+                        );
                     })
-                    ->orWhereHas('alumni.alamat', function ($alamat) use ($pattern) {
-                        $this->whereAnyLike($alamat, ['kota', 'provinsi', 'alamat_lengkap'], $pattern);
+                    ->orWhere(function ($fallback) use ($keywordWilayahIds) {
+                        $fallback
+                            ->whereDoesntHave('perusahaan.lokasiAktif', function ($lokasi) {
+                                $lokasi->whereNotNull('latitude')
+                                    ->whereNotNull('longitude');
+                            })
+                            ->whereHas('alumni.alamat', function ($alamat) use ($keywordWilayahIds) {
+                                $this->wherePointWithinWilayahIds(
+                                    $alamat,
+                                    'alamat_alumni.geom::geometry',
+                                    $keywordWilayahIds
+                                );
+                            });
                     });
                 });
             },
@@ -715,9 +739,15 @@ class MapController extends Controller
             'nama' => function ($q, string $pattern) {
                 $this->whereAnyLike($q, ['nama_lengkap'], $pattern);
             },
-            'wilayah' => function ($q, string $pattern) {
-                $q->whereHas('alamat', function ($alamat) use ($pattern) {
-                    $this->whereAnyLike($alamat, ['kota', 'provinsi', 'alamat_lengkap'], $pattern);
+            'wilayah' => function ($q) use ($filters) {
+                $keywordWilayahIds = $this->resolveWilayahIdsFromKeyword($filters['keyword'] ?? '');
+
+                $q->whereHas('alamat', function ($alamat) use ($keywordWilayahIds) {
+                    $this->wherePointWithinWilayahIds(
+                        $alamat,
+                        'alamat_alumni.geom::geometry',
+                        $keywordWilayahIds
+                    );
                 });
             },
         ]);
@@ -736,8 +766,14 @@ class MapController extends Controller
             'perusahaan' => function ($q, string $pattern) {
                 $this->whereAnyLike($q, ['kampus', 'jenjang', 'program_studi'], $pattern);
             },
-            'wilayah' => function ($q, string $pattern) {
-                $this->whereAnyLike($q, ['kota_kampus', 'provinsi_kampus', 'alamat_kampus'], $pattern);
+            'wilayah' => function ($q) use ($filters) {
+                $keywordWilayahIds = $this->resolveWilayahIdsFromKeyword($filters['keyword'] ?? '');
+
+                $this->wherePointWithinWilayahIds(
+                    $q,
+                    'ST_SetSRID(ST_MakePoint(studi_lanjut.longitude, studi_lanjut.latitude), 4326)',
+                    $keywordWilayahIds
+                );
             },
         ]);
     }
@@ -751,6 +787,14 @@ class MapController extends Controller
 
         $pattern = $this->likePattern($keyword);
         $scopes = $this->activeSearchScopes($filters);
+
+        if ($this->shouldPreferWilayahKeywordSearch($filters)) {
+            $scopes = [
+                'nama' => false,
+                'perusahaan' => false,
+                'wilayah' => true,
+            ];
+        }
 
         $query->where(function ($outer) use ($callbacks, $pattern, $scopes) {
             $hasCondition = false;
@@ -803,6 +847,86 @@ class MapController extends Controller
                 $q->{$method}('LOWER(' . $column . ') LIKE ?', [$pattern]);
             }
         });
+    }
+
+    private function wherePointWithinWilayahIds($query, string $pointExpression, array $wilayahIds): void
+    {
+        $wilayahIds = array_values(array_unique(array_map('intval', $wilayahIds)));
+        $wilayahIds = array_values(array_filter($wilayahIds, fn (int $id) => $id > 0));
+
+        if (empty($wilayahIds)) {
+            $query->whereRaw('1 = 0');
+            return;
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($wilayahIds), '?'));
+
+        $query->whereRaw(
+            "EXISTS (
+                SELECT 1
+                FROM wilayah_kalsel search_wilayah
+                WHERE search_wilayah.id IN ({$placeholders})
+                  AND ST_Within({$pointExpression}, search_wilayah.geom)
+            )",
+            $wilayahIds
+        );
+    }
+
+    private function resolveWilayahIdsFromKeyword(string $keyword): array
+    {
+        $normalizedKeyword = $this->normalizeRegionText($keyword);
+        if ($normalizedKeyword === '') {
+            return [];
+        }
+
+        if (array_key_exists($normalizedKeyword, $this->wilayahKeywordIdCache)) {
+            return $this->wilayahKeywordIdCache[$normalizedKeyword];
+        }
+
+        $rows = DB::table('wilayah_kalsel')
+            ->select(['id', 'nama', 'level'])
+            ->get();
+
+        if (in_array($normalizedKeyword, ['kalsel', 'kalimantan selatan'], true)) {
+            $ids = $rows
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->filter(fn (int $id) => $id > 0)
+                ->values()
+                ->all();
+
+            return $this->wilayahKeywordIdCache[$normalizedKeyword] = $ids;
+        }
+
+        $ids = $rows
+            ->filter(function ($row) use ($normalizedKeyword) {
+                $name = (string) ($row->nama ?? '');
+                $level = (string) ($row->level ?? '');
+                $displayName = trim(($level === 'kota' ? 'Kota ' : 'Kabupaten ') . $name);
+
+                return $this->regionPhraseMatches($name, $normalizedKeyword)
+                    || $this->regionPhraseMatches($displayName, $normalizedKeyword);
+            })
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id) => $id > 0)
+            ->values()
+            ->all();
+
+        return $this->wilayahKeywordIdCache[$normalizedKeyword] = $ids;
+    }
+
+    private function shouldPreferWilayahKeywordSearch(array $filters): bool
+    {
+        $keyword = $filters['keyword'] ?? '';
+        if ($keyword === '') {
+            return false;
+        }
+
+        $selectedScopes = $filters['search_scopes'] ?? [];
+
+        return empty($selectedScopes)
+            && !empty($this->resolveWilayahIdsFromKeyword($keyword));
     }
 
     private function likePattern(string $keyword): string
@@ -905,12 +1029,7 @@ class MapController extends Controller
             && $this->textContains([$item['perusahaan'] ?? ''], $keyword);
 
         $matchesRegion = $scopes['wilayah']
-            && $this->regionTextMatches([
-                $item['kota'] ?? '',
-                $item['provinsi'] ?? '',
-                $item['alamat'] ?? '',
-                $item['perusahaan'] ?? '',
-            ], $keyword);
+            && !empty($this->resolveWilayahIdsFromKeyword($keyword));
 
         return $matchesName || $matchesCompany || $matchesRegion;
     }
@@ -935,11 +1054,7 @@ class MapController extends Controller
             ], $keyword);
 
         $matchesRegion = $scopes['wilayah']
-            && $this->regionTextMatches([
-                $item['kota_kampus'] ?? '',
-                $item['provinsi_kampus'] ?? '',
-                $item['alamat_kampus'] ?? '',
-            ], $keyword);
+            && !empty($this->resolveWilayahIdsFromKeyword($keyword));
 
         return $matchesName || $matchesInstitution || $matchesRegion;
     }

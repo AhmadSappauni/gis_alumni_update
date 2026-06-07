@@ -12,6 +12,22 @@
         </div>
 
         <div class="header-right statistik-actions">
+            @php
+                $hasInitialFilters = collect($initialFilters ?? [])
+                    ->filter(fn ($v) => $v !== null && trim((string) $v) !== '')
+                    ->isNotEmpty();
+            @endphp
+
+            <button id="stat-filter-toggle" class="btn-filter-toggle btn-filter-icon" type="button"
+                aria-controls="stat-filter-panel"
+                aria-expanded="{{ $hasInitialFilters ? 'true' : 'false' }}"
+                title="Tampilkan filter statistik"
+                aria-label="Tampilkan filter statistik">
+                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
+            </button>
             <button id="stat-export-pdf" class="btn-export" type="button" title="Export PDF laporan statistik">
                 Export PDF
             </button>
@@ -21,20 +37,7 @@
         </div>
     </header>
 
-    <section class="glass-panel statistik-filter">
-        @php
-            $hasInitialFilters = collect($initialFilters ?? [])
-                ->filter(fn ($v) => $v !== null && trim((string) $v) !== '')
-                ->isNotEmpty();
-        @endphp
-
-        <div class="filter-head">
-            <button id="stat-filter-toggle" class="btn-filter-toggle" type="button" aria-controls="stat-filter-panel"
-                aria-expanded="{{ $hasInitialFilters ? 'true' : 'false' }}">
-                Filter Statistik
-            </button>
-        </div>
-
+    <section id="stat-filter-shell" class="glass-panel statistik-filter" {{ $hasInitialFilters ? '' : 'hidden' }}>
         <div id="stat-filter-panel" class="filter-panel" {{ $hasInitialFilters ? '' : 'hidden' }}>
             <div class="filter-grid">
             <div class="filter-item">

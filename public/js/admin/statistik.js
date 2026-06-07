@@ -7,11 +7,15 @@ function qs(id) {
 function initFilterToggle() {
     const btn = qs('stat-filter-toggle');
     const panel = qs('stat-filter-panel');
+    const shell = qs('stat-filter-shell');
     if (!btn || !panel) return;
 
     function setExpanded(isExpanded) {
         btn.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
         panel.hidden = !isExpanded;
+        if (shell) {
+            shell.hidden = !isExpanded;
+        }
     }
 
     btn.addEventListener('click', function () {

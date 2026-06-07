@@ -86,6 +86,7 @@
 .filter-panel.is-collapsed .map-search-input-wrap input,
 .filter-panel.is-collapsed #btn-search,
 .filter-panel.is-collapsed #toggle-filter,
+.filter-panel.is-collapsed .map-marker-loading,
 .filter-panel.is-collapsed .scrollable-content {
     display: none !important;
 }
@@ -111,6 +112,80 @@
 .map-search-panel {
     display: flex;
     align-items: center;
+}
+
+.map-marker-loading {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 42px;
+    max-width: min(100%, 320px);
+    padding: 9px 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.16);
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.25;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    pointer-events: none;
+}
+
+.map-marker-loading[hidden] {
+    display: none !important;
+}
+
+.map-marker-loading-spinner {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    border: 2px solid rgba(0, 74, 135, 0.2);
+    border-top-color: #004a87;
+    animation: map-marker-loading-spin 0.8s linear infinite;
+}
+
+.map-marker-loading.is-error {
+    color: #991b1b;
+    background: rgba(255, 245, 245, 0.94);
+    border-color: rgba(248, 113, 113, 0.34);
+}
+
+.map-marker-loading.is-error .map-marker-loading-spinner {
+    animation: none;
+    border-color: #ef4444;
+    position: relative;
+}
+
+.map-marker-loading.is-error .map-marker-loading-spinner::before,
+.map-marker-loading.is-error .map-marker-loading-spinner::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 9px;
+    height: 2px;
+    border-radius: 999px;
+    background: #ef4444;
+    transform-origin: center;
+}
+
+.map-marker-loading.is-error .map-marker-loading-spinner::before {
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.map-marker-loading.is-error .map-marker-loading-spinner::after {
+    transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+@keyframes map-marker-loading-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .map-search-input-wrap {

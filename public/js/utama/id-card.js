@@ -4,6 +4,37 @@ document.addEventListener("DOMContentLoaded", function() {
     // LOGIKA MODAL ID CARD PROFIL ALUMNI
     // =====================================================================
 
+    function nilaiTeks(value) {
+        const text = (value || '').toString().trim();
+        return text && text !== '-' && text.toLowerCase() !== 'null' ? text : '';
+    }
+
+    function normalisasiUrlLinkedIn(value) {
+        const raw = nilaiTeks(value);
+        if (!raw) {
+            return '';
+        }
+
+        const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+
+        try {
+            const url = new URL(withScheme);
+            if (!['http:', 'https:'].includes(url.protocol)) {
+                return '';
+            }
+
+            return url.toString();
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function setHidden(el, hidden) {
+        if (el) {
+            el.hidden = hidden;
+        }
+    }
+
     function isiModalProfil(alumni) {
         const data = alumni || {};
 
@@ -14,8 +45,25 @@ document.addEventListener("DOMContentLoaded", function() {
 
         let namaPerusahaan = (data.perusahaan || '').toString().trim();
         let jabatan = (data.jabatan || '').toString().trim();
-        let linearitas = (data.linearitas || '').toString().trim();
+        let linearitas = (
+            data.linearitas ||
+            data.kesesuaian_bidang ||
+            data.kesesuaian_bidang_ilmu ||
+            ''
+        ).toString().trim();
         let bidangPekerjaan = (data.bidang_pekerjaan || data.bidang || '').toString().trim();
+        const judulSkripsi = nilaiTeks(
+            data.judul_skripsi ||
+            data.skripsi ||
+            data.judul_tugas_akhir ||
+            data.judul_ta
+        );
+        const linkLinkedIn = normalisasiUrlLinkedIn(
+            data.link_linkedin ||
+            data.linkedin ||
+            data.linkedin_url ||
+            data.linkedIn
+        );
 
         const alamatRaw = (data.alamat || data.alamat_kantor || data.alamat_perusahaan || data.alamat_lengkap_perusahaan || data.alamat_alumni || '').toString().trim();
         const kota = (data.kota || data.kota_perusahaan || data.kota_kampus || '').toString().trim();
@@ -53,6 +101,10 @@ document.addEventListener("DOMContentLoaded", function() {
             if (lokasiLabelEl) lokasiLabelEl.textContent = 'Tempat Kerja';
             document.getElementById('modal-perusahaan').textContent = namaPerusahaan || '-';
             if (alamatLabelEl) alamatLabelEl.textContent = 'Alamat Kantor';
+
+            if (!linearitas) {
+                linearitas = 'Tidak Erat';
+            }
         } else {
             if (lokasiLabelEl) lokasiLabelEl.textContent = 'Status';
             document.getElementById('modal-perusahaan').textContent = 'Belum Bekerja';
@@ -67,6 +119,23 @@ document.addEventListener("DOMContentLoaded", function() {
         document.getElementById('modal-alamat').textContent = alamatTampil || '-';
         document.getElementById('modal-jabatan').textContent = jabatan || '-';
         document.getElementById('modal-bidang-pekerjaan').textContent = bidangPekerjaan || '-';
+
+        const extraInfoEl = document.getElementById('modal-extra-info');
+        const skripsiCardEl = document.getElementById('modal-skripsi-card');
+        const judulSkripsiEl = document.getElementById('modal-judul-skripsi');
+        const linkedInCardEl = document.getElementById('modal-linkedin-card');
+
+        if (judulSkripsiEl) {
+            judulSkripsiEl.textContent = judulSkripsi;
+        }
+
+        if (linkedInCardEl) {
+            linkedInCardEl.href = linkLinkedIn || '#';
+        }
+
+        setHidden(skripsiCardEl, !judulSkripsi);
+        setHidden(linkedInCardEl, !linkLinkedIn);
+        setHidden(extraInfoEl, !judulSkripsi && !linkLinkedIn);
 
         // Buat avatar berdasarkan nama
         let avatarUrl = 'https://ui-avatars.com/api/?name=' + namaAlumni.replace(/\s+/g, '+') + '&background=004a87&color=fff&size=100';

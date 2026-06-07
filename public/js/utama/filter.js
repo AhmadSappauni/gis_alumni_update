@@ -364,6 +364,7 @@ window.statusClusterAktif = false;
 let mapMarkerFetchController = null;
 let mapMarkerFetchSequence = 0;
 let mapFilterOptionsInitialized = false;
+let mapMarkerLoadingHideTimer = null;
 
 function getSelectedFilterValues(selectId) {
     const select = document.getElementById(selectId);
@@ -449,6 +450,35 @@ function emptyMapPayload() {
     };
 }
 
+function setMapMarkerLoading(visible, message, state) {
+    const loadingEl = document.getElementById('map-marker-loading');
+    if (!loadingEl) {
+        return;
+    }
+
+    const textEl = document.getElementById('map-marker-loading-text');
+
+    if (mapMarkerLoadingHideTimer) {
+        clearTimeout(mapMarkerLoadingHideTimer);
+        mapMarkerLoadingHideTimer = null;
+    }
+
+    if (message && textEl) {
+        textEl.textContent = message;
+    }
+
+    loadingEl.classList.toggle('is-error', state === 'error');
+    loadingEl.hidden = !visible;
+}
+
+function showMapMarkerLoadingError(message) {
+    setMapMarkerLoading(true, message || 'Data marker gagal dimuat.', 'error');
+
+    mapMarkerLoadingHideTimer = setTimeout(function () {
+        setMapMarkerLoading(false);
+    }, 4500);
+}
+
 function renderFetchedMapPayload() {
     window.__RENDERING_FETCHED_MARKERS__ = true;
     try {
@@ -500,6 +530,7 @@ function fetchMapMarkersAndRender(options) {
     const endpoint = window.mapDataUrl || window.__MAP_MARKER_ENDPOINT__;
 
     if (!endpoint || typeof fetch !== 'function') {
+        setMapMarkerLoading(false);
         renderFetchedMapPayload();
         return Promise.resolve();
     }
@@ -514,6 +545,11 @@ function fetchMapMarkersAndRender(options) {
     const params = buildMapMarkerApiParams();
     const url = new URL(endpoint, window.location.origin);
     params.forEach((value, key) => url.searchParams.set(key, value));
+
+    setMapMarkerLoading(
+        true,
+        options?.initializeCustomSelect ? 'Memuat data alumni...' : 'Memperbarui marker...'
+    );
 
     return fetch(url.toString(), {
         headers: {
@@ -543,6 +579,7 @@ function fetchMapMarkersAndRender(options) {
             }
 
             renderFetchedMapPayload();
+            setMapMarkerLoading(false);
         })
         .catch(error => {
             if (error && error.name === 'AbortError') {
@@ -559,6 +596,7 @@ function fetchMapMarkersAndRender(options) {
             }
 
             renderFetchedMapPayload();
+            showMapMarkerLoadingError('Data marker gagal dimuat.');
             showMapDataError(error?.message || 'Data marker peta gagal dimuat. Silakan coba lagi.');
         });
 }
@@ -601,6 +639,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (window.mapDataUrl || window.__MAP_MARKER_ENDPOINT__) {
         fetchMapMarkersAndRender({ initializeCustomSelect: true });
     } else {
+        setMapMarkerLoading(false);
         populateBidangFilter();
         populateAngkatanFilter();
         initCustomSelect();
@@ -701,8 +740,8 @@ function toggleMultiJobLayers(alumniId) {
     const mainLatLng = mainMarker.getLatLng();
 
     const sideIcon = L.icon({
-        // iconUrl: '/img/icon sampingan.png',
-        iconUrl: 'https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/icon%20sampingan.png',
+        iconUrl: '/img/icon sampingan.png',
+        // iconUrl: 'https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/icon%20sampingan.png',
         iconSize: [24, 38],
         iconAnchor: [12, 38],
         popupAnchor: [0, -42]
@@ -2050,6 +2089,53 @@ function escapeHtml(value) {
         .replace(/'/g, '&#039;');
 }
 
+function getLinearitasDescription(linearitas) {
+    switch (linearitas) {
+        case 'Sangat Erat':
+            return 'Pekerjaan sangat sesuai dengan bidang pendidikan alumni.';
+        case 'Erat':
+            return 'Pekerjaan sesuai dengan bidang pendidikan alumni.';
+        case 'Cukup Erat':
+            return 'Pekerjaan masih cukup berkaitan dengan bidang pendidikan alumni.';
+        case 'Kurang Erat':
+            return 'Pekerjaan hanya sedikit berkaitan dengan bidang pendidikan alumni.';
+        case 'Tidak Erat':
+            return 'Pekerjaan kurang atau tidak berkaitan dengan bidang pendidikan alumni.';
+        default:
+            return 'Menunjukkan seberapa sesuai bidang pendidikan alumni dengan pekerjaan saat ini.';
+    }
+}
+
+function renderPopupStatusBadge(statusKerja, linearitas) {
+    if (statusKerja === 'Belum Bekerja') {
+        return '<span class="popup-badge">Belum Bekerja</span>';
+    }
+
+    const label = escapeHtml(linearitas || 'Tidak Erat');
+    const description = escapeHtml(getLinearitasDescription(linearitas));
+
+    return `
+        <span class="popup-badge popup-badge-linearitas">
+            <span>${label}</span>
+            <button
+                type="button"
+                class="linearitas-info-trigger"
+                aria-label="Penjelasan kesesuaian bidang"
+            >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span class="linearitas-info-tooltip" role="tooltip">
+                    ${description}
+                </span>
+            </button>
+        </span>
+    `;
+}
+
 function getCoordinateStackKey(latitude, longitude) {
     const lat = Number(latitude);
     const lng = Number(longitude);
@@ -2595,6 +2681,7 @@ function filterDanTampilkanMarker() {
     const keywordTrimmed = rawKeyword.toString().trim().toLowerCase();
     // Minimal 2 karakter untuk benar-benar menjalankan pencarian (panel tetap bisa menampilkan helper).
     const keyword = keywordTrimmed.length >= 2 ? keywordTrimmed : '';
+    const keywordSudahDifilterServer = !!window.__RENDERING_FETCHED_MARKERS__;
 
     const scopes = getCariBerdasarkanScopes();
 
@@ -2714,7 +2801,7 @@ function filterDanTampilkanMarker() {
         // =====================================
         let cocokKeyword = true;
 
-        if (keyword !== '') {
+        if (keyword !== '' && !keywordSudahDifilterServer) {
 
             const n = nama.toLowerCase();
             const p = perusahaan.toLowerCase();
@@ -2802,12 +2889,12 @@ function filterDanTampilkanMarker() {
             arrayMarker[index] = { latitude, longitude };
         } else {
         const icon = L.icon({
-            // iconUrl: statusKerja === 'Belum Bekerja'
-            //     ? '/img/icon alumni nganggur.png'
-            //     : '/img/icon alumni kerja.png',
             iconUrl: statusKerja === 'Belum Bekerja'
-                ? 'https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/icon%20alumni%20nganggur.png'
-                : 'https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/icon%20alumni%20kerja.png',
+                ? '/img/icon alumni nganggur.png'
+                : '/img/icon alumni kerja.png',
+            // iconUrl: statusKerja === 'Belum Bekerja'
+            //     ? 'https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/icon%20alumni%20nganggur.png'
+            //     : 'https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/icon%20alumni%20kerja.png',
             iconSize: [24, 38],
             iconAnchor: [12, 38],
             popupAnchor: [0, -42]
@@ -2895,11 +2982,7 @@ function filterDanTampilkanMarker() {
                     </div>
 
                     <div class="popup-footer">
-                        <span class="popup-badge">
-                            ${statusKerja === 'Belum Bekerja'
-                                ? 'Belum Bekerja'
-                                : linearitas}
-                        </span>
+                        ${renderPopupStatusBadge(statusKerja, linearitas)}
                         ${multiJobButton}
                     </div>
 
@@ -3047,7 +3130,7 @@ function filterDanTampilkanMarker() {
             }
 
             let cocokKeyword = true;
-            if (keyword !== '') {
+            if (keyword !== '' && !keywordSudahDifilterServer) {
                 const n = (nama || '').toLowerCase();
 
                 const teksInstansi = [
@@ -3127,8 +3210,8 @@ function filterDanTampilkanMarker() {
                 // Mode selain marker: tidak membuat marker Leaflet (tetap hitung choropleth/heatmap).
             } else {
             const icon = L.icon({
-                // iconUrl: '/img/Icon studi lanjut.png',
-                iconUrl: 'https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/Icon%20studi%20lanjut.png',
+                iconUrl: '/img/Icon studi lanjut.png',
+                // iconUrl: 'https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/Icon%20studi%20lanjut.png',
                 iconSize: [24, 38],
                 iconAnchor: [12, 38],
                 popupAnchor: [0, -42]

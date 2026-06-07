@@ -65,12 +65,17 @@
 }
 
 .btn-filter-toggle {
-    padding: 10px 14px;
+    width: 48px;
+    height: 48px;
+    padding: 0;
     border-radius: 14px;
     border: 1px solid rgba(0, 74, 135, 0.18);
     background: rgba(255, 255, 255, 0.75);
     color: var(--pilkom-blue-dark);
-    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
@@ -81,8 +86,14 @@
     background: rgba(255, 255, 255, 0.9);
 }
 
+.btn-filter-toggle[aria-expanded="true"] {
+    background: var(--pilkom-blue-dark);
+    border-color: var(--pilkom-blue-dark);
+    color: #ffffff;
+    box-shadow: 0 10px 20px rgba(0, 74, 135, 0.16);
+}
+
 .filter-panel {
-    margin-top: 6px;
     padding: 16px;
     border-radius: 18px;
     border: 1px solid rgba(0, 74, 135, 0.10);
@@ -667,6 +678,10 @@
     }
 
     .statistik-actions {
+        display: flex;
+    }
+
+    .statistik-actions .btn-export {
         display: none;
     }
 }

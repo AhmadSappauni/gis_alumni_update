@@ -101,15 +101,104 @@
     
     .info-row .icon { font-size: 12px; margin-top: 1px; }
 
+    .popup-footer {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        overflow: visible;
+    }
+
     /* Lencana Status (Lebih ramping) */
     .popup-badge {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        position: relative;
         padding: 4px 12px;
         border-radius: 50px;
         font-size: 10px;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+    }
+
+    .popup-badge-linearitas {
+        padding-right: 6px;
+    }
+
+    .linearitas-info-trigger {
+        position: relative;
+        width: 17px;
+        height: 17px;
+        padding: 0;
+        border: 1px solid currentColor;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.72);
+        color: inherit;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: help;
+        line-height: 1;
+        opacity: 0.9;
+    }
+
+    .linearitas-info-trigger:hover,
+    .linearitas-info-trigger:focus-visible {
+        opacity: 1;
+        background: rgba(255, 255, 255, 0.96);
+        outline: none;
+    }
+
+    .linearitas-info-tooltip {
+        position: absolute;
+        left: auto;
+        right: -28px;
+        bottom: calc(100% + 8px);
+        width: 168px;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: #0f172a;
+        color: #ffffff;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.22);
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0;
+        line-height: 1.35;
+        text-align: left;
+        text-transform: none;
+        white-space: normal;
+        overflow-wrap: break-word;
+        transform: translateY(4px);
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
+        z-index: 20;
+    }
+
+    .linearitas-info-tooltip::after {
+        content: "";
+        position: absolute;
+        left: auto;
+        right: 31px;
+        bottom: -5px;
+        width: 10px;
+        height: 10px;
+        background: #0f172a;
+        transform: rotate(45deg);
+    }
+
+    .linearitas-info-trigger:hover .linearitas-info-tooltip,
+    .linearitas-info-trigger:focus .linearitas-info-tooltip,
+    .linearitas-info-trigger:focus-visible .linearitas-info-tooltip {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
     }
 
     .badge-linier { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }

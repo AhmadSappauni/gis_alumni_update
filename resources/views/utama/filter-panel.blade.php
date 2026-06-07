@@ -80,6 +80,11 @@
         </div>
     </div>
 
+    <div id="map-marker-loading" class="map-marker-loading" role="status" aria-live="polite" aria-atomic="true">
+        <span class="map-marker-loading-spinner" aria-hidden="true"></span>
+        <span id="map-marker-loading-text">Memuat data alumni...</span>
+    </div>
+
     <div class="scrollable-content">
         <div id="filter-body" class="filter-body hidden">
             <div class="filter-body-inner">
