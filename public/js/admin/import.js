@@ -78,6 +78,13 @@ function headerLabel(key) {
         nama_perusahaan: 'Perusahaan',
         alamat_lengkap_perusahaan: 'Alamat Instansi',
         gaji_nominal: 'Gaji',
+        kampus_studi_lanjut: 'Kampus Studi Lanjut',
+        program_studi_lanjut: 'Program Studi Lanjut',
+        alamat_kampus: 'Alamat Kampus',
+        kota_kampus: 'Kota Kampus',
+        provinsi_kampus: 'Provinsi Kampus',
+        latitude_kampus: 'Latitude Kampus',
+        longitude_kampus: 'Longitude Kampus',
     };
     return map[k] || titleCaseFromSnake(k);
 }

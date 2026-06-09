@@ -1580,6 +1580,9 @@ class AdminAlumniController extends Controller
                 | alamat_lengkap_perusahaan, kota_perusahaan, provinsi_perusahaan,
                 | jabatan, bidang_pekerjaan, status_kerja, tanggal_mulai, tanggal_selesai,
                 | masa_tunggu, status_karir, gaji_nominal,
+                | kampus_studi_lanjut, program_studi_lanjut,
+                | alamat_kampus, kota_kampus, provinsi_kampus,
+                | latitude_kampus, longitude_kampus,
                 | jenjang, tahun_masuk_studi_lanjut, tahun_lulus_studi_lanjut, status_studi_lanjut
                 */
 
@@ -1696,10 +1699,67 @@ class AdminAlumniController extends Controller
                 $statusKarir = trim((string) ($row['status_karir'] ?? '')) ?: null;
                 $gajiNominal = $this->toInt($row['gaji_nominal'] ?? null);
 
+                $kampusStudi = $this->getRowValue($row, [
+                    'kampus_studi_lanjut',
+                    'kampus',
+                    'nama_kampus',
+                    'universitas',
+                    'perguruan_tinggi',
+                ]);
+                $programStudi = $this->getRowValue($row, [
+                    'program_studi_lanjut',
+                    'program_studi',
+                    'prodi_studi_lanjut',
+                    'prodi',
+                ]);
+                $alamatKampus = $this->getRowValue($row, [
+                    'alamat_kampus',
+                    'alamat_kampus_studi_lanjut',
+                    'alamat_lengkap_kampus',
+                    'alamat_perguruan_tinggi',
+                ]);
+                $alamatGeocodingKampus = $this->getRowValue($row, [
+                    'alamat_geocoding_kampus',
+                    'alamat_geocode_kampus',
+                    'alamat_geocoding_studi_lanjut',
+                    'alamat_geocode_studi_lanjut',
+                ]);
+                $statusAlamatKampus = $this->getRowValue($row, [
+                    'status_alamat_kampus',
+                    'status_geocoding_kampus',
+                    'status_alamat_studi_lanjut',
+                    'status_geocoding_studi_lanjut',
+                ]);
+                $kotaKampus = $this->getRowValue($row, [
+                    'kota_kampus',
+                    'kota_kampus_studi_lanjut',
+                    'kota_kabupaten_kampus',
+                    'kota_kabupaten_studi_lanjut',
+                    'kabupaten_kampus',
+                    'kabupaten_studi_lanjut',
+                ]);
+                $provinsiKampus = $this->getRowValue($row, [
+                    'provinsi_kampus',
+                    'provinsi_kampus_studi_lanjut',
+                    'propinsi_kampus',
+                    'propinsi_kampus_studi_lanjut',
+                    'provinsi_studi_lanjut',
+                    'propinsi_studi_lanjut',
+                ]);
+
                 $jenjangStudi = trim((string) ($row['jenjang'] ?? '')) ?: null;
                 $tahunMasukStudi = $this->ambilTahun($row['tahun_masuk_studi_lanjut'] ?? null);
                 $tahunLulusStudi = $this->ambilTahun($row['tahun_lulus_studi_lanjut'] ?? null);
                 $statusStudi = trim((string) ($row['status_studi_lanjut'] ?? '')) ?: null;
+                $hasStudiLanjutData = $kampusStudi
+                    || $programStudi
+                    || $alamatKampus
+                    || $kotaKampus
+                    || $provinsiKampus
+                    || $jenjangStudi
+                    || $statusStudi
+                    || $tahunMasukStudi !== null
+                    || $tahunLulusStudi !== null;
 
                 /*
                 |--------------------------------------------------------------------------
@@ -1924,6 +1984,96 @@ class AdminAlumniController extends Controller
                     'source' => $sourceKerjaCoordinate,
                 ]);
 
+                $latExcelKampus = $this->parseCoordinate($this->getRowValue($row, [
+                    'latitude_studi_lanjut',
+                    'lat_studi_lanjut',
+                    'latitude_kampus',
+                    'lat_kampus',
+                    'latitude_perguruan_tinggi',
+                    'lat_perguruan_tinggi',
+                ]));
+                $lngExcelKampus = $this->parseCoordinate($this->getRowValue($row, [
+                    'longitude_studi_lanjut',
+                    'lng_studi_lanjut',
+                    'lon_studi_lanjut',
+                    'longitude_kampus',
+                    'lng_kampus',
+                    'lon_kampus',
+                    'longitude_perguruan_tinggi',
+                    'lng_perguruan_tinggi',
+                    'lon_perguruan_tinggi',
+                ]));
+
+                $latKampus = null;
+                $lngKampus = null;
+                $kampusGeoLevel = null;
+                $kampusGeoQuery = null;
+
+                if ($this->isValidLatLng($latExcelKampus, $lngExcelKampus, $provinsiKampus)) {
+                    $latKampus = $latExcelKampus;
+                    $lngKampus = $lngExcelKampus;
+                    Log::info('Geocoding kampus (from excel coords)', $geoContextBase + [
+                        'kampus' => $kampusStudi,
+                        'lat' => $latKampus,
+                        'lng' => $lngKampus,
+                    ]);
+                } else {
+                    if ($latExcelKampus !== null || $lngExcelKampus !== null) {
+                        Log::info('Excel coords invalid (kampus studi lanjut)', $geoContextBase + [
+                            'kampus' => $kampusStudi,
+                            'lat' => $latExcelKampus,
+                            'lng' => $lngExcelKampus,
+                            'provinsi' => $provinsiKampus,
+                        ]);
+                    }
+
+                    [$latKampus, $lngKampus, $kampusGeoLevel, $kampusGeoQuery] = $this->geocodeIfPossible(
+                        $alamatKampus,
+                        $kotaKampus,
+                        $provinsiKampus,
+                        $geoContextBase + [
+                            'type' => 'kampus_studi_lanjut',
+                            'kampus' => $kampusStudi,
+                            'status_alamat' => $statusAlamatKampus,
+                        ],
+                        $alamatGeocodingKampus
+                    );
+                }
+
+                // Jika sudah punya koordinat kampus tapi wilayah kampus masih kosong, isi otomatis via reverse geocoding.
+                if ($this->isValidLatLng($latKampus, $lngKampus, $provinsiKampus)
+                    && ($this->isEmptyLocationValue($kotaKampus) || $this->isEmptyLocationValue($provinsiKampus))) {
+                    [$kotaRg, $provRg] = $this->reverseGeocodeWilayah($latKampus, $lngKampus, $geoContextBase + [
+                        'type' => 'kampus_studi_lanjut',
+                        'kampus' => $kampusStudi,
+                    ]);
+                    if ($this->isEmptyLocationValue($kotaKampus) && !$this->isEmptyLocationValue($kotaRg)) {
+                        $kotaKampus = $kotaRg;
+                    }
+                    if ($this->isEmptyLocationValue($provinsiKampus) && !$this->isEmptyLocationValue($provRg)) {
+                        $provinsiKampus = $provRg;
+                    }
+                }
+
+                $sourceKampusCoordinate = 'kosong';
+                if ($this->isValidLatLng($latExcelKampus, $lngExcelKampus, $provinsiKampus)) {
+                    $sourceKampusCoordinate = 'excel';
+                } elseif ($latKampus !== null && $lngKampus !== null) {
+                    $sourceKampusCoordinate = ($kampusGeoLevel === 0)
+                        ? 'geocoding_alamat_geocoding'
+                        : 'geocoding_alamat_gabungan';
+                }
+
+                Log::info('Import koordinat kampus studi lanjut', [
+                    'nim' => $nim,
+                    'kampus' => $kampusStudi,
+                    'lat_excel' => $latExcelKampus,
+                    'lng_excel' => $lngExcelKampus,
+                    'lat_final' => $latKampus,
+                    'lng_final' => $lngKampus,
+                    'source' => $sourceKampusCoordinate,
+                ]);
+
                 // Catat data yang tersimpan tapi tidak punya koordinat (tidak akan muncul di peta)
                 if ($isBekerja) {
                     if ($latPerusahaan === null || $lngPerusahaan === null) {
@@ -1933,6 +2083,10 @@ class AdminAlumniController extends Controller
                     if ($latAlumni === null || $lngAlumni === null) {
                         $no_map++;
                     }
+                }
+
+                if ($hasStudiLanjutData && ($latKampus === null || $lngKampus === null)) {
+                    $no_map++;
                 }
 
                 /*
@@ -1973,6 +2127,14 @@ class AdminAlumniController extends Controller
                     $latPerusahaan,
                     $lngPerusahaan,
                     $hasJobData,
+                    $hasStudiLanjutData,
+                    $kampusStudi,
+                    $programStudi,
+                    $alamatKampus,
+                    $kotaKampus,
+                    $provinsiKampus,
+                    $latKampus,
+                    $lngKampus,
                     $jenjangStudi,
                     $tahunMasukStudi,
                     $tahunLulusStudi,
@@ -2110,17 +2272,17 @@ class AdminAlumniController extends Controller
                         ]);
                     }
 
-                    if ($jenjangStudi || $statusStudi || $tahunMasukStudi || $tahunLulusStudi) {
+                    if ($hasStudiLanjutData) {
                         StudiLanjut::create([
                             'alumni_id'        => $alumni->id,
-                            'kampus'           => null,
-                            'alamat_kampus'    => null,
-                            'kota_kampus'      => null,
-                            'provinsi_kampus'  => null,
-                            'latitude'         => null,
-                            'longitude'        => null,
+                            'kampus'           => $kampusStudi,
+                            'alamat_kampus'    => $alamatKampus,
+                            'kota_kampus'      => $kotaKampus,
+                            'provinsi_kampus'  => $provinsiKampus,
+                            'latitude'         => $latKampus,
+                            'longitude'        => $lngKampus,
                             'jenjang'          => $jenjangStudi,
-                            'program_studi'    => null,
+                            'program_studi'    => $programStudi,
                             'tahun_masuk'      => $tahunMasukStudi,
                             'tahun_lulus'      => $tahunLulusStudi,
                             'status'           => $statusStudi

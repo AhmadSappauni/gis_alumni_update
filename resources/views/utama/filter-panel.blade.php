@@ -164,7 +164,9 @@
                                     {{-- <option value="bekerja" selected data-icon="{{ asset('img/icon alumni kerja.png') }}">Sedang Bekerja</option> --}}
                                     <option value="bekerja" selected data-icon="https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/icon%20alumni%20kerja.png">Sedang Bekerja</option>
                                     {{-- <option value="belum_bekerja" selected data-icon="{{ asset('img/icon alumni nganggur.png') }}">Belum Bekerja</option> --}}
-                                    <option value="belum_bekerja" selected data-icon="https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/icon%20alumni%20nganggur.png">Belum Bekerja</option>
+                                    @if(auth()->user()?->canViewSensitiveAlumniData())
+                                        <option value="belum_bekerja" selected data-icon="https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/icon%20alumni%20nganggur.png">Belum Bekerja</option>
+                                    @endif
                                     {{-- <option value="studi_lanjut" data-icon="{{ asset('img/Icon studi lanjut.png') }}">Studi Lanjut</option> --}}
                                     <option value="studi_lanjut" data-icon="https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/Icon%20studi%20lanjut.png">Studi Lanjut</option>
                                 </select>

@@ -363,6 +363,24 @@ body {
     color: #004a87;
 }
 
+.status-legend-item--locked {
+    color: #64748b;
+}
+
+.status-legend-item--locked img {
+    opacity: 0.55;
+    filter: grayscale(1);
+}
+
+.status-legend-item--locked b {
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.08);
+    color: #475569;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
 .status-legend-item--stack {
     grid-template-columns: 28px 1fr;
 }

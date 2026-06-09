@@ -13,6 +13,16 @@
 
 let arrayMarker = [];
 
+function canViewBelumBekerja() {
+    return !!(window.appAuth && window.appAuth.canViewBelumBekerja);
+}
+
+function getDefaultStatusFilterValues() {
+    return canViewBelumBekerja()
+        ? ['bekerja', 'belum_bekerja']
+        : ['bekerja'];
+}
+
 function normalisasiModeVisualisasi(mode) {
     const value = (mode || '').toString().trim().toLowerCase();
 
@@ -402,7 +412,9 @@ function buildMapMarkerApiParams() {
 
     appendMultiValueParam(params, 'search_scope', getSelectedFilterValues('search-category'));
     appendMultiValueParam(params, 'bidang_pekerjaan', getSelectedFilterValues('filter-bidang'));
-    appendMultiValueParam(params, 'status', getSelectedFilterValues('filter-status-kerja'));
+    const statusValues = getSelectedFilterValues('filter-status-kerja')
+        .filter(value => canViewBelumBekerja() || value !== 'belum_bekerja');
+    appendMultiValueParam(params, 'status', statusValues);
 
     const linearitas = document.getElementById('filter-linearitas')?.value || 'semua';
     if (linearitas !== 'semua') {
@@ -431,6 +443,10 @@ function hydrateMapPayload(payload) {
     const safePayload = payload && typeof payload === 'object' ? payload : {};
 
     window.mapPayload = safePayload;
+    if (Object.prototype.hasOwnProperty.call(safePayload, 'can_view_belum_bekerja')) {
+        window.appAuth = window.appAuth || {};
+        window.appAuth.canViewBelumBekerja = !!safePayload.can_view_belum_bekerja;
+    }
     alumniData = Array.isArray(safePayload.markers) ? safePayload.markers : [];
     window.alumniData = alumniData;
     window.studiLanjutData = Array.isArray(safePayload.studi_lanjut_markers)
@@ -893,10 +909,10 @@ function isDefaultStatusFilter(values) {
     const cleanValues = (values || [])
         .map(value => (value || '').toString())
         .filter(value => value !== '' && value !== 'semua');
+    const defaultValues = getDefaultStatusFilterValues();
 
-    return cleanValues.length === 2 &&
-        cleanValues.includes('bekerja') &&
-        cleanValues.includes('belum_bekerja');
+    return cleanValues.length === defaultValues.length &&
+        defaultValues.every(value => cleanValues.includes(value));
 }
 
 function getActiveFilterItems() {
@@ -1042,7 +1058,7 @@ function resetActiveFilterByKey(key) {
             setFilterSelectValue('filter-linearitas', 'semua');
             break;
         case 'status':
-            setFilterSelectValue('filter-status-kerja', ['bekerja', 'belum_bekerja']);
+            setFilterSelectValue('filter-status-kerja', getDefaultStatusFilterValues());
             break;
         case 'angkatan':
             setFilterSelectValue('filter-angkatan', 'semua');
@@ -1132,6 +1148,8 @@ function bindFilterEvents() {
     const resultsPanelEl = document.getElementById('search-results');
     const searchWrapEl = document.querySelector('.map-search-input-wrap');
     const clearBtnEl = document.getElementById('btn-clear-search');
+    const filterToggleBtn = document.getElementById('toggle-filter');
+    const filterBodyPanelEl = document.getElementById('filter-body');
 
     const setPanelCollapsed = (collapsed) => {
         if (!filterPanel) {
@@ -1180,6 +1198,30 @@ function bindFilterEvents() {
         resultsPanelEl.innerHTML = `<div class="result-helper">${message}</div>`;
         openSearchPanel();
     };
+
+    const setFilterChoicesOpen = (open) => {
+        if (!filterBodyPanelEl) {
+            return;
+        }
+
+        const isOpen = !!open;
+        filterBodyPanelEl.classList.toggle('hidden', !isOpen);
+
+        if (filterToggleBtn) {
+            filterToggleBtn.setAttribute('aria-expanded', isOpen.toString());
+        }
+    };
+
+    const closeFilterChoices = () => {
+        setFilterChoicesOpen(false);
+    };
+
+    if (filterToggleBtn && filterBodyPanelEl) {
+        filterToggleBtn.setAttribute(
+            'aria-expanded',
+            (!filterBodyPanelEl.classList.contains('hidden')).toString()
+        );
+    }
 
     const syncClearButton = () => {
         syncSearchClearButtonState();
@@ -1338,11 +1380,28 @@ function bindFilterEvents() {
         });
     }
 
-    document.getElementById('toggle-filter')
-        ?.addEventListener('click', function () {
-            document.getElementById('filter-body')
-                ?.classList.toggle('hidden');
-        });
+    filterToggleBtn?.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const isCurrentlyOpen = !!filterBodyPanelEl && !filterBodyPanelEl.classList.contains('hidden');
+        setFilterChoicesOpen(!isCurrentlyOpen);
+    });
+
+    // Klik di luar card filter menutup pilihan filter, tanpa mengubah keyword/search bar.
+    document.addEventListener('pointerdown', function (event) {
+        if (!filterBodyPanelEl || filterBodyPanelEl.classList.contains('hidden')) {
+            return;
+        }
+
+        const target = event.target;
+        const clickedInsideFilterChoices = filterBodyPanelEl.contains(target);
+        const clickedOnFilterToggle = !!filterToggleBtn && filterToggleBtn.contains(target);
+
+        if (!clickedInsideFilterChoices && !clickedOnFilterToggle) {
+            closeFilterChoices();
+        }
+    });
 
     document.getElementById('toggle-advanced-filter')
         ?.addEventListener('click', function () {
@@ -1889,12 +1948,13 @@ window.syncCustomSelectValue = function (selectId, value) {
 };
 
 window.resetSemuaFilter = function () {
+    const defaultStatusValues = getDefaultStatusFilterValues();
 
     if (typeof window.syncCustomSelectValue === 'function') {
         window.syncCustomSelectValue('search-category', 'semua');
         window.syncCustomSelectValue('filter-linearitas', 'semua');
         window.syncCustomSelectValue('filter-bidang', 'semua');
-        window.syncCustomSelectValue('filter-status-kerja', ['bekerja', 'belum_bekerja']);
+        window.syncCustomSelectValue('filter-status-kerja', defaultStatusValues);
         window.syncCustomSelectValue('filter-tahun', 'semua');
         window.syncCustomSelectValue('filter-angkatan', 'semua');
         window.syncCustomSelectValue('filter-wilayah', '');
@@ -1918,7 +1978,7 @@ window.resetSemuaFilter = function () {
             if (element) {
                 if (id === 'filter-status-kerja') {
                     Array.from(element.options || []).forEach(function (opt) {
-                        opt.selected = (opt.value === 'bekerja' || opt.value === 'belum_bekerja');
+                        opt.selected = defaultStatusValues.includes(opt.value);
                     });
                 } else if (id === 'visualization-mode-ui' || id === 'filter-visualization-mode') {
                     element.value = 'marker';
@@ -2709,12 +2769,13 @@ function filterDanTampilkanMarker() {
     const statusFilterIsSemua =
         statusFilters.length === 0 || statusFilters.includes('semua');
 
+    const defaultStatusValues = getDefaultStatusFilterValues();
+    const cleanStatusFilters = statusFilters.filter(v => v !== 'semua');
     const statusFilterIsDefault =
         !statusFilterIsSemua &&
-        statusFilters.includes('bekerja') &&
-        statusFilters.includes('belum_bekerja') &&
+        defaultStatusValues.every(value => statusFilters.includes(value)) &&
         !statusFilters.includes('studi_lanjut') &&
-        statusFilters.filter(v => v !== 'semua').length === 2;
+        cleanStatusFilters.length === defaultStatusValues.length;
 
     const tahunFilter =
         document.getElementById('filter-tahun')
@@ -3393,9 +3454,18 @@ function perbaruiLegendaStatus(jumlahTotalAlumni, jumlahBekerja, jumlahBelumBeke
     const totalEl = document.getElementById('legend-total-count');
     const multiJobEl = document.getElementById('legend-multijob-count');
     const studiEl = document.getElementById('legend-studi-count');
+    const belumItemEl = belumEl?.closest('.status-legend-item');
+    const canViewSensitiveStatus = canViewBelumBekerja();
 
     if (bekerjaEl) bekerjaEl.textContent = `(${jumlahBekerja} orang)`;
-    if (belumEl) belumEl.textContent = `(${jumlahBelumBekerja} orang)`;
+    if (belumEl) {
+        belumEl.textContent = canViewSensitiveStatus
+            ? `(${jumlahBelumBekerja} orang)`
+            : 'Login diperlukan';
+    }
+    if (belumItemEl) {
+        belumItemEl.classList.toggle('status-legend-item--locked', !canViewSensitiveStatus);
+    }
     if (totalEl) totalEl.textContent = `${jumlahTotalAlumni} orang`;
     if (multiJobEl) multiJobEl.textContent = `(${jumlahMultiJob ?? 0} orang)`;
     if (studiEl) studiEl.textContent = `(${jumlahStudiLanjut ?? 0} orang)`;

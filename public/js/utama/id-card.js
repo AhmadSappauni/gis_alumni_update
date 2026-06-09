@@ -41,6 +41,12 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
         }
 
+        if (!window.appAuth || !window.appAuth.isAdmin) {
+            editLinkEl.href = '#';
+            setHidden(editLinkEl, true);
+            return;
+        }
+
         const alumniId = (alumni?.alumni_id ?? alumni?.id ?? '').toString().trim();
         const urlTemplate = editLinkEl.dataset.editUrlTemplate || '';
 

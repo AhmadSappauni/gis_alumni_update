@@ -18,6 +18,11 @@
     
 </head>
 <body class="map-page">
+    @php
+        $authUser = auth()->user();
+        $canViewBelumBekerja = (bool) $authUser?->canViewSensitiveAlumniData();
+    @endphp
+
     @include('utama.filter-panel')
     <div id="map"></div>
 
@@ -47,11 +52,11 @@
             <span>Alumni Bekerja</span>
             <b id="legend-bekerja-count">0</b>
         </div>
-        <div class="status-legend-item">
+        <div class="status-legend-item {{ $canViewBelumBekerja ? '' : 'status-legend-item--locked' }}">
             <img src="{{ asset('img/icon alumni nganggur.png') }}" alt="Alumni Belum Bekerja">
             {{-- <img src="https://jmogfydhlafcuoknkcrg.supabase.co/storage/v1/object/public/alumni/icon%20alumni%20nganggur.png" alt="Alumni Belum Bekerja"> --}}
             <span>Alumni Belum Bekerja</span>
-            <b id="legend-belum-count">0</b>
+            <b id="legend-belum-count">{{ $canViewBelumBekerja ? '0' : 'Login diperlukan' }}</b>
         </div>
         <div class="status-legend-item">
             <img src="{{ asset('img/icon sampingan.png') }}" alt="Multi-Job">
@@ -95,6 +100,12 @@
     <script src="https://cdn.jsdelivr.net/npm/leaflet-betterscale@1.0.0/L.Control.BetterScale.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-minimap/3.6.1/Control.MiniMap.min.js"></script>
     <script>
+        window.appAuth = {
+            isAuthenticated: @json(auth()->check()),
+            role: @json($authUser?->role),
+            isAdmin: @json((bool) $authUser?->isAdmin()),
+            canViewBelumBekerja: @json($canViewBelumBekerja)
+        };
         window.mapDataUrl = @json($mapDataUrl ?? route('map.data'));
         window.mapPayload = @json($mapPayload ?? []);
         var alumniData = window.mapPayload.markers || [];

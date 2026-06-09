@@ -8,6 +8,8 @@ use App\Http\Controllers\PublicStatistikController;
 use App\Http\Controllers\NominatimController;
 use App\Http\Controllers\WilayahController;
 use App\Http\Controllers\LandingController;
+use App\Http\Controllers\PostgisDemoController;
+use App\Http\Controllers\AuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -44,6 +46,15 @@ Route::get('/nominatim/reverse', [NominatimController::class, 'reverse'])->name(
 
 Route::get('/api/wilayah-kalsel', [WilayahController::class, 'index'])->name('api.wilayah-kalsel');
 
+/*
+|--------------------------------------------------------------------------
+| INTERNAL POSTGIS DEMO
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/postgis', [PostgisDemoController::class, 'index'])->name('postgis-demo.index');
+Route::get('/postgis-demo-rahasia/data', [PostgisDemoController::class, 'data'])->name('postgis-demo.data');
+
 
 /*
 |--------------------------------------------------------------------------
@@ -54,6 +65,21 @@ Route::get('/api/wilayah-kalsel', [WilayahController::class, 'index'])->name('ap
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 Route::redirect('/welcome', '/', 301);
 
+/*
+|--------------------------------------------------------------------------
+| AUTH
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])->name('login.store');
+});
+
+Route::post('/logout', [AuthController::class, 'logout'])
+    ->middleware('auth')
+    ->name('logout');
+
 
 /*
 |--------------------------------------------------------------------------
@@ -61,7 +87,7 @@ Route::redirect('/welcome', '/', 301);
 |--------------------------------------------------------------------------
 */
 
-Route::prefix('admin')->group(function () {
+Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 
     Route::redirect('/', '/admin/statistik')
         ->name('admin.index');

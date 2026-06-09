@@ -41,8 +41,10 @@ class MapController extends Controller
     private function buildMapPayload(?Request $request = null): array
     {
         $filters = $this->getMapFilters($request);
+        $canViewBelumBekerja = $this->canViewBelumBekerja($request);
         $includeBekerja = $this->statusFilterIncludes($filters, 'bekerja');
-        $includeBelumBekerja = $this->statusFilterIncludes($filters, 'belum_bekerja')
+        $includeBelumBekerja = $canViewBelumBekerja
+            && $this->statusFilterIncludes($filters, 'belum_bekerja')
             && $this->canIncludeBelumBekerjaForFilters($filters);
         $includeStudiLanjut = $this->statusFilterIncludes($filters, 'studi_lanjut');
         $markers = collect();
@@ -350,6 +352,7 @@ class MapController extends Controller
             'total_belum_bekerja' => $belumCount,
             'total_multi_job' => $multiJobCount,
             'total_studi_lanjut' => $studiCount,
+            'can_view_belum_bekerja' => $canViewBelumBekerja,
             'markers' => $markers,
             'studi_lanjut_markers' => $studiLanjutMarkers,
         ];
@@ -383,9 +386,17 @@ class MapController extends Controller
             'total_belum_bekerja' => 0,
             'total_multi_job' => 0,
             'total_studi_lanjut' => 0,
+            'can_view_belum_bekerja' => $this->canViewBelumBekerja(),
             'markers' => [],
             'studi_lanjut_markers' => [],
         ];
+    }
+
+    private function canViewBelumBekerja(?Request $request = null): bool
+    {
+        $user = $request?->user() ?? auth()->user();
+
+        return (bool) $user?->canViewSensitiveAlumniData();
     }
 
     private function summaryFromPayload(array $payload): array

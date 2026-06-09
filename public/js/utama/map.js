@@ -934,6 +934,20 @@ fetch('/data/data_kalsel_simplified.geojson')
                             const bekerja = stats?.bekerja ?? 0;
                             const belum = stats?.belum_bekerja ?? 0;
                             const studi = stats?.studi_lanjut ?? 0;
+                            const canViewBelum = !!(window.appAuth && window.appAuth.canViewBelumBekerja);
+                            const belumStatHtml = canViewBelum
+                                ? `
+                                            <div class="wilayah-stat-item stat-belum">
+                                                <span class="stat-number">${belum}</span>
+                                                <span class="stat-label">Belum Bekerja</span>
+                                            </div>
+                                `
+                                : `
+                                            <div class="wilayah-stat-item stat-belum">
+                                                <span class="stat-number" style="font-size:11px;line-height:1.2;">Login</span>
+                                                <span class="stat-label">Diperlukan</span>
+                                            </div>
+                                `;
 
                             html = `
                                 <div class="wilayah-popup">
@@ -955,10 +969,7 @@ fetch('/data/data_kalsel_simplified.geojson')
                                                 <span class="stat-number">${bekerja}</span>
                                                 <span class="stat-label">Bekerja</span>
                                             </div>
-                                            <div class="wilayah-stat-item stat-belum">
-                                                <span class="stat-number">${belum}</span>
-                                                <span class="stat-label">Belum Bekerja</span>
-                                            </div>
+                                            ${belumStatHtml}
                                             <div class="wilayah-stat-item stat-studi">
                                                 <span class="stat-number">${studi}</span>
                                                 <span class="stat-label">Studi Lanjut</span>

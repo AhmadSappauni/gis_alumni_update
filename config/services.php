@@ -41,4 +41,8 @@ return [
         'user_agent' => env('NOMINATIM_USER_AGENT', 'gis_alumni_4/1.0 (Laravel; Nominatim proxy)'),
     ],
 
+    'postgis_demo' => [
+        'key' => env('POSTGIS_DEMO_KEY'),
+    ],
+
 ];
