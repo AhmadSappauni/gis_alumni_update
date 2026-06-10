@@ -2,12 +2,13 @@
 
 namespace App\Exports\Sheets;
 
+use App\Exports\Sheets\Concerns\StatistikSheetFormatter;
 use Maatwebsite\Excel\Concerns\FromArray;
-use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithTitle;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use Maatwebsite\Excel\Events\AfterSheet;
 
-class KetenagakerjaanSheet implements FromArray, WithTitle, WithStyles
+class KetenagakerjaanSheet implements FromArray, WithTitle, WithEvents
 {
     public function __construct(
         protected array $payload,
@@ -103,15 +104,16 @@ class KetenagakerjaanSheet implements FromArray, WithTitle, WithStyles
         return $rows;
     }
 
-    public function styles(Worksheet $sheet): array
+    public function registerEvents(): array
     {
-        $sheet->getColumnDimension('A')->setWidth(28);
-        $sheet->getColumnDimension('B')->setWidth(48);
-        $sheet->getColumnDimension('C')->setWidth(16);
-
         return [
-            1 => ['font' => ['bold' => true, 'size' => 12]],
+            AfterSheet::class => function (AfterSheet $event) {
+                StatistikSheetFormatter::styleSectionedSheet($event->sheet->getDelegate(), [
+                    'A' => 28,
+                    'B' => 48,
+                    'C' => 18,
+                ]);
+            },
         ];
     }
 }
-

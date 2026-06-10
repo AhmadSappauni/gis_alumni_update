@@ -1,5 +1,5 @@
 <div class="map-navigation-rail" aria-label="Navigasi">
-    <button class="rail-btn" id="open-sidebar" type="button" title="Menu" aria-label="Menu">
+    <button class="rail-btn" id="open-sidebar" type="button" title="Menu utama" aria-label="Menu utama" data-map-tooltip="Menu utama">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -14,6 +14,7 @@
         type="button"
         title="Direktori Alumni"
         aria-label="Direktori Alumni"
+        data-map-tooltip="Direktori alumni"
     >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -30,6 +31,7 @@
         class="rail-btn {{ request()->routeIs('statistik.*') ? 'active' : '' }}"
         title="Statistik Alumni"
         aria-label="Statistik Alumni"
+        data-map-tooltip="Statistik alumni"
     >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -43,15 +45,15 @@
 <div class="filter-panel" aria-label="Pencarian dan filter peta">
     <div class="map-search-panel">
         <div class="map-search-input-wrap">
-            <input type="text" id="search-input" placeholder="Ketik nama atau tempat kerja..." aria-label="Pencarian alumni">
-            <button id="btn-clear-search" type="button" class="map-clear-btn" title="Hapus" aria-label="Hapus" hidden>
+            <input type="text" id="search-input" placeholder="Ketik nama, NIM, atau tempat kerja..." aria-label="Pencarian alumni">
+            <button id="btn-clear-search" type="button" class="map-clear-btn" title="Hapus pencarian" aria-label="Hapus pencarian" data-map-tooltip="Hapus pencarian" hidden>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
             </button>
-            <button id="btn-search" type="button" class="map-search-btn" title="Cari" aria-label="Cari">
+            <button id="btn-search" type="button" class="map-search-btn" title="Cari alumni" aria-label="Cari alumni" data-map-tooltip="Cari alumni">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <circle cx="11" cy="11" r="8"></circle>
@@ -59,7 +61,7 @@
                 </svg>
             </button>
 
-            <button id="toggle-filter" type="button" class="map-filter-btn" title="Filter" aria-label="Filter">
+            <button id="toggle-filter" type="button" class="map-filter-btn" title="Filter data" aria-label="Filter data" data-map-tooltip="Filter data">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
@@ -67,7 +69,7 @@
                 <span id="active-filter-count" class="map-filter-count" hidden>0</span>
             </button>
 
-            <button id="collapse-filter-panel" type="button" class="map-collapse-btn" title="Tutup/Buka Panel" aria-expanded="true" aria-label="Tutup/Buka Panel">
+            <button id="collapse-filter-panel" type="button" class="map-collapse-btn" title="Tutup atau buka panel pencarian" aria-expanded="true" aria-label="Tutup atau buka panel pencarian" data-map-tooltip="Tutup atau buka panel">
                 <svg class="icon-collapse" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <polyline points="15 18 9 12 15 6"></polyline>
@@ -106,9 +108,9 @@
                     <label class="filter-label">Cari Berdasarkan:</label>
                     <select id="search-category" class="custom-select">
                         <option value="semua">Semua</option>
-                        <option value="nama">Nama</option>
-                        <option value="perusahaan">Tempat Kerja</option>
-                        <option value="wilayah">Wilayah</option>
+                        <option value="nama">Nama Alumni</option>
+                        <option value="nim">NIM Alumni</option>
+                        <option value="perusahaan">Nama Tempat Kerja Alumni</option>
                     </select>
                 </div>
 
@@ -146,7 +148,7 @@
                     <div id="advanced-filter-body" class="advanced-filter-body hidden">
                         <div class="advanced-filter-content">
                             <div class="filter-section">
-                                <label class="filter-label">Kesesuaian Bidang:</label>
+                                <label class="filter-label">Relevansi Bidang Kerja dengan Pendidikan:</label>
                                 <select id="filter-linearitas" class="custom-select">
                                     <option value="semua">Semua Kesesuaian</option>
                                     <option value="Sangat Erat">Sangat Erat</option>

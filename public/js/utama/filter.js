@@ -1,7 +1,7 @@
 ﻿// ======================================================
 // FILTER.JS FINAL PROFESSIONAL
 // Support:
-// ✔ Search alumni / perusahaan
+// ✔ Search alumni / NIM / perusahaan
 // ✔ Filter linearitas
 // ✔ Filter tahun lulus
 // ✔ Filter wilayah
@@ -303,6 +303,46 @@ function initMultiJobStorage() {
     if (!window.alumniDataById) {
         window.alumniDataById = {};
     }
+}
+
+function shouldConsumeLeafletActivation(e) {
+    if (typeof window.shouldSuppressMapFeatureClick !== 'function' || !window.shouldSuppressMapFeatureClick()) {
+        return false;
+    }
+
+    if (e?.originalEvent && typeof L !== 'undefined' && L.DomEvent && typeof L.DomEvent.stop === 'function') {
+        L.DomEvent.stop(e.originalEvent);
+    }
+
+    if (typeof map !== 'undefined' && map && typeof map.closePopup === 'function') {
+        map.closePopup();
+    }
+
+    return true;
+}
+
+function bindGuardedPopup(layer, content, options) {
+    if (!layer || typeof layer.bindPopup !== 'function') {
+        return layer;
+    }
+
+    layer.bindPopup(content, options);
+
+    if (typeof layer.off === 'function' && typeof layer._openPopup === 'function') {
+        layer.off('click', layer._openPopup, layer);
+    }
+
+    if (typeof layer.on === 'function' && typeof layer.openPopup === 'function') {
+        layer.on('click', function (e) {
+            if (shouldConsumeLeafletActivation(e)) {
+                return;
+            }
+
+            layer.openPopup(e?.latlng);
+        });
+    }
+
+    return layer;
 }
 
 function clearMultiJobLayers() {
@@ -811,7 +851,8 @@ function toggleMultiJobLayers(alumniId) {
             </div>
         `;
 
-        const marker = L.marker([lat, lng], { icon: sideIcon }).bindPopup(popup);
+        const marker = L.marker([lat, lng], { icon: sideIcon });
+        bindGuardedPopup(marker, popup);
 
         bindTooltipDenganDelay(
             marker,
@@ -852,7 +893,7 @@ function getCariBerdasarkanScopes() {
     const select = document.getElementById('search-category');
 
     if (!select) {
-        return { nama: true, perusahaan: true, wilayah: true, isSemua: true };
+        return { nama: true, nim: true, perusahaan: true, isSemua: true };
     }
 
     const values = Array.from(select.selectedOptions || [])
@@ -862,13 +903,13 @@ function getCariBerdasarkanScopes() {
     const isSemua = values.length === 0 || values.includes('semua');
 
     if (isSemua) {
-        return { nama: true, perusahaan: true, wilayah: true, isSemua: true };
+        return { nama: true, nim: true, perusahaan: true, isSemua: true };
     }
 
     return {
         nama: values.includes('nama'),
+        nim: values.includes('nim'),
         perusahaan: values.includes('perusahaan'),
-        wilayah: values.includes('wilayah'),
         isSemua: false
     };
 }
@@ -1150,6 +1191,8 @@ function bindFilterEvents() {
     const clearBtnEl = document.getElementById('btn-clear-search');
     const filterToggleBtn = document.getElementById('toggle-filter');
     const filterBodyPanelEl = document.getElementById('filter-body');
+    let pendingDismissedClick = false;
+    let pendingDismissTimer = null;
 
     const setPanelCollapsed = (collapsed) => {
         if (!filterPanel) {
@@ -1216,6 +1259,180 @@ function bindFilterEvents() {
         setFilterChoicesOpen(false);
     };
 
+    const isSearchPanelOpen = () =>
+        !!resultsPanelEl && !resultsPanelEl.classList.contains('is-hidden');
+
+    const isFilterChoicesOpen = () =>
+        !!filterBodyPanelEl && !filterBodyPanelEl.classList.contains('hidden');
+
+    const closeCustomDropdowns = () => {
+        document.querySelectorAll('.custom-dropdown-options.open')
+            .forEach(x => x.classList.remove('open'));
+
+        document.querySelectorAll('.custom-dropdown-trigger.active')
+            .forEach(x => x.classList.remove('active'));
+    };
+
+    const closeLayerControlMenu = () => {
+        const layerMenu = document.getElementById('layer-control-menu');
+        if (layerMenu) {
+            layerMenu.classList.add('hidden');
+        }
+    };
+
+    const closeLeafletPopup = () => {
+        if (typeof map !== 'undefined' && map && typeof map.closePopup === 'function') {
+            map.closePopup();
+        }
+    };
+
+    const getOpenCustomDropdownRoots = () =>
+        Array.from(document.querySelectorAll('.custom-dropdown-options.open'))
+            .map(el => el.closest('.custom-dropdown-wrapper') || el)
+            .filter(Boolean);
+
+    const getOpenLayerControlRoot = () => {
+        const menu = document.getElementById('layer-control-menu');
+        if (!menu || menu.classList.contains('hidden')) {
+            return null;
+        }
+
+        return document.getElementById('layer-control-panel') || menu;
+    };
+
+    const getActiveDismissRoots = () => {
+        const roots = [];
+
+        if ((isSearchPanelOpen() || isFilterChoicesOpen()) && filterPanel) {
+            roots.push(filterPanel);
+        }
+
+        if (isSearchPanelOpen()) {
+            if (resultsPanelEl) roots.push(resultsPanelEl);
+            if (searchWrapEl) roots.push(searchWrapEl);
+        }
+
+        if (isFilterChoicesOpen()) {
+            if (filterBodyPanelEl) roots.push(filterBodyPanelEl);
+            if (filterToggleBtn) roots.push(filterToggleBtn);
+        }
+
+        getOpenCustomDropdownRoots().forEach(root => roots.push(root));
+
+        const layerRoot = getOpenLayerControlRoot();
+        if (layerRoot) {
+            roots.push(layerRoot);
+        }
+
+        document.querySelectorAll('.leaflet-popup')
+            .forEach(popup => roots.push(popup));
+
+        return roots;
+    };
+
+    const hasDismissibleUiOpen = () =>
+        isSearchPanelOpen() ||
+        isFilterChoicesOpen() ||
+        getOpenCustomDropdownRoots().length > 0 ||
+        !!getOpenLayerControlRoot() ||
+        !!document.querySelector('.leaflet-popup');
+
+    const isSearchToFilterShortcut = (target) =>
+        isSearchPanelOpen() &&
+        !isFilterChoicesOpen() &&
+        !document.querySelector('.leaflet-popup') &&
+        getOpenCustomDropdownRoots().length === 0 &&
+        !getOpenLayerControlRoot() &&
+        !!filterToggleBtn &&
+        !!target?.closest &&
+        filterToggleBtn.contains(target.closest('#toggle-filter'));
+
+    const isInsideActiveDismissRoot = (target) =>
+        getActiveDismissRoots().some(root => root && root.contains(target));
+
+    const closeDismissibleUi = () => {
+        closeSearchPanel({ clearResults: false });
+        closeFilterChoices();
+        closeCustomDropdowns();
+        closeLayerControlMenu();
+        closeLeafletPopup();
+    };
+
+    const markDismissedClick = () => {
+        pendingDismissedClick = true;
+        window.__mapDismissClickUntil = Date.now() + 450;
+
+        if (pendingDismissTimer) {
+            clearTimeout(pendingDismissTimer);
+        }
+
+        pendingDismissTimer = setTimeout(function () {
+            pendingDismissedClick = false;
+            window.__mapDismissClickUntil = 0;
+        }, 450);
+    };
+
+    window.shouldSuppressMapFeatureClick = function () {
+        return pendingDismissedClick || Date.now() < (window.__mapDismissClickUntil || 0);
+    };
+
+    const consumeDismissalEvent = (event) => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+    };
+
+    const dismissFromOutsideInteraction = (event) => {
+        if (event.button !== undefined && event.button !== 0) {
+            return false;
+        }
+
+        if (pendingDismissedClick) {
+            consumeDismissalEvent(event);
+            return true;
+        }
+
+        const target = event.target;
+        if (!target || !hasDismissibleUiOpen()) {
+            return false;
+        }
+
+        if (isSearchToFilterShortcut(target) || isInsideActiveDismissRoot(target)) {
+            return false;
+        }
+
+        closeDismissibleUi();
+        markDismissedClick();
+        consumeDismissalEvent(event);
+        return true;
+    };
+
+    document.addEventListener('pointerdown', function (event) {
+        dismissFromOutsideInteraction(event);
+    }, true);
+
+    document.addEventListener('mousedown', function (event) {
+        dismissFromOutsideInteraction(event);
+    }, true);
+
+    document.addEventListener('touchstart', function (event) {
+        dismissFromOutsideInteraction(event);
+    }, true);
+
+    document.addEventListener('click', function (event) {
+        if (pendingDismissedClick) {
+            consumeDismissalEvent(event);
+
+            if (pendingDismissTimer) {
+                clearTimeout(pendingDismissTimer);
+            }
+
+            pendingDismissTimer = setTimeout(function () {
+                pendingDismissedClick = false;
+                window.__mapDismissClickUntil = 0;
+            }, 80);
+        }
+    }, true);
+
     if (filterToggleBtn && filterBodyPanelEl) {
         filterToggleBtn.setAttribute(
             'aria-expanded',
@@ -1266,16 +1483,7 @@ function bindFilterEvents() {
 
     document.getElementById('search-category')
         ?.addEventListener('change', function () {
-            const keyword =
-                document.getElementById('search-input')
-                    ?.value.trim() || '';
-
-            const scopes = getCariBerdasarkanScopes();
-
-            if (
-                (!scopes.wilayah || keyword === '') &&
-                typeof window.resetHighlightWilayah === 'function'
-            ) {
+            if (typeof window.resetHighlightWilayah === 'function') {
                 window.resetHighlightWilayah();
             }
 
@@ -1365,7 +1573,7 @@ function bindFilterEvents() {
             if (k.length >= 2) {
                 openSearchPanel();
             } else if (k.length === 1) {
-                renderSearchHelper('Ketik minimal 2 huruf untuk mencari alumni atau tempat kerja.');
+                renderSearchHelper('Ketik minimal 2 huruf untuk mencari nama, NIM, atau tempat kerja.');
             }
         });
 
@@ -1385,6 +1593,10 @@ function bindFilterEvents() {
         e.stopPropagation();
 
         const isCurrentlyOpen = !!filterBodyPanelEl && !filterBodyPanelEl.classList.contains('hidden');
+        if (isSearchPanelOpen()) {
+            closeSearchPanel({ clearResults: false });
+        }
+
         setFilterChoicesOpen(!isCurrentlyOpen);
     });
 
@@ -1468,9 +1680,6 @@ function bindFilterEvents() {
 }
 
 function handleSearchSubmit() {
-
-    const scopes = getCariBerdasarkanScopes();
-
     const inputEl = document.getElementById('search-input');
     const keyword = (inputEl?.value ?? '').toString().trim();
 
@@ -1494,7 +1703,7 @@ function handleSearchSubmit() {
     if (keyword.length < 2) {
         const container = document.getElementById('search-results');
         if (container) {
-            container.innerHTML = `<div class="result-helper">Ketik minimal 2 huruf untuk mencari alumni atau tempat kerja.</div>`;
+            container.innerHTML = `<div class="result-helper">Ketik minimal 2 huruf untuk mencari nama, NIM, atau tempat kerja.</div>`;
             container.classList.remove('is-hidden');
         }
         window.__SEARCH_KEYWORD_OVERRIDE__ = '';
@@ -1511,44 +1720,11 @@ function handleSearchSubmit() {
     const btn = document.getElementById('btn-clear-search');
     if (btn) btn.hidden = false;
 
-    if (keyword === '' && typeof window.resetHighlightWilayah === 'function') {
-        window.resetHighlightWilayah();
-    }
-
-    let berhasilZoom = false;
-
-    if (scopes.wilayah && keyword !== '') {
-        berhasilZoom =
-            typeof window.cariWilayahDanZoom === 'function' &&
-            window.cariWilayahDanZoom(keyword);
-    } else if (typeof window.resetHighlightWilayah === 'function') {
+    if (typeof window.resetHighlightWilayah === 'function') {
         window.resetHighlightWilayah();
     }
 
     filterDanTampilkanMarker();
-
-    // Tampilkan pesan khusus hanya jika mode pencarian memang wilayah saja
-    const wilayahSaja = scopes.wilayah && !scopes.nama && !scopes.perusahaan;
-
-    if (wilayahSaja && keyword !== '') {
-        if (berhasilZoom) {
-            const container =
-                document.getElementById('search-results');
-
-            if (container) {
-                container.innerHTML =
-                    `<div class="result-count">Menampilkan wilayah: ${keyword}</div>`;
-            }
-        } else {
-            const container =
-                document.getElementById('search-results');
-
-            if (container && container.innerHTML.trim() === '') {
-                container.innerHTML =
-                    `<div class="result-empty">Tidak ada alumni di wilayah "${keyword}".</div>`;
-            }
-        }
-    }
 }
 
 function populateBidangFilter() {
@@ -2316,7 +2492,7 @@ function createCoordinateStackMarker(stack) {
         zIndexOffset: 700
     });
 
-    marker.bindPopup(buildCoordinateStackPopup(entries), {
+    bindGuardedPopup(marker, buildCoordinateStackPopup(entries), {
         className: 'coordinate-stack-popup-wrap',
         maxWidth: 330,
         minWidth: 260
@@ -2865,31 +3041,14 @@ function filterDanTampilkanMarker() {
         if (keyword !== '' && !keywordSudahDifilterServer) {
 
             const n = nama.toLowerCase();
+            const nim = (item.nim || '').toString().toLowerCase();
             const p = perusahaan.toLowerCase();
-            const teksWilayahPencarian = [
-                item.kota || '',
-                item.provinsi || '',
-                alamatLengkap || '',
-                perusahaan || ''
-            ].join(' ').toLowerCase();
 
             const cocokNama = scopes.nama && n.includes(keyword);
+            const cocokNim = scopes.nim && nim.includes(keyword);
             const cocokPerusahaan = scopes.perusahaan && p.includes(keyword);
 
-            let cocokWilayah = false;
-            if (scopes.wilayah) {
-                // Pencocokan wilayah dibuat ketat (frasa utuh) agar tidak match "Banjar" -> "Banjarbaru"
-                const kotaWilayah = item.kota || '';
-                const provinsiWilayah = item.provinsi || '';
-
-                cocokWilayah =
-                    cocokFrasaWilayah(kotaWilayah, keyword) ||
-                    (kotaWilayah === '' && cocokFrasaWilayah(alamatLengkap || '', keyword)) ||
-                    cocokFrasaWilayah(provinsiWilayah, keyword) ||
-                    cocokFrasaWilayah(teksWilayahPencarian, keyword);
-            }
-
-            cocokKeyword = cocokNama || cocokPerusahaan || cocokWilayah;
+            cocokKeyword = cocokNama || cocokNim || cocokPerusahaan;
         }
 
         const cocokLinearitas =
@@ -3051,7 +3210,7 @@ function filterDanTampilkanMarker() {
             </div>
         `;
 
-        marker.bindPopup(popup);
+        bindGuardedPopup(marker, popup);
         const tooltipTempat =
             statusKerja === 'Belum Bekerja'
                 ? 'Belum Bekerja'
@@ -3193,6 +3352,7 @@ function filterDanTampilkanMarker() {
             let cocokKeyword = true;
             if (keyword !== '' && !keywordSudahDifilterServer) {
                 const n = (nama || '').toLowerCase();
+                const nim = (row.nim || '').toString().toLowerCase();
 
                 const teksInstansi = [
                     kampus || '',
@@ -3200,24 +3360,11 @@ function filterDanTampilkanMarker() {
                     programStudi || ''
                 ].join(' ').toLowerCase();
 
-                const teksWilayah = [
-                    row.kota_kampus || '',
-                    row.provinsi_kampus || '',
-                    row.alamat_kampus || ''
-                ].join(' ').toLowerCase();
-
                 const cocokNama = scopes.nama && n.includes(keyword);
+                const cocokNim = scopes.nim && nim.includes(keyword);
                 const cocokInstansi = scopes.perusahaan && teksInstansi.includes(keyword);
 
-                let cocokWilayah = false;
-                if (scopes.wilayah) {
-                    cocokWilayah =
-                        cocokFrasaWilayah(row.kota_kampus || '', keyword) ||
-                        cocokFrasaWilayah(row.provinsi_kampus || '', keyword) ||
-                        cocokFrasaWilayah(teksWilayah, keyword);
-                }
-
-                cocokKeyword = cocokNama || cocokInstansi || cocokWilayah;
+                cocokKeyword = cocokNama || cocokNim || cocokInstansi;
             }
 
             let cocokTahun = true;
@@ -3338,7 +3485,7 @@ function filterDanTampilkanMarker() {
                 </div>
             `;
 
-            marker.bindPopup(popup);
+            bindGuardedPopup(marker, popup);
 
             bindTooltipDenganDelay(marker, `
                 <div><b>${nama}</b></div>
@@ -3429,7 +3576,7 @@ function filterDanTampilkanMarker() {
         container.classList.add('is-hidden');
     } else if (keywordTrimmed.length < 2) {
         container.classList.remove('is-hidden');
-        container.innerHTML = `<div class="result-helper">Ketik minimal 2 huruf untuk mencari alumni atau tempat kerja.</div>`;
+        container.innerHTML = `<div class="result-helper">Ketik minimal 2 huruf untuk mencari nama, NIM, atau tempat kerja.</div>`;
     } else if (jumlah > 0) {
         container.classList.remove('is-hidden');
         container.innerHTML =

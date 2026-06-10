@@ -93,6 +93,7 @@
     @include('utama.daftar-alumni')
     @include('utama.id-card')
     @include('utama.cluster')
+    @include('utama.map-guide')
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
@@ -117,6 +118,7 @@
     <script src="{{ asset('js/utama/daftar-alumni.js') }}"></script>
     <script src="{{ asset('js/utama/id-card.js') }}"></script>
     <script src="{{ asset('js/utama/cluster.js') }}"></script>
+    <script src="{{ asset('js/utama/map-guide.js') }}"></script>
     
 </body>
 </html>

@@ -2,15 +2,25 @@
 
 namespace App\Exports\Sheets;
 
+use App\Exports\Sheets\Concerns\StatistikSheetFormatter;
 use App\Models\RiwayatPekerjaan;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromArray;
+use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Cell\Cell;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\Cell\DefaultValueBinder;
 
-class DataAlumniDetailSheet implements FromArray, WithHeadings, WithTitle, WithEvents
+class DataAlumniDetailSheet extends DefaultValueBinder implements
+    FromArray,
+    WithHeadings,
+    WithTitle,
+    WithEvents,
+    WithCustomValueBinder
 {
     public function __construct(protected Collection $alumni)
     {
@@ -19,6 +29,16 @@ class DataAlumniDetailSheet implements FromArray, WithHeadings, WithTitle, WithE
     public function title(): string
     {
         return 'Data Alumni Detail';
+    }
+
+    public function bindValue(Cell $cell, $value): bool
+    {
+        if ($cell->getColumn() === 'C' && $cell->getRow() > 1) {
+            $cell->setValueExplicit((string) $value, DataType::TYPE_STRING);
+            return true;
+        }
+
+        return parent::bindValue($cell, $value);
     }
 
     protected function pickMainJob($jobs): ?RiwayatPekerjaan
@@ -120,7 +140,7 @@ class DataAlumniDetailSheet implements FromArray, WithHeadings, WithTitle, WithE
             $kampus = '-';
             if ($alumni->studiLanjut && $alumni->studiLanjut->isNotEmpty()) {
                 $first = $alumni->studiLanjut->sortByDesc('tahun_masuk')->first();
-                $kampus = $first?->nama_kampus ?? '-';
+                $kampus = $first?->kampus ?? '-';
             }
 
             $rows[] = [
@@ -151,9 +171,8 @@ class DataAlumniDetailSheet implements FromArray, WithHeadings, WithTitle, WithE
     {
         return [
             AfterSheet::class => function (AfterSheet $event) {
-                $event->sheet->freezePane('A2');
+                StatistikSheetFormatter::styleDetailSheet($event->sheet->getDelegate());
             },
         ];
     }
 }
-

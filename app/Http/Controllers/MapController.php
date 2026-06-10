@@ -251,7 +251,7 @@ class MapController extends Controller
                 ])
                 ->with([
                     'alumni' => function ($q) {
-                        $q->select(['id', 'nama_lengkap']);
+                        $q->select(['id', 'nim', 'nama_lengkap']);
                     },
                     'alumni.akademik' => function ($q) {
                         $q->select(['id', 'alumni_id', 'angkatan', 'tahun_lulus']);
@@ -277,6 +277,7 @@ class MapController extends Controller
 
                 $studiLanjutMarkers->push([
                     'alumni_id' => $alumni->id,
+                    'nim' => $alumni->nim,
                     'nama_lengkap' => $alumni->nama_lengkap,
                     'tahun_lulus_alumni' => $alumni->akademik?->tahun_lulus,
                     'angkatan' => $alumni->akademik?->angkatan,
@@ -697,36 +698,14 @@ class MapController extends Controller
                     $this->whereAnyLike($alumni, ['nama_lengkap'], $pattern);
                 });
             },
+            'nim' => function ($q, string $pattern) {
+                $q->whereHas('alumni', function ($alumni) use ($pattern) {
+                    $this->whereAnyLike($alumni, ['nim'], $pattern);
+                });
+            },
             'perusahaan' => function ($q, string $pattern) {
                 $q->whereHas('perusahaan', function ($perusahaan) use ($pattern) {
                     $this->whereAnyLike($perusahaan, ['nama_perusahaan'], $pattern);
-                });
-            },
-            'wilayah' => function ($q) use ($filters) {
-                $keywordWilayahIds = $this->resolveWilayahIdsFromKeyword($filters['keyword'] ?? '');
-
-                $q->where(function ($wilayah) use ($keywordWilayahIds) {
-                    $wilayah->whereHas('perusahaan.lokasiAktif', function ($lokasi) use ($keywordWilayahIds) {
-                        $this->wherePointWithinWilayahIds(
-                            $lokasi,
-                            'lokasi_perusahaan.geom::geometry',
-                            $keywordWilayahIds
-                        );
-                    })
-                    ->orWhere(function ($fallback) use ($keywordWilayahIds) {
-                        $fallback
-                            ->whereDoesntHave('perusahaan.lokasiAktif', function ($lokasi) {
-                                $lokasi->whereNotNull('latitude')
-                                    ->whereNotNull('longitude');
-                            })
-                            ->whereHas('alumni.alamat', function ($alamat) use ($keywordWilayahIds) {
-                                $this->wherePointWithinWilayahIds(
-                                    $alamat,
-                                    'alamat_alumni.geom::geometry',
-                                    $keywordWilayahIds
-                                );
-                            });
-                    });
                 });
             },
         ]);
@@ -750,16 +729,8 @@ class MapController extends Controller
             'nama' => function ($q, string $pattern) {
                 $this->whereAnyLike($q, ['nama_lengkap'], $pattern);
             },
-            'wilayah' => function ($q) use ($filters) {
-                $keywordWilayahIds = $this->resolveWilayahIdsFromKeyword($filters['keyword'] ?? '');
-
-                $q->whereHas('alamat', function ($alamat) use ($keywordWilayahIds) {
-                    $this->wherePointWithinWilayahIds(
-                        $alamat,
-                        'alamat_alumni.geom::geometry',
-                        $keywordWilayahIds
-                    );
-                });
+            'nim' => function ($q, string $pattern) {
+                $this->whereAnyLike($q, ['nim'], $pattern);
             },
         ]);
     }
@@ -774,17 +745,13 @@ class MapController extends Controller
                     $this->whereAnyLike($alumni, ['nama_lengkap'], $pattern);
                 });
             },
+            'nim' => function ($q, string $pattern) {
+                $q->whereHas('alumni', function ($alumni) use ($pattern) {
+                    $this->whereAnyLike($alumni, ['nim'], $pattern);
+                });
+            },
             'perusahaan' => function ($q, string $pattern) {
                 $this->whereAnyLike($q, ['kampus', 'jenjang', 'program_studi'], $pattern);
-            },
-            'wilayah' => function ($q) use ($filters) {
-                $keywordWilayahIds = $this->resolveWilayahIdsFromKeyword($filters['keyword'] ?? '');
-
-                $this->wherePointWithinWilayahIds(
-                    $q,
-                    'ST_SetSRID(ST_MakePoint(studi_lanjut.longitude, studi_lanjut.latitude), 4326)',
-                    $keywordWilayahIds
-                );
             },
         ]);
     }
@@ -799,18 +766,10 @@ class MapController extends Controller
         $pattern = $this->likePattern($keyword);
         $scopes = $this->activeSearchScopes($filters);
 
-        if ($this->shouldPreferWilayahKeywordSearch($filters)) {
-            $scopes = [
-                'nama' => false,
-                'perusahaan' => false,
-                'wilayah' => true,
-            ];
-        }
-
         $query->where(function ($outer) use ($callbacks, $pattern, $scopes) {
             $hasCondition = false;
 
-            foreach (['nama', 'perusahaan', 'wilayah'] as $scope) {
+            foreach (['nama', 'nim', 'perusahaan'] as $scope) {
                 if (!($scopes[$scope] ?? false) || !isset($callbacks[$scope])) {
                     continue;
                 }
@@ -927,19 +886,6 @@ class MapController extends Controller
         return $this->wilayahKeywordIdCache[$normalizedKeyword] = $ids;
     }
 
-    private function shouldPreferWilayahKeywordSearch(array $filters): bool
-    {
-        $keyword = $filters['keyword'] ?? '';
-        if ($keyword === '') {
-            return false;
-        }
-
-        $selectedScopes = $filters['search_scopes'] ?? [];
-
-        return empty($selectedScopes)
-            && !empty($this->resolveWilayahIdsFromKeyword($keyword));
-    }
-
     private function likePattern(string $keyword): string
     {
         return '%' . strtolower($keyword) . '%';
@@ -1039,10 +985,10 @@ class MapController extends Controller
         $matchesCompany = $scopes['perusahaan']
             && $this->textContains([$item['perusahaan'] ?? ''], $keyword);
 
-        $matchesRegion = $scopes['wilayah']
-            && !empty($this->resolveWilayahIdsFromKeyword($keyword));
+        $matchesNim = $scopes['nim']
+            && $this->textContains([$item['nim'] ?? ''], $keyword);
 
-        return $matchesName || $matchesCompany || $matchesRegion;
+        return $matchesName || $matchesNim || $matchesCompany;
     }
 
     private function keywordMatchesStudyMarker(array $item, array $filters): bool
@@ -1064,10 +1010,10 @@ class MapController extends Controller
                 $item['program_studi'] ?? '',
             ], $keyword);
 
-        $matchesRegion = $scopes['wilayah']
-            && !empty($this->resolveWilayahIdsFromKeyword($keyword));
+        $matchesNim = $scopes['nim']
+            && $this->textContains([$item['nim'] ?? ''], $keyword);
 
-        return $matchesName || $matchesInstitution || $matchesRegion;
+        return $matchesName || $matchesNim || $matchesInstitution;
     }
 
     private function activeSearchScopes(array $filters): array
@@ -1077,8 +1023,8 @@ class MapController extends Controller
 
         return [
             'nama' => $isAll || in_array('nama', $selected, true),
+            'nim' => $isAll || in_array('nim', $selected, true),
             'perusahaan' => $isAll || in_array('perusahaan', $selected, true),
-            'wilayah' => $isAll || in_array('wilayah', $selected, true),
         ];
     }
 

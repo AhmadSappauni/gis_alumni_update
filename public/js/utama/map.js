@@ -63,6 +63,7 @@ const ResetControl = L.Control.extend({
         link.title = 'Reset Peta';
         link.setAttribute('role', 'button');
         link.setAttribute('aria-label', 'Reset Peta');
+        link.setAttribute('data-map-tooltip', 'Reset tampilan peta');
         link.innerHTML = '⟲';
 
         L.DomEvent.disableClickPropagation(container);
@@ -920,6 +921,13 @@ fetch('/data/data_kalsel_simplified.geojson')
 
                 const polygonEvents = {
                     click: function (e) {
+                        if (typeof window.shouldSuppressMapFeatureClick === 'function' && window.shouldSuppressMapFeatureClick()) {
+                            if (e?.originalEvent && L.DomEvent && typeof L.DomEvent.stop === 'function') {
+                                L.DomEvent.stop(e.originalEvent);
+                            }
+                            return;
+                        }
+
                         const mode = (window.visualizationMode || 'marker').toString();
                         const namaWilayah = getNamaWilayah(feature);
                         const key = getKeyWilayah(namaWilayah);

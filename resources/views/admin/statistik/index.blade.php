@@ -33,10 +33,10 @@
                 </svg>
             </button>
             <button id="stat-export-pdf" class="btn-export" type="button" title="Export PDF laporan statistik">
-                Export PDF
+                Export Laporan PDF
             </button>
             <button id="stat-export-excel" class="btn-export" type="button" title="Export Excel laporan statistik">
-                Export Excel
+                Export Laporan Excel
             </button>
         </div>
     </header>

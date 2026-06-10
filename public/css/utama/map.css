@@ -247,7 +247,7 @@ body {
     position: fixed;
     /* Turunkan sedikit agar tidak menutupi panel polygon (top-right) */
     top: 8px;
-    right: 67px;
+    right: 116px;
     z-index: 900;
     width: 84px;
     height: 84px;

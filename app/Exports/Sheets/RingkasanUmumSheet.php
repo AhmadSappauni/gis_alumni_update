@@ -2,12 +2,13 @@
 
 namespace App\Exports\Sheets;
 
+use App\Exports\Sheets\Concerns\StatistikSheetFormatter;
 use Maatwebsite\Excel\Concerns\FromArray;
-use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithTitle;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use Maatwebsite\Excel\Events\AfterSheet;
 
-class RingkasanUmumSheet implements FromArray, WithTitle, WithStyles
+class RingkasanUmumSheet implements FromArray, WithTitle, WithEvents
 {
     public function __construct(
         protected array $payload,
@@ -75,16 +76,12 @@ class RingkasanUmumSheet implements FromArray, WithTitle, WithStyles
         return $rows;
     }
 
-    public function styles(Worksheet $sheet): array
+    public function registerEvents(): array
     {
-        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
-        $sheet->getStyle('A2')->getFont()->setBold(true);
-        $sheet->getColumnDimension('A')->setWidth(38);
-        $sheet->getColumnDimension('B')->setWidth(60);
-
         return [
-            8 => ['font' => ['bold' => true]],
-            9 => ['font' => ['bold' => true], 'fill' => ['fillType' => 'solid', 'color' => ['rgb' => 'F1F5F9']]],
+            AfterSheet::class => function (AfterSheet $event) {
+                StatistikSheetFormatter::styleSummarySheet($event->sheet->getDelegate());
+            },
         ];
     }
 }

@@ -66,7 +66,7 @@
             flex-shrink: 0;
         }
         .lp-nav-brand-text { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.02em; }
-        .lp-nav-links { display: flex; align-items: center; gap: 2rem; }
+        .lp-nav-links { display: flex; align-items: center; gap: 1.5rem; }
         .lp-nav-link {
             font-size: 0.9rem; font-weight: 500; color: var(--text-mid);
             transition: color 0.2s;
@@ -79,6 +79,16 @@
             transition: background 0.2s;
         }
         .lp-nav-cta:hover { background: var(--yellow-h); }
+        .lp-nav-login {
+            color: var(--navy);
+            padding: 0.42rem 1.15rem;
+            border: 2px solid var(--navy);
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 700;
+            transition: background 0.2s, color 0.2s;
+        }
+        .lp-nav-login:hover { background: var(--navy-light); }
         .lp-nav-mobile { display: none; align-items: center; gap: 0.75rem; }
         .lp-hamburger {
             background: none; border: none; cursor: pointer; padding: 4px;
@@ -362,6 +372,9 @@
             <a href="#fitur"   class="lp-nav-link">Fitur</a>
             <a href="{{ route('statistik.index') }}" class="lp-nav-link">Statistik</a>
             <a href="{{ route('peta') }}" class="lp-nav-cta">Buka Peta</a>
+            @guest
+                <a href="{{ route('login') }}" class="lp-nav-login">Login</a>
+            @endguest
         </div>
 
         {{-- Mobile bar --}}
@@ -382,6 +395,9 @@
         <a href="#tentang" onclick="lpCloseMenu()">Tentang</a>
         <a href="#fitur"   onclick="lpCloseMenu()">Fitur</a>
         <a href="{{ route('statistik.index') }}">Statistik</a>
+        @guest
+            <a href="{{ route('login') }}">Login</a>
+        @endguest
     </div>
 </nav>
 

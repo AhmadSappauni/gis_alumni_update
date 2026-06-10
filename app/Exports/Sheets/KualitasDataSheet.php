@@ -2,10 +2,13 @@
 
 namespace App\Exports\Sheets;
 
+use App\Exports\Sheets\Concerns\StatistikSheetFormatter;
 use Maatwebsite\Excel\Concerns\FromArray;
+use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\Events\AfterSheet;
 
-class KualitasDataSheet implements FromArray, WithTitle
+class KualitasDataSheet implements FromArray, WithTitle, WithEvents
 {
     public function __construct(
         protected array $payload,
@@ -73,5 +76,17 @@ class KualitasDataSheet implements FromArray, WithTitle
 
         return $rows;
     }
-}
 
+    public function registerEvents(): array
+    {
+        return [
+            AfterSheet::class => function (AfterSheet $event) {
+                StatistikSheetFormatter::styleSectionedSheet($event->sheet->getDelegate(), [
+                    'A' => 30,
+                    'B' => 18,
+                    'C' => 20,
+                ]);
+            },
+        ];
+    }
+}

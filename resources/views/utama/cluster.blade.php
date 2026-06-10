@@ -1,12 +1,32 @@
 <div id="layer-control-panel" class="layer-control-panel">
-    <button id="toggle-layer-panel" class="layer-toggle-btn" type="button" title="Tampilkan pengaturan layer">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 3l9 4.5-9 4.5-9-4.5L12 3z"></path>
-            <path d="M3 12l9 4.5 9-4.5"></path>
-            <path d="M3 16.5L12 21l9-4.5"></path>
-        </svg>
-    </button>
+    <div class="map-utility-controls">
+        <button
+            id="open-map-guide"
+            class="map-guide-help-btn"
+            type="button"
+            title="Panduan peta"
+            aria-label="Panduan peta"
+            data-map-tooltip="Panduan peta"
+        >
+            ?
+        </button>
+
+        <button
+            id="toggle-layer-panel"
+            class="layer-toggle-btn"
+            type="button"
+            title="Pengaturan layer"
+            aria-label="Pengaturan layer"
+            data-map-tooltip="Pengaturan layer"
+        >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 3l9 4.5-9 4.5-9-4.5L12 3z"></path>
+                <path d="M3 12l9 4.5 9-4.5"></path>
+                <path d="M3 16.5L12 21l9-4.5"></path>
+            </svg>
+        </button>
+    </div>
 
         <div id="layer-control-menu" class="layer-control-menu hidden">
             <div class="layer-control-section">
