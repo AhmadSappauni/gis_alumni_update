@@ -284,3 +284,33 @@
     background: rgba(15, 23, 42, 0.045);
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
 }
+
+@media (max-width: 768px) {
+    .layer-control-panel {
+        position: fixed;
+        top: 66px;
+        right: 10px;
+        z-index: 1000;
+        gap: 8px;
+    }
+
+    .layer-toggle-btn,
+    .map-guide-help-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 11px;
+    }
+
+    .layer-control-menu {
+        width: min(320px, calc(100vw - 20px));
+        min-width: 0;
+        max-width: none;
+        max-height: calc(100dvh - 118px);
+        overflow-y: auto;
+        padding: 10px;
+    }
+
+    .polygon-wilayah-list {
+        max-height: 180px;
+    }
+}

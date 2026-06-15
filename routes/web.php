@@ -44,7 +44,7 @@ Route::get('/nominatim/reverse', [NominatimController::class, 'reverse'])->name(
 |--------------------------------------------------------------------------
 */
 
-Route::get('/api/wilayah-kalsel', [WilayahController::class, 'index'])->name('api.wilayah-kalsel');
+Route::get('/wilayah-kalsel', [WilayahController::class, 'index'])->name('wilayah-kalsel');
 
 /*
 |--------------------------------------------------------------------------

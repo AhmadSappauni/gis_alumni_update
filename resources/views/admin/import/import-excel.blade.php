@@ -33,7 +33,7 @@
                     <button
                         type="button"
                         id="btn-cancel-import"
-                        style="display:none; border:none; border-radius:12px; padding:10px 14px; font-weight:800; cursor:pointer; background:#e2e8f0; color:#0f172a;"
+                        style="display:none; border:none; border-radius:12px; padding:10px 14px; margin-bottom: -10px; font-weight:800; cursor:pointer; background:#e2e8f0; color:#0f172a;"
                         title="Batalkan file yang dipilih"
                     >
                         Cancel

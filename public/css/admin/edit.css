@@ -458,3 +458,41 @@
         gap: 4px;
     }
 }
+
+@media (max-width: 768px) {
+    .tab-navigation {
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tab-btn {
+        flex: 0 0 auto;
+        min-width: 185px;
+        padding: 13px 14px;
+        border-radius: 13px;
+        font-size: 13px;
+    }
+
+    .tab-pane > div[style*="display: flex; justify-content: space-between"] {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 14px !important;
+    }
+
+    .tab-pane table {
+        min-width: 720px;
+    }
+
+    .profil-modal-overlay {
+        padding: 10px;
+    }
+
+    .profil-modal-card {
+        max-height: calc(100dvh - 20px);
+        overflow-y: auto;
+        border-radius: 18px;
+        padding: 22px;
+    }
+}

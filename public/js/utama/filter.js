@@ -1792,7 +1792,7 @@ function populateWilayahFilter() {
         return;
     }
 
-    fetch('/api/wilayah-kalsel', {
+    fetch('/wilayah-kalsel', {
         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
     })
         .then(function (r) { return r.json(); })

@@ -144,3 +144,34 @@
 /* Warna Tombol Detail (Biru Muda) */
 .btn-detail { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
 .btn-detail:hover { background: #dbeafe; color: #1d4ed8; transform: scale(1.1); }
+
+@media (max-width: 520px) {
+    .direktori-modal-card {
+        width: calc(100vw - 20px);
+        height: min(86dvh, 720px);
+        border-radius: 14px;
+    }
+
+    .direktori-header,
+    .direktori-tools,
+    .list-direktori-modal-container {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .dir-card-modal {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .dir-content-left {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .dir-actions-right {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}

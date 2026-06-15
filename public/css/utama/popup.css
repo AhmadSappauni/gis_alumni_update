@@ -343,3 +343,30 @@
     border-left-color: rgba(0, 74, 135, 0.92);
     border-right-color: rgba(0, 74, 135, 0.92);
 }
+
+@media (max-width: 480px) {
+    .leaflet-popup-content {
+        width: min(230px, calc(100vw - 48px)) !important;
+    }
+
+    .wilayah-popup-wrap .leaflet-popup-content {
+        width: min(280px, calc(100vw - 48px)) !important;
+        min-width: 0;
+    }
+
+    .wilayah-popup-header {
+        padding: 12px 38px 12px 14px;
+    }
+
+    .wilayah-stat-grid {
+        gap: 6px;
+    }
+
+    .wilayah-stat-item {
+        padding: 8px;
+    }
+
+    .wilayah-stat-item .stat-number {
+        font-size: 19px;
+    }
+}

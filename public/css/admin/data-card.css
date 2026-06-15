@@ -1,7 +1,7 @@
 /* --- GRID KARTU DATA (Pengganti Tabel) --- */
 .cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
     gap: 20px;
     padding-bottom: 20px;
 }
@@ -211,6 +211,11 @@
     background: transparent;
 }
 
+.table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
 .alumni-table th {
     text-align: left;
     padding: 16px 20px;
@@ -276,4 +281,30 @@
     color: #ef4444;
     border-color: #ef4444;
     background: #fef2f2;
+}
+
+@media (max-width: 768px) {
+    .cards-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .data-card {
+        padding: 18px;
+    }
+
+    .card-footer {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .action-buttons {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .alumni-table {
+        min-width: 720px;
+    }
 }

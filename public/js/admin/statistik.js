@@ -1418,7 +1418,7 @@ function populateWilayahFilter() {
 
     const initialId = String(select.dataset.initialWilayahId || '').trim();
 
-    return fetch('/api/wilayah-kalsel', {
+    return fetch('/wilayah-kalsel', {
         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
     })
         .then(function (r) { return r.json(); })

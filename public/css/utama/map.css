@@ -11,6 +11,12 @@ body {
     z-index: 1; 
 }
 
+@supports (height: 100dvh) {
+    #map {
+        height: 100dvh;
+    }
+}
+
 /* Sedikit bayangan untuk marker icon (terlihat lebih "3D") */
 #map img.leaflet-marker-icon {
     -webkit-filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35));
@@ -558,4 +564,97 @@ body {
 
 #map .leaflet-tooltip.alumni-tooltip.leaflet-tooltip-right:before {
     border-right-color: rgba(0, 0, 0, 0.85);
+}
+
+@media (max-width: 768px) {
+    :root {
+        --zoom-offset-right: 10px;
+        --zoom-offset-top: 128px;
+        --zoom-offset-bottom: 10px;
+    }
+
+    .kompas-ui {
+        top: 66px;
+        right: 92px;
+        width: 64px;
+        height: 64px;
+    }
+
+    .status-legend,
+    .choropleth-legend {
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        min-width: 0;
+        max-width: none;
+        max-height: min(34vh, 260px);
+        overflow-y: auto;
+        padding: 10px 12px;
+        border-radius: 12px;
+        pointer-events: auto;
+    }
+
+    .status-legend-title,
+    .choropleth-legend-title {
+        margin-bottom: 8px;
+        font-size: 13px;
+    }
+
+    .status-legend-summary {
+        margin-bottom: 8px;
+        padding: 7px 9px;
+    }
+
+    .status-legend-logo {
+        width: 30px;
+        height: 30px;
+    }
+
+    .status-legend-item {
+        grid-template-columns: 24px minmax(0, 1fr) auto;
+        gap: 8px;
+        padding: 4px 0;
+        font-size: 12px;
+    }
+
+    .status-legend-item img {
+        width: 21px;
+        height: 21px;
+    }
+
+    .status-legend-item b {
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    .status-legend-item--stack {
+        grid-template-columns: 24px minmax(0, 1fr);
+    }
+
+    .status-legend-stack-marker {
+        width: 20px;
+        height: 20px;
+        font-size: 9px;
+    }
+
+    .status-legend-stack-text > span,
+    .choropleth-legend-item {
+        font-size: 12px;
+    }
+
+    .status-legend-stack-text small {
+        font-size: 10px;
+    }
+
+    #map .leaflet-control-minimap {
+        transform: scale(0.72);
+        transform-origin: bottom left;
+    }
+}
+
+@media (max-width: 420px) {
+    .status-legend,
+    .choropleth-legend {
+        max-height: min(30vh, 220px);
+    }
 }

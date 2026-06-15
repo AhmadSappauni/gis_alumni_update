@@ -352,6 +352,70 @@
     }
 }
 
+@media (max-width: 640px) {
+    :root {
+        --rail-left: 8px;
+        --rail-width: 52px;
+        --rail-gap: 10px;
+        --ui-top: 10px;
+        --search-height: 50px;
+        --btn-size: 44px;
+        --rail-btn-size: 40px;
+        --rail-btn-gap: 9px;
+    }
+
+    .map-navigation-rail {
+        border-radius: 16px;
+        padding: 2px 0;
+    }
+
+    .rail-btn svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .filter-panel {
+        left: calc(var(--rail-left) + var(--rail-width) + var(--rail-gap));
+        width: calc(100vw - (var(--rail-left) + var(--rail-width) + var(--rail-gap) + 8px));
+        max-height: calc(100dvh - (var(--ui-top) * 2));
+    }
+
+    .map-search-input-wrap input {
+        font-size: 13px;
+        padding: 0 10px;
+    }
+
+    .scrollable-content {
+        max-height: calc(100dvh - var(--search-height) - 28px);
+        border-radius: 14px;
+    }
+
+    .filter-body {
+        padding: 10px 14px 16px;
+    }
+
+    .results-container {
+        padding: 0 14px 14px;
+    }
+}
+
+@media (max-width: 420px) {
+    :root {
+        --rail-width: 48px;
+        --rail-gap: 8px;
+        --btn-size: 42px;
+        --rail-btn-size: 38px;
+    }
+
+    .map-search-input-wrap input {
+        padding: 0 8px;
+    }
+
+    .map-clear-btn {
+        width: 34px;
+    }
+}
+
 /* Hindari kontrol Leaflet tertutup rail/search */
 .map-page .leaflet-top.leaflet-left {
     left: calc(var(--rail-left) + var(--rail-width) + 10px) !important;

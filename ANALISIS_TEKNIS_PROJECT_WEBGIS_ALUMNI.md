@@ -455,7 +455,7 @@ Frontend admin statistik `public/js/admin/statistik.js`:
 - Fetch payload (`public/js/admin/statistik.js:684-697`).
 - Memetakan KPI dan chart dari payload (`public/js/admin/statistik.js:700-855`).
 - Ekspor PDF/Excel dari URL endpoint (`public/js/admin/statistik.js:1370-1396`).
-- Mengisi filter wilayah dari `/api/wilayah-kalsel` (`public/js/admin/statistik.js:1398-1423`).
+- Mengisi filter wilayah dari `/wilayah-kalsel` (`public/js/admin/statistik.js:1398-1423`).
 
 Frontend publik statistik `public/js/utama/statistik.js` memiliki struktur serupa, dengan Chart.js default pada `public/js/utama/statistik.js:178-201` dan update chart pada `public/js/utama/statistik.js:728-822`.
 
@@ -550,7 +550,7 @@ Route publik:
 - `GET /statistik/data` -> JSON statistik publik (`routes/web.php:28`).
 - `GET /nominatim` -> halaman utilitas Nominatim (`routes/web.php:36`).
 - `GET /nominatim/reverse` -> reverse geocode (`routes/web.php:37`).
-- `GET /api/wilayah-kalsel` -> daftar wilayah Kalsel (`routes/web.php:45`).
+- `GET /wilayah-kalsel` -> daftar wilayah Kalsel (`routes/web.php:45`).
 
 Route admin:
 
