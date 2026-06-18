@@ -74,6 +74,7 @@
             <ul class="map-guide-full-list">
                 <li>Ketik minimal 2 huruf untuk mencari alumni.</li>
                 <li>Gunakan tombol filter untuk mempersempit data.</li>
+                <li>Geser peta dengan klik tahan lalu seret. Pada touchpad, ketuk 2x lalu tahan dan seret.</li>
                 <li>Klik pin alumni untuk melihat ringkasan profil dan lokasi.</li>
                 <li>Klik wilayah berwarna untuk melihat ringkasan kabupaten/kota.</li>
                 <li>Gunakan tombol layer untuk marker, choropleth, heatmap, legenda, cluster, dan komponen peta.</li>
@@ -96,4 +97,19 @@
 
 <div id="map-search-hint" class="map-search-hint" role="status" aria-live="polite" hidden>
     Mulai dari pencarian di sini
+</div>
+
+<div id="map-drag-hint" class="map-drag-hint" role="status" aria-live="polite" hidden>
+    <span class="map-drag-hint-icon" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 11V7a2 2 0 1 1 4 0v4"></path>
+            <path d="M11 10V6a2 2 0 1 1 4 0v7"></path>
+            <path d="M15 11a2 2 0 1 1 4 0v3a7 7 0 0 1-7 7h-1a6 6 0 0 1-5.4-3.4L4 14.5a1.7 1.7 0 0 1 3.1-1.4L8 15"></path>
+        </svg>
+    </span>
+    <span class="map-drag-hint-text">
+        <span class="map-drag-hint-title">Geser peta: klik tahan lalu seret</span>
+        <span class="map-drag-hint-subtitle">Touchpad: ketuk 2x lalu tahan dan seret</span>
+    </span>
 </div>

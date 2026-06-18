@@ -87,19 +87,18 @@ class MapController extends Controller
 
             $jobsAlumni = $pekerjaGrouped->get($job->alumni_id, collect());
 
-            $pekerjaanLainnya = $jobsAlumni
+            $pekerjaanSampingan = $jobsAlumni
                 ->filter(function ($row) use ($job) {
-                    return (int) $row->id !== (int) $job->id;
+                    return (int) $row->id !== (int) $job->id
+                        && $this->getStatusKarirLower($row->status_karir) === 'sampingan';
                 })
+                ->values();
+
+            $pekerjaanLainnya = $pekerjaanSampingan
                 ->map(function ($row) {
                     $lokasi = $this->getLokasiPerusahaan($row);
 
                     if (!$lokasi || !$lokasi->latitude || !$lokasi->longitude) {
-                        return null;
-                    }
-
-                    $statusKarirLower = $this->getStatusKarirLower($row->status_karir);
-                    if ($statusKarirLower !== 'sampingan') {
                         return null;
                     }
 
@@ -141,6 +140,8 @@ class MapController extends Controller
                 'link_linkedin' => $job->perusahaan?->link_linkedin,
 
                 'pekerjaan_lainnya' => $pekerjaanLainnya,
+                'multi_job_count' => $pekerjaanSampingan->count(),
+                'multi_job_mappable_count' => $pekerjaanLainnya->count(),
             ]);
         }
 
@@ -310,13 +311,6 @@ class MapController extends Controller
             })
             ->values();
 
-        $workingCount = $markers
-            ->where('status', 'Bekerja')
-            ->pluck('alumni_id')
-            ->filter()
-            ->unique()
-            ->count();
-
         $belumCount = $markers
             ->where('status', 'Belum Bekerja')
             ->pluck('alumni_id')
@@ -324,25 +318,35 @@ class MapController extends Controller
             ->unique()
             ->count();
 
-        $multiJobCount = $markers
-            ->filter(function ($item) {
-                $pekerjaanLainnya = $item['pekerjaan_lainnya'] ?? [];
-                return is_array($pekerjaanLainnya) && count($pekerjaanLainnya) > 0;
-            })
-            ->pluck('alumni_id')
-            ->filter()
-            ->unique()
-            ->count();
+        $workingSummaryIds = $includeBekerja
+            ? $this->primaryCurrentJobs($pekerja)
+                ->pluck('alumni_id')
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
+            : collect();
 
-        $studiCount = $studiLanjutMarkers
-            ->pluck('alumni_id')
-            ->filter()
-            ->unique()
-            ->count();
+        $multiJobSummaryIds = $includeBekerja
+            ? $this->collectMultiJobAlumniIds($pekerja)
+            : collect();
+
+        $studiLanjutSummaryIds = $includeStudiLanjut
+            ? $this->collectStudiLanjutAlumniIds($filters)
+            : collect();
+
+        $multiJobCount = $multiJobSummaryIds->count();
+
+        $studiCount = $studiLanjutSummaryIds->count();
+
+        $workingCount = $workingSummaryIds->count();
 
         $totalAlumni = collect()
             ->merge($markers->pluck('alumni_id'))
             ->merge($studiLanjutMarkers->pluck('alumni_id'))
+            ->merge($workingSummaryIds)
+            ->merge($multiJobSummaryIds)
+            ->merge($studiLanjutSummaryIds)
             ->filter()
             ->unique()
             ->count();
@@ -568,6 +572,42 @@ class MapController extends Controller
             ->unique()
             ->values()
             ->all();
+    }
+
+    private function collectMultiJobAlumniIds(Collection $pekerja): Collection
+    {
+        return $pekerja
+            ->groupBy('alumni_id')
+            ->filter(function ($jobs, $alumniId) {
+                if (!$alumniId || $jobs->count() < 2) {
+                    return false;
+                }
+
+                return $jobs->contains(function ($job) {
+                    return $this->getStatusKarirLower($job->status_karir) === 'sampingan';
+                });
+            })
+            ->keys()
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+    }
+
+    private function collectStudiLanjutAlumniIds(array $filters): Collection
+    {
+        $query = StudiLanjut::query()
+            ->select(['alumni_id'])
+            ->whereNotNull('alumni_id');
+
+        $this->applyStudiLanjutQueryFilters($query, $filters);
+
+        return $query
+            ->pluck('alumni_id')
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
     }
 
     private function getMapFilters(?Request $request): array

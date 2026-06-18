@@ -1,6 +1,7 @@
 (function () {
     const GUIDE_STORAGE_KEY = 'webgis-map-guide-seen-v2';
     const GUIDE_SESSION_KEY = 'webgis-map-guide-opened-session-v2';
+    const DRAG_HINT_SESSION_KEY = 'webgis-map-drag-hint-hidden-session-v1';
 
     function safeStorage(storage, method, key, value) {
         try {
@@ -171,6 +172,52 @@
         }
     }
 
+    function setupMapDragHint() {
+        const hint = document.getElementById('map-drag-hint');
+
+        if (!hint || safeStorage(window.sessionStorage, 'get', DRAG_HINT_SESSION_KEY) === '1') {
+            return;
+        }
+
+        let showTimer = null;
+        let hideTimer = null;
+
+        const showHint = function () {
+            hint.hidden = false;
+            requestAnimationFrame(function () {
+                hint.classList.add('is-visible');
+            });
+        };
+
+        const hideHint = function () {
+            safeStorage(window.sessionStorage, 'set', DRAG_HINT_SESSION_KEY, '1');
+
+            if (showTimer) {
+                clearTimeout(showTimer);
+                showTimer = null;
+            }
+
+            if (hideTimer) {
+                clearTimeout(hideTimer);
+            }
+
+            hint.classList.remove('is-visible');
+            hideTimer = setTimeout(function () {
+                hint.hidden = true;
+            }, 240);
+
+            if (window.map && typeof window.map.off === 'function') {
+                window.map.off('dragstart movestart zoomstart', hideHint);
+            }
+        };
+
+        if (window.map && typeof window.map.on === 'function') {
+            window.map.on('dragstart movestart zoomstart', hideHint);
+        }
+
+        showTimer = window.setTimeout(showHint, 900);
+    }
+
     function setupMapTooltips() {
         let tooltip = document.querySelector('.map-ui-tooltip');
 
@@ -314,6 +361,7 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         setupGuideDialog();
+        setupMapDragHint();
         setupMapTooltips();
     });
 })();

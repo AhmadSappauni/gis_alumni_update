@@ -6,6 +6,22 @@ var map = L.map("map", {
     zoomControl: false
 }).setView(defaultCenter, defaultZoom);
 
+window.__mapFeatureClickSuppressUntil = 0;
+
+function suppressMapFeatureClick(duration) {
+    window.__mapFeatureClickSuppressUntil = Date.now() + (duration || 350);
+}
+
+window.suppressMapFeatureClick = suppressMapFeatureClick;
+
+map.on('dragstart movestart', function () {
+    suppressMapFeatureClick(250);
+});
+
+map.on('dragend moveend', function () {
+    suppressMapFeatureClick(450);
+});
+
 function getLeftUiOverlayOffsetX() {
     if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
         return 0;
@@ -132,6 +148,10 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: '',
 }).addTo(map);
 
+// L.tileLayer('https://geoservices.big.go.id/rbi/rest/services/BASEMAP/Rupabumi_Indonesia/MapServer/tile/{z}/{y}/{x}', {
+//     attribution: 'BIG - Rupabumi Indonesia'
+// }).addTo(map);
+
 // Hapus teks "Leaflet" di attribution (attribution OSM tetap wajib ditampilkan)
 map.attributionControl.setPrefix(false);
 
@@ -143,6 +163,9 @@ window.statusPolygonAktif = true;
 window.statusHoverPolygonAktif = false;
 window.statusPolygonWilayah = {};
 window.defaultStatusPolygonWilayah = true;
+window.filterWilayahKey = '';
+window.pendingFilterWilayahFlyTo = false;
+window.statusPolygonAktifSebelumFilter = null;
 
 function getStyleWilayah(feature) {
     var namaKab = getNamaWilayah(feature);
@@ -160,10 +183,10 @@ function getStyleWilayah(feature) {
 
     return {
         fillColor,
-        weight: 1,
+        weight: 1.2,
         opacity: 1,
         color: '#475569',
-        dashArray: '3',
+        dashArray: '16 6 2 6 2 6',
         fillOpacity: mode === 'choropleth' ? 0.65 : 0.5
     };
 }
@@ -288,16 +311,16 @@ const WILAYAH_CONFIG = {
     'banjarmasin': { regionId: 'banjarmasin', regionName: 'Banjarmasin', color: '#004a87' },
     'banjarbaru': { regionId: 'banjarbaru', regionName: 'Banjarbaru', color: '#0ea5e9' },
     'banjar': { regionId: 'banjar', regionName: 'Banjar', color: '#10b981' },
-    'barito kuala': { regionId: 'barito kuala', regionName: 'Barito Kuala', color: '#f59e0b' },
+    'barito kuala': { regionId: 'barito kuala', regionName: 'Barito Kuala', color: '#22f50b' },
     'tanah laut': { regionId: 'tanah laut', regionName: 'Tanah Laut', color: '#ef4444' },
-    'tanah bumbu': { regionId: 'tanah bumbu', regionName: 'Tanah Bumbu', color: '#8b5cf6' },
+    'tanah bumbu': { regionId: 'tanah bumbu', regionName: 'Tanah Bumbu', color: '#686161' },
     'kotabaru': { regionId: 'kotabaru', regionName: 'Kotabaru', color: '#ec4899' },
     'tapin': { regionId: 'tapin', regionName: 'Tapin', color: '#f97316' },
-    'hulu sungai selatan': { regionId: 'hulu sungai selatan', regionName: 'Hulu Sungai Selatan', color: '#14b8a6' },
+    'hulu sungai selatan': { regionId: 'hulu sungai selatan', regionName: 'Hulu Sungai Selatan', color: '#9214b8' },
     'hulu sungai tengah': { regionId: 'hulu sungai tengah', regionName: 'Hulu Sungai Tengah', color: '#6366f1' },
     'hulu sungai utara': { regionId: 'hulu sungai utara', regionName: 'Hulu Sungai Utara', color: '#a855f7' },
     'balangan': { regionId: 'balangan', regionName: 'Balangan', color: '#fbbf24' },
-    'tabalong': { regionId: 'tabalong', regionName: 'Tabalong', color: '#4ade80' }
+    'tabalong': { regionId: 'tabalong', regionName: 'Tabalong', color: '#07b546' }
 };
 
 window.wilayahConfig = WILAYAH_CONFIG;
@@ -315,9 +338,7 @@ function hitungChoroplethMaxVisible() {
         const namaWilayah = getNamaWilayah(layer.feature);
         const key = getKeyWilayah(namaWilayah);
 
-        const visible =
-            window.statusPolygonAktif &&
-            window.statusPolygonWilayah[key] !== false;
+        const visible = isPolygonWilayahTerlihat(key);
 
         if (!visible) {
             return;
@@ -344,9 +365,7 @@ function hitungChoroplethValuesVisible() {
         const namaWilayah = getNamaWilayah(layer.feature);
         const key = getKeyWilayah(namaWilayah);
 
-        const visible =
-            window.statusPolygonAktif &&
-            window.statusPolygonWilayah[key] !== false;
+        const visible = isPolygonWilayahTerlihat(key);
 
         if (!visible) {
             return;
@@ -389,6 +408,10 @@ window.refreshWilayahStyle = function () {
     }
 
     window.layerWilayahKalsel.setStyle(getStyleWilayah);
+
+    if (typeof window.perbaruiTampilanPolygon === 'function') {
+        window.perbaruiTampilanPolygon();
+    }
 };
 
 if (typeof window.__DEBUG_CHOROPLETH === 'undefined') {
@@ -446,6 +469,21 @@ function getKeyWilayah(teks) {
 }
 
 window.getKeyWilayah = getKeyWilayah;
+
+function isPolygonWilayahTerlihat(key) {
+    if (!window.statusPolygonAktif) {
+        return false;
+    }
+
+    const filterKey = (window.filterWilayahKey || '').toString().trim();
+    if (filterKey !== '') {
+        return key === filterKey;
+    }
+
+    return window.statusPolygonWilayah[key] !== false;
+}
+
+window.isPolygonWilayahTerlihat = isPolygonWilayahTerlihat;
 
 function getPolygonRegionName(feature) {
     const props = feature?.properties || {};
@@ -558,8 +596,7 @@ window.cariWilayahDanZoom = function (keyword) {
 
         const namaWilayah = getNamaWilayah(layer.feature);
         const namaNormal = normalisasiTeksWilayah(namaWilayah);
-        const aktif =
-            window.statusPolygonWilayah[getKeyWilayah(namaWilayah)] !== false;
+        const aktif = isPolygonWilayahTerlihat(getKeyWilayah(namaWilayah));
 
         if (!aktif) return;
 
@@ -621,6 +658,106 @@ window.resetHighlightWilayah = function () {
     window.highlightWilayah = null;
 };
 
+function getLayerWilayahByKey(key) {
+    const registryLayer = window.wilayahRegistry?.[key]?.layer || null;
+    if (registryLayer) {
+        return registryLayer;
+    }
+
+    if (!window.layerWilayahKalsel) {
+        return null;
+    }
+
+    let target = null;
+    window.layerWilayahKalsel.eachLayer(function (layer) {
+        if (target) {
+            return;
+        }
+
+        const namaWilayah = getNamaWilayah(layer.feature);
+        if (getKeyWilayah(namaWilayah) === key) {
+            target = layer;
+        }
+    });
+
+    return target;
+}
+
+window.terapkanFilterWilayahPeta = function (namaWilayah, options) {
+    const key = getKeyWilayah(namaWilayah);
+    const shouldFly = options?.flyTo === true;
+    const forceApply = options?.force === true;
+    const previousKey = (window.filterWilayahKey || '').toString().trim();
+
+    if (key && !previousKey) {
+        window.statusPolygonAktifSebelumFilter = !!window.statusPolygonAktif;
+    }
+
+    if (!key && previousKey && window.statusPolygonAktifSebelumFilter !== null) {
+        window.statusPolygonAktif = !!window.statusPolygonAktifSebelumFilter;
+        window.statusPolygonAktifSebelumFilter = null;
+
+        const masterToggle = document.getElementById('toggle-polygon-map');
+        if (masterToggle) {
+            masterToggle.checked = window.statusPolygonAktif;
+        }
+    }
+
+    window.filterWilayahKey = key;
+
+    if (!key) {
+        window.pendingFilterWilayahFlyTo = false;
+    } else if (shouldFly) {
+        window.pendingFilterWilayahFlyTo = true;
+    } else if (previousKey !== key) {
+        window.pendingFilterWilayahFlyTo = false;
+    }
+
+    if (!forceApply && !shouldFly && previousKey === key) {
+        return;
+    }
+
+    if (key) {
+        window.statusPolygonAktif = true;
+
+        const masterToggle = document.getElementById('toggle-polygon-map');
+        if (masterToggle) {
+            masterToggle.checked = true;
+        }
+    }
+
+    if (!window.layerWilayahKalsel) {
+        return;
+    }
+
+    window.pendingFilterWilayahFlyTo = false;
+
+    if (typeof window.refreshWilayahStyle === 'function') {
+        window.refreshWilayahStyle();
+    } else {
+        window.perbaruiTampilanPolygon();
+    }
+
+    if (!key || !shouldFly) {
+        return;
+    }
+
+    const targetLayer = getLayerWilayahByKey(key);
+    if (!targetLayer) {
+        return;
+    }
+
+    window.resetHighlightWilayah();
+
+    const leftPadding = Math.max(30, (getLeftUiOverlayOffsetX() * 2) + 30);
+    map.flyToBounds(targetLayer.getBounds(), {
+        paddingTopLeft: [leftPadding, 30],
+        paddingBottomRight: [30, 30],
+        maxZoom: 11,
+        duration: 1.25
+    });
+};
+
 window.perbaruiTampilanPolygon = function () {
     if (!window.layerWilayahKalsel) {
         return;
@@ -633,8 +770,7 @@ window.perbaruiTampilanPolygon = function () {
 
         window.layerWilayahKalsel.eachLayer(function (layer) {
             const namaWilayah = getNamaWilayah(layer.feature);
-            const aktif =
-                window.statusPolygonWilayah[getKeyWilayah(namaWilayah)] !== false;
+            const aktif = isPolygonWilayahTerlihat(getKeyWilayah(namaWilayah));
 
             aturTampilanPolygonWilayah(layer, aktif);
         });
@@ -687,7 +823,7 @@ window.setStatusPolygonWilayah = function (namaWilayah, isVisible) {
         window.layerWilayahKalsel.eachLayer(function (layer) {
             const namaLayer = getNamaWilayah(layer.feature);
             const layerKey = getKeyWilayah(namaLayer);
-            const aktif = window.statusPolygonWilayah[layerKey] !== false;
+            const aktif = isPolygonWilayahTerlihat(layerKey);
             aturTampilanPolygonWilayah(layer, aktif);
         });
     }
@@ -703,7 +839,7 @@ window.setStatusPolygonWilayah = function (namaWilayah, isVisible) {
             return;
         }
 
-        aturTampilanPolygonWilayah(layer, isVisible);
+        aturTampilanPolygonWilayah(layer, isPolygonWilayahTerlihat(key));
     });
 
     if (typeof window.sinkronkanKontrolPolygonWilayah === 'function') {
@@ -746,7 +882,7 @@ window.setSemuaStatusPolygonWilayah = function (isVisible) {
             return;
         }
 
-        aturTampilanPolygonWilayah(layer, !!isVisible);
+        aturTampilanPolygonWilayah(layer, isPolygonWilayahTerlihat(key));
     });
 
     if (typeof window.sinkronkanKontrolPolygonWilayah === 'function') {
@@ -792,7 +928,7 @@ window.renderKontrolPolygonWilayah = function () {
 
     container.innerHTML = wilayahList.map(function (item) {
         const checked = window.statusPolygonWilayah[item.key] !== false ? 'checked' : '';
-        const visible = window.statusPolygonAktif && window.statusPolygonWilayah[item.key] !== false;
+        const visible = isPolygonWilayahTerlihat(item.key);
         const visibleClass = visible ? 'is-wilayah-visible' : '';
 
         return `
@@ -829,7 +965,7 @@ window.sinkronkanKontrolPolygonWilayah = function () {
 
     items.forEach(function (item) {
         const key = item.dataset.wilayahKey || '';
-        const visible = window.statusPolygonAktif && window.statusPolygonWilayah[key] !== false;
+        const visible = isPolygonWilayahTerlihat(key);
         item.classList.toggle('is-wilayah-visible', !!visible);
     });
 };
@@ -846,9 +982,7 @@ window.previewHighlightWilayah = function (key, hover) {
     const registry = window.wilayahRegistry || {};
     const target = registry[key]?.layer || null;
 
-    const isVisible =
-        window.statusPolygonAktif &&
-        window.statusPolygonWilayah[key] !== false;
+    const isVisible = isPolygonWilayahTerlihat(key);
 
     if (!hover) {
         if (window.previewWilayahLayer && window.highlightWilayah !== window.previewWilayahLayer) {
@@ -1057,6 +1191,15 @@ fetch('/data/data_kalsel_simplified.geojson')
         window.choroplethLayer = window.layerWilayahKalsel;
 
         window.renderKontrolPolygonWilayah();
-        window.perbaruiTampilanPolygon();
+
+        if (window.filterWilayahKey && typeof window.terapkanFilterWilayahPeta === 'function') {
+            const shouldFly = window.pendingFilterWilayahFlyTo === true;
+            window.terapkanFilterWilayahPeta(window.filterWilayahKey, {
+                flyTo: shouldFly,
+                force: true
+            });
+        } else {
+            window.perbaruiTampilanPolygon();
+        }
     })
     .catch(error => console.error('Error:', error));

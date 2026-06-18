@@ -521,6 +521,7 @@ window.closeEditModalKerja = function () {
 window.openModalStudi = function () {
     const modal = $('modal-studi');
     if (modal) modal.classList.add('active');
+    setCampusSearchStatus('studi_cari_status', 'Gunakan nama kampus, alamat, kota, atau provinsi.', 'idle');
     initMapStudiTambah();
 };
 
@@ -550,6 +551,7 @@ window.editStudiLanjut = function (data) {
 
     const modal = $('modal-edit-studi');
     if (modal) modal.classList.add('active');
+    setCampusSearchStatus('edit_cari_status', 'Gunakan nama kampus, alamat, kota, atau provinsi.', 'idle');
 
     const lat = parseFloat(data.latitude);
     const lng = parseFloat(data.longitude);
@@ -564,29 +566,56 @@ window.closeEditModalStudi = function () {
 /* ==========================================
    GEOCODE STUDI LANJUT
 ========================================== */
+function setCampusSearchStatus(elementId, message, state = 'idle') {
+    const statusEl = $(elementId);
+
+    if (!statusEl) {
+        return;
+    }
+
+    statusEl.textContent = message;
+    statusEl.dataset.state = state;
+}
+
+function showCampusAlert(icon, title, text) {
+    return Swal.fire({
+        icon,
+        title,
+        text,
+        confirmButtonText: 'Mengerti',
+        confirmButtonColor: '#004a87',
+        backdrop: 'rgba(15, 23, 42, 0.58)',
+        customClass: {
+            container: 'admin-campus-alert-container',
+            popup: 'admin-campus-alert'
+        }
+    });
+}
+
 window.cariLokasiKampusTambah = async function () {
     const q = buildCampusQuery('studi');
 
     if (!q || q.length < 3) {
-        alert('Isi minimal nama kampus, lalu klik cari lokasi.');
+        showCampusAlert(
+            'warning',
+            'Nama kampus belum lengkap',
+            'Isi minimal nama kampus, lalu klik Cari Lokasi Kampus.'
+        );
         return;
     }
 
-    const statusEl = $('studi_cari_status');
-    if (statusEl) {
-        statusEl.textContent = 'Sedang mencari kampus...';
-        statusEl.style.color = '#64748b';
-    }
+    setCampusSearchStatus('studi_cari_status', 'Sedang mencari lokasi kampus...', 'loading');
 
     try {
         const hasil = await searchLocationCampus(q);
 
         if (!hasil.length) {
-            if (statusEl) {
-                statusEl.textContent = 'Kampus tidak ditemukan.';
-                statusEl.style.color = '#ef4444';
-            }
-            alert('Lokasi kampus tidak ditemukan.');
+            setCampusSearchStatus('studi_cari_status', 'Lokasi kampus tidak ditemukan.', 'error');
+            showCampusAlert(
+                'error',
+                'Lokasi tidak ditemukan',
+                'Coba lengkapi nama kampus dengan kota atau provinsi agar pencarian lebih akurat.'
+            );
             return;
         }
 
@@ -595,11 +624,12 @@ window.cariLokasiKampusTambah = async function () {
         const lng = parseFloat(item.lon);
 
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-            if (statusEl) {
-                statusEl.textContent = 'Kampus ditemukan, tapi koordinat tidak valid.';
-                statusEl.style.color = '#ef4444';
-            }
-            alert('Koordinat tidak valid dari hasil pencarian.');
+            setCampusSearchStatus('studi_cari_status', 'Koordinat hasil pencarian tidak valid.', 'error');
+            showCampusAlert(
+                'error',
+                'Koordinat tidak valid',
+                'Hasil pencarian tidak memiliki koordinat yang dapat digunakan. Coba kata kunci lain.'
+            );
             return;
         }
 
@@ -617,19 +647,17 @@ window.cariLokasiKampusTambah = async function () {
         if (kotaEl && parts.kota) kotaEl.value = kotaEl.value || parts.kota;
         if (provEl && parts.provinsi) provEl.value = provEl.value || parts.provinsi;
 
-        if (statusEl) {
-            statusEl.textContent = 'Kampus ditemukan.';
-            statusEl.style.color = '#10b981';
-        }
+        setCampusSearchStatus('studi_cari_status', 'Lokasi ditemukan. Pin dan koordinat telah diperbarui.', 'success');
 
         setTimeout(() => mapStudiTambah && mapStudiTambah.invalidateSize(), 100);
     } catch (e) {
         console.error(e);
-        if (statusEl) {
-            statusEl.textContent = 'Gagal mencari kampus.';
-            statusEl.style.color = '#ef4444';
-        }
-        alert('Gagal mencari lokasi kampus.');
+        setCampusSearchStatus('studi_cari_status', 'Pencarian lokasi kampus gagal.', 'error');
+        showCampusAlert(
+            'error',
+            'Pencarian gagal',
+            'Terjadi kendala saat mencari lokasi kampus. Periksa koneksi lalu coba kembali.'
+        );
     }
 };
 
@@ -637,25 +665,26 @@ window.cariLokasiKampusEdit = async function () {
     const q = buildCampusQuery('edit');
 
     if (!q || q.length < 3) {
-        alert('Isi minimal nama kampus, lalu klik cari lokasi.');
+        showCampusAlert(
+            'warning',
+            'Nama kampus belum lengkap',
+            'Isi minimal nama kampus, lalu klik Cari Lokasi Kampus.'
+        );
         return;
     }
 
-    const statusEl = $('edit_cari_status');
-    if (statusEl) {
-        statusEl.textContent = 'Sedang mencari kampus...';
-        statusEl.style.color = '#64748b';
-    }
+    setCampusSearchStatus('edit_cari_status', 'Sedang mencari lokasi kampus...', 'loading');
 
     try {
         const hasil = await searchLocationCampus(q);
 
         if (!hasil.length) {
-            if (statusEl) {
-                statusEl.textContent = 'Kampus tidak ditemukan.';
-                statusEl.style.color = '#ef4444';
-            }
-            alert('Lokasi kampus tidak ditemukan.');
+            setCampusSearchStatus('edit_cari_status', 'Lokasi kampus tidak ditemukan.', 'error');
+            showCampusAlert(
+                'error',
+                'Lokasi tidak ditemukan',
+                'Coba lengkapi nama kampus dengan kota atau provinsi agar pencarian lebih akurat.'
+            );
             return;
         }
 
@@ -664,11 +693,12 @@ window.cariLokasiKampusEdit = async function () {
         const lng = parseFloat(item.lon);
 
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-            if (statusEl) {
-                statusEl.textContent = 'Kampus ditemukan, tapi koordinat tidak valid.';
-                statusEl.style.color = '#ef4444';
-            }
-            alert('Koordinat tidak valid dari hasil pencarian.');
+            setCampusSearchStatus('edit_cari_status', 'Koordinat hasil pencarian tidak valid.', 'error');
+            showCampusAlert(
+                'error',
+                'Koordinat tidak valid',
+                'Hasil pencarian tidak memiliki koordinat yang dapat digunakan. Coba kata kunci lain.'
+            );
             return;
         }
 
@@ -686,19 +716,17 @@ window.cariLokasiKampusEdit = async function () {
         if (kotaEl && parts.kota) kotaEl.value = kotaEl.value || parts.kota;
         if (provEl && parts.provinsi) provEl.value = provEl.value || parts.provinsi;
 
-        if (statusEl) {
-            statusEl.textContent = 'Kampus ditemukan.';
-            statusEl.style.color = '#10b981';
-        }
+        setCampusSearchStatus('edit_cari_status', 'Lokasi ditemukan. Pin dan koordinat telah diperbarui.', 'success');
 
         setTimeout(() => mapStudiEdit && mapStudiEdit.invalidateSize(), 100);
     } catch (e) {
         console.error(e);
-        if (statusEl) {
-            statusEl.textContent = 'Gagal mencari kampus.';
-            statusEl.style.color = '#ef4444';
-        }
-        alert('Gagal mencari lokasi kampus.');
+        setCampusSearchStatus('edit_cari_status', 'Pencarian lokasi kampus gagal.', 'error');
+        showCampusAlert(
+            'error',
+            'Pencarian gagal',
+            'Terjadi kendala saat mencari lokasi kampus. Periksa koneksi lalu coba kembali.'
+        );
     }
 };
 

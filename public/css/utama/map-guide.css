@@ -299,6 +299,68 @@
     display: none !important;
 }
 
+.map-drag-hint {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    z-index: 10800;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    max-width: min(430px, calc(100vw - 32px));
+    padding: 10px 13px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.92);
+    color: #ffffff;
+    font-family: 'Inter', sans-serif;
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.28);
+    opacity: 0;
+    transform: translate(-50%, 8px);
+    pointer-events: none;
+    transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.map-drag-hint.is-visible {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+.map-drag-hint[hidden] {
+    display: none !important;
+}
+
+.map-drag-hint-icon {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.map-drag-hint-text {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+
+.map-drag-hint-title {
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1.25;
+}
+
+.map-drag-hint-subtitle {
+    color: rgba(255, 255, 255, 0.76);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
 .map-ui-tooltip {
     position: fixed;
     z-index: 15000;
@@ -400,5 +462,28 @@ body.map-guide-open {
         left: calc(var(--rail-left, 10px) + var(--rail-width, 60px) + var(--rail-gap, 16px) + 12px);
         max-width: calc(100vw - 140px);
         white-space: normal;
+    }
+
+    .map-drag-hint {
+        bottom: calc(10px + min(34vh, 260px) + 12px);
+        max-width: calc(100vw - 24px);
+        padding: 9px 11px;
+        border-radius: 12px;
+    }
+
+    .map-drag-hint-title,
+    .map-drag-hint-subtitle {
+        white-space: normal;
+    }
+}
+
+@media (max-width: 420px) {
+    .map-drag-hint {
+        bottom: calc(10px + min(30vh, 220px) + 10px);
+    }
+
+    .map-drag-hint-icon {
+        width: 32px;
+        height: 32px;
     }
 }

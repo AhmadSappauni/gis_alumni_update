@@ -314,7 +314,11 @@ function shouldConsumeLeafletActivation(e) {
         L.DomEvent.stop(e.originalEvent);
     }
 
-    if (typeof map !== 'undefined' && map && typeof map.closePopup === 'function') {
+    const shouldClosePopup =
+        typeof window.shouldClosePopupOnSuppressedFeatureClick !== 'function' ||
+        window.shouldClosePopupOnSuppressedFeatureClick();
+
+    if (shouldClosePopup && typeof map !== 'undefined' && map && typeof map.closePopup === 'function') {
         map.closePopup();
     }
 
@@ -479,6 +483,23 @@ function buildMapMarkerApiParams() {
     return params;
 }
 
+function sinkronkanFilterWilayahPeta(options) {
+    const select = document.getElementById('filter-wilayah');
+    if (!select || typeof window.terapkanFilterWilayahPeta !== 'function') {
+        return;
+    }
+
+    const value = (select.value || '').toString().trim();
+    const selectedOption = select.options[select.selectedIndex] || null;
+    const namaWilayah = value
+        ? (selectedOption?.dataset?.wilayahNama || selectedOption?.textContent || '')
+        : '';
+
+    window.terapkanFilterWilayahPeta(namaWilayah, {
+        flyTo: options?.flyTo === true
+    });
+}
+
 function hydrateMapPayload(payload) {
     const safePayload = payload && typeof payload === 'object' ? payload : {};
 
@@ -504,6 +525,22 @@ function emptyMapPayload() {
         markers: [],
         studi_lanjut_markers: []
     };
+}
+
+function getMapPayloadCount(key, fallback) {
+    const payload = window.mapPayload || {};
+
+    if (!Object.prototype.hasOwnProperty.call(payload, key)) {
+        return fallback;
+    }
+
+    const value = Number(payload[key]);
+
+    if (!Number.isFinite(value)) {
+        return fallback;
+    }
+
+    return Math.max(0, Math.floor(value));
 }
 
 function setMapMarkerLoading(visible, message, state) {
@@ -1373,6 +1410,14 @@ function bindFilterEvents() {
     };
 
     window.shouldSuppressMapFeatureClick = function () {
+        return (
+            pendingDismissedClick ||
+            Date.now() < (window.__mapDismissClickUntil || 0) ||
+            Date.now() < (window.__mapFeatureClickSuppressUntil || 0)
+        );
+    };
+
+    window.shouldClosePopupOnSuppressedFeatureClick = function () {
         return pendingDismissedClick || Date.now() < (window.__mapDismissClickUntil || 0);
     };
 
@@ -1393,6 +1438,23 @@ function bindFilterEvents() {
 
         const target = event.target;
         if (!target || !hasDismissibleUiOpen()) {
+            return false;
+        }
+
+        const mapContainer =
+            typeof map !== 'undefined' && map && typeof map.getContainer === 'function'
+                ? map.getContainer()
+                : document.getElementById('map');
+        const isMapInteraction = !!mapContainer && mapContainer.contains(target);
+        const isStartEvent = ['pointerdown', 'mousedown', 'touchstart'].includes(event.type);
+        const onlyLeafletPopupOpen =
+            !!document.querySelector('.leaflet-popup') &&
+            !isSearchPanelOpen() &&
+            !isFilterChoicesOpen() &&
+            getOpenCustomDropdownRoots().length === 0 &&
+            !getOpenLayerControlRoot();
+
+        if (onlyLeafletPopupOpen && isStartEvent && isMapInteraction && !isInsideActiveDismissRoot(target)) {
             return false;
         }
 
@@ -1524,7 +1586,10 @@ function bindFilterEvents() {
         ?.addEventListener('change', filterDanTampilkanMarker);
 
     document.getElementById('filter-wilayah')
-        ?.addEventListener('change', filterDanTampilkanMarker);
+        ?.addEventListener('change', function () {
+            sinkronkanFilterWilayahPeta({ flyTo: true });
+            filterDanTampilkanMarker();
+        });
 
     ['visualization-mode-ui', 'filter-visualization-mode'].forEach(function (id) {
         document.getElementById(id)
@@ -1805,6 +1870,7 @@ function populateWilayahFilter() {
                 const option = document.createElement('option');
                 option.value = wilayah.id;
                 option.textContent = wilayah.display;
+                option.dataset.wilayahNama = wilayah.nama || wilayah.display || '';
                 select.appendChild(option);
             });
 
@@ -2569,6 +2635,7 @@ function createCoordinateStackManager(targetLayer, options) {
 // ======================================================
 function filterDanTampilkanMarker() {
 
+    sinkronkanFilterWilayahPeta({ flyTo: false });
     updateActiveFilterUI();
 
     if ((window.mapDataUrl || window.__MAP_MARKER_ENDPOINT__) && !window.__RENDERING_FETCHED_MARKERS__) {
@@ -3160,13 +3227,17 @@ function filterDanTampilkanMarker() {
                 `;
 
         const pekerjaanLainnya = Array.isArray(item.pekerjaan_lainnya) ? item.pekerjaan_lainnya : [];
-        const multiJobCount = statusKerja === 'Belum Bekerja' ? 0 : pekerjaanLainnya.length;
-        if (multiJobCount > 0 && alumniId) {
+        const multiJobMappableCount = pekerjaanLainnya.length;
+        const multiJobTotalCount = statusKerja === 'Belum Bekerja'
+            ? 0
+            : Math.max(Number(item.multi_job_count ?? multiJobMappableCount) || 0, multiJobMappableCount);
+
+        if (multiJobTotalCount > 0 && alumniId) {
             multiJobAlumniIds.add(alumniId);
         }
 
         const multiJobButton =
-            multiJobCount > 0 && alumniId
+            multiJobMappableCount > 0 && alumniId
                 ? `
                     <button
                         type="button"
@@ -3175,9 +3246,19 @@ function filterDanTampilkanMarker() {
                         title="Tampilkan pekerjaan sampingan"
                         style="border:none;background:#ede9fe;color:#5b21b6;border:1px solid #c4b5fd;border-radius:10px;padding:6px 10px;font-size:11px;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;gap:6px;"
                     >
-                        MULTI-JOB ${multiJobCount}
+                        MULTI-JOB ${multiJobTotalCount}
                     </button>
                 `
+                : multiJobTotalCount > 0 && alumniId
+                    ? `
+                        <span
+                            class="popup-badge"
+                            title="Lokasi pekerjaan sampingan belum tersedia"
+                            style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;"
+                        >
+                            MULTI-JOB ${multiJobTotalCount}
+                        </span>
+                    `
                 : '';
 
         const popup = `
@@ -3234,7 +3315,7 @@ function filterDanTampilkanMarker() {
             meta: statusKerja === 'Belum Bekerja'
                 ? ''
                 : `Linearitas: ${linearitas || '-'}`,
-            multiJobCount
+            multiJobCount: multiJobTotalCount
         };
 
         if (mainCoordinateStack) {
@@ -3553,11 +3634,11 @@ function filterDanTampilkanMarker() {
     }
 
     perbaruiLegendaStatus(
-        alumniIdsDisplayed.size,
-        alumniIdsBekerja.size,
-        alumniIdsBelumBekerja.size,
-        multiJobAlumniIds.size,
-        alumniIdsStudiLanjutMatched.size
+        getMapPayloadCount('total_alumni', alumniIdsDisplayed.size),
+        getMapPayloadCount('total_bekerja', alumniIdsBekerja.size),
+        getMapPayloadCount('total_belum_bekerja', alumniIdsBelumBekerja.size),
+        getMapPayloadCount('total_multi_job', multiJobAlumniIds.size),
+        getMapPayloadCount('total_studi_lanjut', alumniIdsStudiLanjutMatched.size)
     );
     updateActiveFilterUI();
     window.perbaruiTampilanPeta();

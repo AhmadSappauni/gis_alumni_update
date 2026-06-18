@@ -198,7 +198,7 @@
                         placeholder="Pilih atau tulis bidang pekerjaan">
                 </div>
                 <div>
-                    <label class="label-admin">Linearitas</label>
+                    <label class="label-admin">Relevansi Pekerjaan dengan Program Studi</label>
                     <select name="linearitas" class="custom-input-admin">
                         <option value="Sangat Erat">Sangat Erat</option>
                         <option value="Erat">Erat</option>

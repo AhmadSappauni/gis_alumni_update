@@ -129,13 +129,9 @@
                 </div>
 
                 <div class="filter-section">
-                    <label class="filter-label">Tahun Lulus:</label>
-                    <select id="filter-tahun" class="custom-select">
-                        <option value="semua">Semua Tahun</option>
-                        <option value="0">Tahun Ini</option>
-                        <option value="1">1 Tahun Terakhir (Tahun Lalu)</option>
-                        <option value="3">3 Tahun Terakhir</option>
-                        <option value="5">5 Tahun Terakhir</option>
+                    <label class="filter-label">Angkatan:</label>
+                    <select id="filter-angkatan" class="custom-select">
+                        <option value="semua">Semua Angkatan</option>
                     </select>
                 </div>
 
@@ -175,9 +171,13 @@
                             </div>
 
                             <div class="filter-section">
-                                <label class="filter-label">Angkatan:</label>
-                                <select id="filter-angkatan" class="custom-select">
-                                    <option value="semua">Semua Angkatan</option>
+                                <label class="filter-label">Tahun Lulus:</label>
+                                <select id="filter-tahun" class="custom-select">
+                                    <option value="semua">Semua Tahun</option>
+                                    <option value="0">Tahun Ini</option>
+                                    <option value="1">1 Tahun Terakhir (Tahun Lalu)</option>
+                                    <option value="3">3 Tahun Terakhir</option>
+                                    <option value="5">5 Tahun Terakhir</option>
                                 </select>
                             </div>
                         </div>
