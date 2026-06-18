@@ -71,6 +71,7 @@
 .sidebar-footer {
     margin-top: auto;
 }
+
 .btn-kembali {
     display: flex;
     align-items: center;
@@ -88,6 +89,37 @@
 }
 .btn-kembali:hover {
     background: rgba(255, 255, 255, 0.2);
+}
+
+.admin-logout-form {
+    margin: 10px 0 0;
+    width: 100%;
+}
+
+.btn-logout-admin {
+    appearance: none;
+    -webkit-appearance: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 14px;
+    background: rgba(239, 68, 68, 0.14);
+    color: #fee2e2;
+    border: 1px solid rgba(254, 226, 226, 0.24);
+    border-radius: 16px;
+    font: inherit;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.btn-logout-admin:hover {
+    background: rgba(239, 68, 68, 0.24);
+    border-color: rgba(254, 226, 226, 0.36);
+    color: #ffffff;
 }
 
 /* --- NAV DROPDOWN LOGIC --- */

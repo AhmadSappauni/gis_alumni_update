@@ -69,11 +69,32 @@ class AlumniImportTemplateExport implements FromArray, ShouldAutoSize, WithStyle
                 'example' => '2024',
             ],
             [
+                'header' => 'judul_skripsi',
+                'stored_to' => 'alumni_akademik.judul_skripsi',
+                'required' => false,
+                'description' => 'Judul skripsi atau tugas akhir alumni.',
+                'example' => 'Sistem Informasi WebGIS Persebaran Alumni',
+            ],
+            [
+                'header' => 'ipk',
+                'stored_to' => 'alumni_akademik.ipk',
+                'required' => false,
+                'description' => 'IPK alumni. Gunakan angka 0 sampai 4, contoh 3.75.',
+                'example' => '3.75',
+            ],
+            [
                 'header' => 'nilai_toefl',
                 'stored_to' => 'alumni_akademik.nilai_toefl',
                 'required' => false,
                 'description' => 'Nilai TOEFL dalam angka.',
                 'example' => '475',
+            ],
+            [
+                'header' => 'lama_studi',
+                'stored_to' => 'alumni_akademik.lama_studi',
+                'required' => false,
+                'description' => 'Lama studi dalam bulan.',
+                'example' => '48',
             ],
             [
                 'header' => 'alamat_lengkap_alumni',

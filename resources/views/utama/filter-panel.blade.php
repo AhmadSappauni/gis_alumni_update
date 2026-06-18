@@ -156,7 +156,7 @@
                             </div>
 
                             <div class="filter-section">
-                                <label class="filter-label">Status Kerja:</label>
+                                <label class="filter-label">Status Kerja(Marker):</label>
                                 <select id="filter-status-kerja" class="custom-select" multiple>
                                     <option value="semua">Semua Status</option>
                                     {{-- <option value="bekerja" selected data-icon="{{ asset('img/icon alumni kerja.png') }}">Sedang Bekerja</option> --}}

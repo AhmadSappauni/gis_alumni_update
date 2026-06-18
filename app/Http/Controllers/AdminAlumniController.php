@@ -1574,7 +1574,7 @@ class AdminAlumniController extends Controller
                 | Wajib minimal: nim
                 | Contoh header yang didukung:
                 | nim, nama_lengkap, jenis_kelamin, email, no_hp,
-                | angkatan, tahun_lulus, tahun_yudisium, nilai_toefl,
+                | angkatan, tahun_lulus, tahun_yudisium, judul_skripsi, ipk, nilai_toefl, lama_studi,
                 | alamat_lengkap_alumni, kota_alumni, provinsi_alumni,
                 | nama_perusahaan, linearitas,
                 | alamat_lengkap_perusahaan, kota_perusahaan, provinsi_perusahaan,
@@ -1596,7 +1596,10 @@ class AdminAlumniController extends Controller
                 $angkatan = $this->ambilTahun($row['angkatan'] ?? null);
                 $tahunLulus = $this->ambilTahun($row['tahun_lulus'] ?? null);
                 $tahunYudisium = $this->ambilTahun($row['tahun_yudisium'] ?? null);
+                $judulSkripsi = trim((string) ($row['judul_skripsi'] ?? '')) ?: null;
+                $ipk = $this->toDecimal($row['ipk'] ?? null);
                 $toefl = is_numeric($row['nilai_toefl'] ?? null) ? (int) $row['nilai_toefl'] : null;
+                $lamaStudi = $this->toInt($row['lama_studi'] ?? null);
 
                 $alamatAlumni = $this->getRowValue($row, [
                     'alamat_lengkap_alumni',
@@ -2103,7 +2106,10 @@ class AdminAlumniController extends Controller
                     $angkatan,
                     $tahunYudisium,
                     $tahunLulus,
+                    $judulSkripsi,
+                    $ipk,
                     $toefl,
+                    $lamaStudi,
                     $alamatAlumni,
                     $kotaAlumni,
                     $provinsiAlumni,
@@ -2166,7 +2172,10 @@ class AdminAlumniController extends Controller
                         'angkatan'       => $angkatan ?? (int) substr($nim, 0, 2),
                         'tahun_yudisium' => $tahunYudisium,
                         'tahun_lulus'    => $tahunLulus,
-                        'nilai_toefl'    => $toefl
+                        'judul_skripsi'  => $judulSkripsi,
+                        'ipk'            => $ipk,
+                        'nilai_toefl'    => $toefl,
+                        'lama_studi'     => $lamaStudi
                     ]);
 
                     /*
@@ -2357,6 +2366,27 @@ class AdminAlumniController extends Controller
 
         $clean = preg_replace('/[^0-9]/', '', (string) $val);
         return $clean === '' ? null : (int) $clean;
+    }
+
+    private function toDecimal($val): ?float
+    {
+        if ($val === null || $val === '') {
+            return null;
+        }
+
+        $normalized = str_replace(',', '.', trim((string) $val));
+
+        if (!is_numeric($normalized)) {
+            return null;
+        }
+
+        $value = round((float) $normalized, 2);
+
+        if ($value < 0 || $value > 4) {
+            return null;
+        }
+
+        return $value;
     }
 
     private function parseTanggal($val): ?string

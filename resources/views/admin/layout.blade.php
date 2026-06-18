@@ -91,6 +91,38 @@
             const activeDropdown = document.querySelector('.nav-dropdown');
             if (activeDropdown) activeDropdown.classList.add('active');
         }
+
+        const adminLogoutForm = document.querySelector('.admin-logout-form');
+        if (adminLogoutForm) {
+            adminLogoutForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const submitLogout = () => HTMLFormElement.prototype.submit.call(adminLogoutForm);
+
+                if (typeof Swal === 'undefined') {
+                    if (window.confirm('Logout dari admin?')) {
+                        submitLogout();
+                    }
+                    return;
+                }
+
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Logout dari admin?',
+                    text: 'Anda akan keluar dari sesi admin.',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, logout',
+                    cancelButtonText: 'Batal',
+                    confirmButtonColor: '#dc2626',
+                    cancelButtonColor: '#64748b',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        submitLogout();
+                    }
+                });
+            });
+        }
     });
 
 // Handler Tutup Modal

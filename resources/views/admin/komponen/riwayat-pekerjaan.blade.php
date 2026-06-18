@@ -51,7 +51,7 @@
                 </div>
 
                 <div>
-                    <label class="label-admin">Linearitas</label>
+                    <label class="label-admin">Relevansi Pekerjaan dengan Studi</label>
                     <select name="linearitas" class="custom-input-admin" required>
                         <option value="Sangat Erat">Sangat Erat</option>
                         <option value="Erat">Erat</option>

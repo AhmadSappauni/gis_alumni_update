@@ -45,7 +45,18 @@
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
             </svg>
-            Kembali ke WebGIS
+            Kembali ke Peta
         </a>
+
+        <form method="POST" action="{{ route('logout') }}" class="admin-logout-form">
+            @csrf
+            <button type="submit" class="btn-logout-admin">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 21H5a2 2 0 01-2-2V5a2 2 0 012-2h8"></path>
+                </svg>
+                Logout
+            </button>
+        </form>
     </div>
 </aside>
