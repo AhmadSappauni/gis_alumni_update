@@ -41,6 +41,16 @@
             </div>
 
             <div class="layer-control-section">
+                <div class="layer-control-item is-column">
+                    <span class="layer-label">Basemap</span>
+                    <select id="basemap-mode-ui" class="custom-select">
+                        <option value="osm" selected>OpenStreetMap</option>
+                        <option value="rbi">Peta RBI (BIG)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="layer-control-section">
                 <button
                     id="toggle-map-components"
                     class="map-components-toggle-btn"

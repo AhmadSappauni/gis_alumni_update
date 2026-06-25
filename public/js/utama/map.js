@@ -144,13 +144,199 @@ if (L.Control && L.Control.MiniMap) {
     }
 }
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: '',
-}).addTo(map);
+const BASEMAP_OSM = 'osm';
+const BASEMAP_RBI = 'rbi';
+const RBI_TILE_ERROR_THRESHOLD = 3;
+const RBI_TILE_RETRY_LIMIT = 1;
 
-// L.tileLayer('https://geoservices.big.go.id/rbi/rest/services/BASEMAP/Rupabumi_Indonesia/MapServer/tile/{z}/{y}/{x}', {
-//     attribution: 'BIG - Rupabumi Indonesia'
-// }).addTo(map);
+const osmBaseLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: '',
+});
+
+// TODO: verify RBI endpoint URL is active
+const RBI_TILE_URL_CANDIDATE = 'https://geoservices.big.go.id/rbi/rest/services/BASEMAP/Rupabumi_Indonesia/MapServer/tile/{z}/{y}/{x}';
+const rbiBaseLayer = L.tileLayer(RBI_TILE_URL_CANDIDATE, {
+    attribution: 'BIG - Rupabumi Indonesia',
+    maxZoom: 19
+});
+
+const basemapLayers = {
+    [BASEMAP_OSM]: osmBaseLayer,
+    [BASEMAP_RBI]: rbiBaseLayer
+};
+
+let activeBasemapKey = BASEMAP_OSM;
+let rbiTileErrorCount = 0;
+let rbiRetryCount = 0;
+let rbiFallbackInProgress = false;
+let rbiRetryTimer = null;
+
+osmBaseLayer.addTo(map);
+
+function showBasemapNotice(message) {
+    const text = (message || '').toString().trim();
+    if (!text) {
+        return;
+    }
+
+    if (typeof window.showToastKecil === 'function') {
+        window.showToastKecil(text);
+        return;
+    }
+
+    const el = document.createElement('div');
+    el.className = 'toast-kecil';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    el.textContent = text;
+
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('is-show'));
+
+    const ttl = 2200;
+    setTimeout(() => el.classList.remove('is-show'), ttl);
+    setTimeout(() => el.remove(), ttl + 450);
+}
+
+function syncBasemapSelect(key) {
+    const select = document.getElementById('basemap-mode-ui');
+
+    if (select && select.value !== key) {
+        select.value = key;
+    }
+
+    if (typeof window.syncCustomSelectValue === 'function') {
+        window.syncCustomSelectValue('basemap-mode-ui', key);
+    }
+}
+
+function resetRbiErrorState() {
+    rbiTileErrorCount = 0;
+    rbiRetryCount = 0;
+    rbiFallbackInProgress = false;
+
+    if (rbiRetryTimer) {
+        clearTimeout(rbiRetryTimer);
+        rbiRetryTimer = null;
+    }
+}
+
+function ensureOsmBaseLayer() {
+    if (!map.hasLayer(osmBaseLayer)) {
+        osmBaseLayer.addTo(map);
+    }
+}
+
+function fallbackToOsmFromRbi() {
+    if (rbiFallbackInProgress) {
+        return;
+    }
+
+    rbiFallbackInProgress = true;
+    activeBasemapKey = BASEMAP_OSM;
+    rbiTileErrorCount = 0;
+
+    if (rbiRetryTimer) {
+        clearTimeout(rbiRetryTimer);
+        rbiRetryTimer = null;
+    }
+
+    ensureOsmBaseLayer();
+
+    if (map.hasLayer(rbiBaseLayer)) {
+        map.removeLayer(rbiBaseLayer);
+    }
+
+    syncBasemapSelect(BASEMAP_OSM);
+    showBasemapNotice('Basemap Peta RBI tidak tersedia. OpenStreetMap digunakan kembali.');
+}
+
+function retryRbiTiles() {
+    if (rbiRetryTimer) {
+        return;
+    }
+
+    rbiTileErrorCount = 0;
+
+    rbiRetryTimer = setTimeout(function () {
+        rbiRetryTimer = null;
+
+        if (activeBasemapKey === BASEMAP_RBI && map.hasLayer(rbiBaseLayer)) {
+            rbiBaseLayer.redraw();
+        }
+    }, 450);
+}
+
+function setBasemap(key) {
+    const nextKey = key === BASEMAP_RBI ? BASEMAP_RBI : BASEMAP_OSM;
+
+    if (nextKey === BASEMAP_RBI) {
+        resetRbiErrorState();
+        activeBasemapKey = BASEMAP_RBI;
+        ensureOsmBaseLayer();
+
+        if (!map.hasLayer(rbiBaseLayer)) {
+            rbiBaseLayer.addTo(map);
+        }
+
+        if (typeof rbiBaseLayer.bringToFront === 'function') {
+            rbiBaseLayer.bringToFront();
+        }
+
+        syncBasemapSelect(BASEMAP_RBI);
+        return;
+    }
+
+    resetRbiErrorState();
+    activeBasemapKey = BASEMAP_OSM;
+    ensureOsmBaseLayer();
+
+    if (map.hasLayer(rbiBaseLayer)) {
+        map.removeLayer(rbiBaseLayer);
+    }
+
+    syncBasemapSelect(BASEMAP_OSM);
+}
+
+rbiBaseLayer.on('tileload', function () {
+    if (activeBasemapKey === BASEMAP_RBI) {
+        rbiTileErrorCount = 0;
+    }
+});
+
+rbiBaseLayer.on('tileerror', function () {
+    if (activeBasemapKey !== BASEMAP_RBI || rbiFallbackInProgress) {
+        return;
+    }
+
+    if (rbiRetryTimer) {
+        return;
+    }
+
+    rbiTileErrorCount += 1;
+
+    if (rbiTileErrorCount < RBI_TILE_ERROR_THRESHOLD) {
+        return;
+    }
+
+    if (rbiRetryCount < RBI_TILE_RETRY_LIMIT) {
+        rbiRetryCount += 1;
+        retryRbiTiles();
+        return;
+    }
+
+    fallbackToOsmFromRbi();
+});
+
+const basemapSelect = document.getElementById('basemap-mode-ui');
+if (basemapSelect) {
+    basemapSelect.addEventListener('change', function () {
+        setBasemap(this.value);
+    });
+}
+
+window.basemapLayers = basemapLayers;
+window.setBasemapMode = setBasemap;
 
 // Hapus teks "Leaflet" di attribution (attribution OSM tetap wajib ditampilkan)
 map.attributionControl.setPrefix(false);
