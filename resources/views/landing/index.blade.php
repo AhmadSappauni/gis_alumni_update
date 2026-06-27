@@ -108,19 +108,17 @@
         /* ── Hero ───────────────────────────────────────────────────── */
         .lp-hero {
             background: var(--bg-hero);
-            padding: 5rem 1.5rem 4.5rem;
+            padding: 3.5rem 1.5rem 4.5rem;
         }
         .lp-hero-grid {
             display: grid; grid-template-columns: 1fr 1fr;
             gap: 3.5rem; align-items: center;
         }
         .lp-hero-logo {
-            width: 88px; height: 88px;
-            border: 2px dashed var(--navy); border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            background: rgba(0, 74, 135, 0.05);
-            font-size: 9.5px; font-weight: 700; color: var(--navy);
-            text-align: center; line-height: 1.4; margin-bottom: 1.5rem;
+            height: 80px;
+            width: auto;
+            object-fit: contain;
+            margin-bottom: 1.25rem;
         }
         .lp-hero-h1 {
             font-size: clamp(2rem, 4vw, 2.85rem);
@@ -411,7 +409,7 @@
 
             {{-- Left: text --}}
             <div>
-                <img src="{{ asset('img/ULM-PNG-Baru.png') }}" alt="Logo ULM" style="height:80px;width:auto;object-fit:contain;margin-bottom:1.5rem;">
+                <img src="{{ asset('img/ULM-PNG-Baru.png') }}" alt="Logo ULM" class="lp-hero-logo">
 
                 <h1 class="lp-hero-h1">
                     Persebaran Alumni Pendidikan Komputer FKIP ULM
