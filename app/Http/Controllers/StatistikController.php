@@ -489,19 +489,480 @@ class StatistikController extends Controller
         try {
         $filters = $this->statistikFiltersFromRequest($request);
         $wilayahId = $filters['wilayah_id'];
+        $wilayahLabel = $this->resolveWilayahLabel($wilayahId);
+        $topWilayahSubtitle = $this->buildTopWilayahSubtitle($wilayahLabel);
 
         $alumniRows = $this->buildFilteredAlumniQuery($filters)->get();
 
         $filtered = $this->filterAlumniForStatistik($alumniRows, $filters);
 
+        $totalAlumni = $filtered->count();
+
+        $countBekerja = 0;
+        $countBelum = 0;
+        $countStudi = 0;
+        $countMultiJob = 0;
+
+        $masaTungguValues = [];
+
+        $statusBuckets = [
+            'Bekerja' => 0,
+            'Belum Bekerja' => 0,
+            'Studi Lanjut' => 0,
+            'Wirausaha' => 0,
+        ];
+
+        $linearitasBuckets = [
+            'Sangat Erat' => 0,
+            'Erat' => 0,
+            'Cukup Erat' => 0,
+            'Kurang Erat' => 0,
+            'Tidak Erat' => 0,
+            'Tidak diketahui' => 0,
+        ];
+
+        $bidangCounts = [];
+
+        $masaTungguBuckets = [
+            '0–3 bulan' => 0,
+            '4–6 bulan' => 0,
+            '7–12 bulan' => 0,
+            '>12 bulan' => 0,
+            'Tidak diketahui' => 0,
+        ];
+
+        $studiJenjangCounts = [
+            'S2' => 0,
+            'S3' => 0,
+            'PPG' => 0,
+            'Profesi' => 0,
+            'Sertifikasi' => 0,
+            'Lainnya' => 0,
+        ];
+
+        $kampusCounts = [];
+        $companyCounts = [];
+
+        $genderBuckets = [
+            'Laki-laki' => 0,
+            'Perempuan' => 0,
+            'Tidak diketahui' => 0,
+        ];
+
+        $toeflValidValues = [];
+        $toeflBuckets = [
+            '< 400' => 0,
+            '400-449' => 0,
+            '450-499' => 0,
+            '>= 500' => 0,
+            'Tidak diketahui' => 0,
+        ];
+
+        $salaryBuckets = [
+            '< Rp1 juta' => 0,
+            'Rp1–3 juta' => 0,
+            'Rp3–5 juta' => 0,
+            'Rp5–10 juta' => 0,
+            '> Rp10 juta' => 0,
+            'Tidak diketahui' => 0,
+        ];
+        $salaryValid = 0;
+        $salaryUnknown = 0;
+
+        $domicileHeatBuckets = [];
+        $workHeatBuckets = [];
+        $domicileNoCoord = 0;
+        $workNoCoord = 0;
+
+        $trenTotal = [];
+        $trenBekerja = [];
+        $trenBelum = [];
+
+        foreach ($filtered as $alumni) {
+            $jobs = $alumni->pekerjaan ?? collect();
+            $jobUtama = $this->pilihPekerjaanUtama($jobs);
+
+            $workingAktif = $jobs->filter(function ($job) {
+                $status = strtolower(trim((string) ($job->status_kerja ?? '')));
+                if (!($status === 'bekerja' || $status === 'wirausaha')) {
+                    return false;
+                }
+                return $this->getStatusKarirLower($job->status_karir) === 'utama' || (bool) $job->is_current;
+            });
+
+            $jobUtamaAktif = $workingAktif->isNotEmpty()
+                ? $this->pilihPekerjaanUtama($workingAktif)
+                : null;
+
+            $hasStudi = ($alumni->studiLanjut && $alumni->studiLanjut->isNotEmpty());
+            if ($hasStudi) {
+                $countStudi += 1;
+            }
+
+            $isMultiJob = $jobs->count() > 1;
+            if ($isMultiJob) {
+                $countMultiJob += 1;
+            }
+
+            $statusKerja = strtolower(trim((string) ($jobUtamaAktif?->status_kerja ?? '')));
+            $isBekerja = $jobUtamaAktif !== null && ($statusKerja === 'bekerja' || $statusKerja === 'wirausaha');
+
+            if ($isBekerja) {
+                $countBekerja += 1;
+            } else {
+                $countBelum += 1;
+            }
+
+            // Status chart (mutual exclusive untuk doughnut)
+            if ($hasStudi) {
+                $statusBuckets['Studi Lanjut'] += 1;
+            } elseif ($statusKerja === 'wirausaha') {
+                $statusBuckets['Wirausaha'] += 1;
+            } elseif ($statusKerja === 'bekerja') {
+                $statusBuckets['Bekerja'] += 1;
+            } else {
+                $statusBuckets['Belum Bekerja'] += 1;
+            }
+
+            // Chart berbasis pekerjaan: hitung hanya jika punya pekerjaan aktif/utama
+            if ($jobUtamaAktif) {
+                // Linearitas (dari perusahaan pekerjaan utama)
+                $lin = trim((string) ($jobUtamaAktif->perusahaan?->linearitas ?? ''));
+                $lin = $lin !== '' ? ucwords(strtolower($lin)) : 'Tidak diketahui';
+                if (!array_key_exists($lin, $linearitasBuckets)) {
+                    $lin = 'Tidak diketahui';
+                }
+                $linearitasBuckets[$lin] += 1;
+
+                // Distribusi rentang gaji (dari pekerjaan utama aktif)
+                $gajiRaw = $jobUtamaAktif->gaji_nominal ?? null;
+                $gaji = is_numeric($gajiRaw) ? (int) $gajiRaw : null;
+                if ($gaji === null || $gaji <= 0) {
+                    $salaryBuckets['Tidak diketahui'] += 1;
+                    $salaryUnknown += 1;
+                } else {
+                    $salaryValid += 1;
+                    if ($gaji < 1000000) {
+                        $salaryBuckets['< Rp1 juta'] += 1;
+                    } elseif ($gaji < 3000000) {
+                        $salaryBuckets['Rp1–3 juta'] += 1;
+                    } elseif ($gaji < 5000000) {
+                        $salaryBuckets['Rp3–5 juta'] += 1;
+                    } elseif ($gaji <= 10000000) {
+                        $salaryBuckets['Rp5–10 juta'] += 1;
+                    } else {
+                        $salaryBuckets['> Rp10 juta'] += 1;
+                    }
+                }
+
+                // Top bidang pekerjaan (dari pekerjaan utama)
+                $bidang = trim((string) ($jobUtamaAktif->bidang_pekerjaan ?? ''));
+                $bidang = $bidang !== '' ? $bidang : 'Tidak diketahui';
+                $bidangCounts[$bidang] = ($bidangCounts[$bidang] ?? 0) + 1;
+
+                // Masa tunggu (bulan)
+                $masaTunggu = $jobUtamaAktif->masa_tunggu;
+                $masaTungguNum = is_numeric($masaTunggu) ? (float) $masaTunggu : null;
+                if ($masaTungguNum === null || $masaTungguNum < 0) {
+                    $masaTungguBuckets['Tidak diketahui'] += 1;
+                } elseif ($masaTungguNum <= 3) {
+                    $masaTungguBuckets['0–3 bulan'] += 1;
+                    $masaTungguValues[] = $masaTungguNum;
+                } elseif ($masaTungguNum <= 6) {
+                    $masaTungguBuckets['4–6 bulan'] += 1;
+                    $masaTungguValues[] = $masaTungguNum;
+                } elseif ($masaTungguNum <= 12) {
+                    $masaTungguBuckets['7–12 bulan'] += 1;
+                    $masaTungguValues[] = $masaTungguNum;
+                } else {
+                    $masaTungguBuckets['>12 bulan'] += 1;
+                    $masaTungguValues[] = $masaTungguNum;
+                }
+            }
+
+            // Top perusahaan/instansi (berdasarkan pekerjaan utama aktif)
+            $company = $this->normalizeCompanyName($jobUtamaAktif?->perusahaan?->nama_perusahaan);
+            if ($company) {
+                $companyCounts[$company] = ($companyCounts[$company] ?? 0) + 1;
+            }
+
+            // Jenis kelamin (normalisasi)
+            $genderLabel = $this->normalizeGender($alumni->jenis_kelamin);
+            $genderBuckets[$genderLabel] = ($genderBuckets[$genderLabel] ?? 0) + 1;
+
+            // TOEFL (dari akademik)
+            $rawToefl = $alumni->akademik?->nilai_toefl;
+            $toefl = $this->parseNumeric($rawToefl);
+            // Validasi range TOEFL PBT (umum): 200 - 677
+            if ($toefl === null || $toefl < 200 || $toefl > 677) {
+                $toeflBuckets['Tidak diketahui'] += 1;
+            } else {
+                $toeflValidValues[] = $toefl;
+                if ($toefl < 400) $toeflBuckets['< 400'] += 1;
+                elseif ($toefl <= 449) $toeflBuckets['400-449'] += 1;
+                elseif ($toefl <= 499) $toeflBuckets['450-499'] += 1;
+                else $toeflBuckets['>= 500'] += 1;
+            }
+
+            // Heatmap domisili (alamat current) - Kalsel only
+            $alamat = $alumni->alamat;
+            $latDom = $alamat?->latitude;
+            $lngDom = $alamat?->longitude;
+            if ($this->isValidLatLng($latDom, $lngDom)) {
+                $latNum = (float) $this->parseNumeric($latDom);
+                $lngNum = (float) $this->parseNumeric($lngDom);
+                $prov = strtolower(trim((string) ($alamat?->provinsi ?? '')));
+                $isKalsel = ($prov !== '' && str_contains($prov, 'kalimantan selatan')) || $this->isInsideKalselBBox($latNum, $lngNum);
+                if ($isKalsel) {
+                    $this->pushHeatPoint($domicileHeatBuckets, $latNum, $lngNum);
+                }
+            } else {
+                $domicileNoCoord += 1;
+            }
+
+            // Heatmap lokasi kerja (lokasi perusahaan pekerjaan utama) - Kalsel only
+            if ($jobUtamaAktif) {
+                $lok = $this->getLokasiPerusahaan($jobUtamaAktif);
+                $latKerja = $lok?->latitude;
+                $lngKerja = $lok?->longitude;
+                if ($this->isValidLatLng($latKerja, $lngKerja)) {
+                    $latNum = (float) $this->parseNumeric($latKerja);
+                    $lngNum = (float) $this->parseNumeric($lngKerja);
+                    $prov = strtolower(trim((string) ($lok?->provinsi ?? '')));
+                    $isKalsel = ($prov !== '' && str_contains($prov, 'kalimantan selatan')) || $this->isInsideKalselBBox($latNum, $lngNum);
+                    if ($isKalsel) {
+                        $this->pushHeatPoint($workHeatBuckets, $latNum, $lngNum);
+                    }
+                } else {
+                    $workNoCoord += 1;
+                }
+            } else {
+                $workNoCoord += 1;
+            }
+
+            // Jika tidak punya pekerjaan utama aktif, gaji dianggap tidak diketahui.
+            if (!$jobUtamaAktif) {
+                $salaryBuckets['Tidak diketahui'] += 1;
+                $salaryUnknown += 1;
+            }
+
+            // Studi lanjut (pilih record terbaru per alumni)
+            $studiRow = null;
+            if ($alumni->studiLanjut && $alumni->studiLanjut->isNotEmpty()) {
+                $studiRow = $alumni->studiLanjut->sort(function ($a, $b) {
+                    $rankA = (int) ($a->tahun_masuk ?? 0);
+                    $rankB = (int) ($b->tahun_masuk ?? 0);
+                    if ($rankA !== $rankB) {
+                        return $rankB <=> $rankA;
+                    }
+                    $createdA = $a->created_at ? strtotime((string) $a->created_at) : 0;
+                    $createdB = $b->created_at ? strtotime((string) $b->created_at) : 0;
+                    if ($createdA !== $createdB) {
+                        return $createdB <=> $createdA;
+                    }
+                    return (int) $b->id <=> (int) $a->id;
+                })->first();
+            }
+
+            if ($studiRow) {
+                $jenjangRaw = strtoupper(trim((string) ($studiRow->jenjang ?? '')));
+                $jenjang = match (true) {
+                    $jenjangRaw === 'S2' => 'S2',
+                    $jenjangRaw === 'S3' => 'S3',
+                    $jenjangRaw === 'PPG' => 'PPG',
+                    str_contains($jenjangRaw, 'PROF') => 'Profesi',
+                    str_contains($jenjangRaw, 'SERT') => 'Sertifikasi',
+                    default => 'Lainnya'
+                };
+                $studiJenjangCounts[$jenjang] += 1;
+
+                $kampus = trim((string) ($studiRow->kampus ?? ''));
+                $kampus = $kampus !== '' ? $kampus : 'Tidak diketahui';
+                $kampusCounts[$kampus] = ($kampusCounts[$kampus] ?? 0) + 1;
+            }
+
+            $angk = $alumni->akademik?->angkatan;
+            $angkKey = $angk !== null ? (string) $angk : 'Tidak diketahui';
+
+            $trenTotal[$angkKey] = ($trenTotal[$angkKey] ?? 0) + 1;
+            if ($isBekerja) {
+                $trenBekerja[$angkKey] = ($trenBekerja[$angkKey] ?? 0) + 1;
+            } else {
+                $trenBelum[$angkKey] = ($trenBelum[$angkKey] ?? 0) + 1;
+            }
+        }
+
+        // Top/count helpers
+        arsort($bidangCounts);
+        $topBidang = array_slice($bidangCounts, 0, 5, true);
+
         $topWilayah = $this->buildTopWilayahCounts($filtered->pluck('id')->all());
 
-        return response()->json([...]);
-    } catch (\Throwable $e) {
+        arsort($kampusCounts);
+        $topKampus = array_slice($kampusCounts, 0, 5, true);
+
+        arsort($companyCounts);
+        $topCompanies = array_slice($companyCounts, 0, 10, true);
+
+        // Sort trend keys: numeric desc for angkatan
+        $trendKeys = array_keys($trenTotal);
+        usort($trendKeys, function ($a, $b) {
+            $na = is_numeric($a) ? (int) $a : null;
+            $nb = is_numeric($b) ? (int) $b : null;
+            if ($na !== null && $nb !== null) {
+                return $na <=> $nb;
+            }
+            if ($na !== null) return -1;
+            if ($nb !== null) return 1;
+            return strcmp($a, $b);
+        });
+
+        $trendLabels = $trendKeys;
+        $trendTotalSeries = array_map(fn ($k) => (int) ($trenTotal[$k] ?? 0), $trendKeys);
+        $trendBekerjaSeries = array_map(fn ($k) => (int) ($trenBekerja[$k] ?? 0), $trendKeys);
+        $trendBelumSeries = array_map(fn ($k) => (int) ($trenBelum[$k] ?? 0), $trendKeys);
+
+        $avgMasaTunggu = null;
+        if (count($masaTungguValues) > 0) {
+            $avgMasaTunggu = array_sum($masaTungguValues) / count($masaTungguValues);
+        }
+
+        $avgToefl = null;
+        $toeflValidCount = count($toeflValidValues);
+        if ($toeflValidCount > 0) {
+            $avgToefl = array_sum($toeflValidValues) / $toeflValidCount;
+        } else {
+            // Jika tidak ada TOEFL valid, chart distribusi ditampilkan sebagai empty state.
+            foreach (array_keys($toeflBuckets) as $k) {
+                $toeflBuckets[$k] = 0;
+            }
+        }
+
+        $domicilePoints = array_map(function ($key, $weight) {
+            [$lat, $lng] = array_map('floatval', explode(',', $key));
+            return ['lat' => $lat, 'lng' => $lng, 'weight' => (int) $weight];
+        }, array_keys($domicileHeatBuckets), array_values($domicileHeatBuckets));
+
+        $workPoints = array_map(function ($key, $weight) {
+            [$lat, $lng] = array_map('floatval', explode(',', $key));
+            return ['lat' => $lat, 'lng' => $lng, 'weight' => (int) $weight];
+        }, array_keys($workHeatBuckets), array_values($workHeatBuckets));
+
+        return response()->json([
+            'filters' => [
+                'angkatan' => $filters['angkatan'],
+                'tahun_lulus' => $filters['tahun_lulus'],
+                'jenis_kelamin' => $filters['jenis_kelamin'],
+                'status_alumni' => $filters['status_alumni'],
+                'bidang_pekerjaan' => $filters['bidang_pekerjaan'],
+                'wilayah_id' => $wilayahId,
+            ],
+            'meta' => [
+                'wilayah_filter_label' => $wilayahLabel,
+                'top_wilayah_subtitle' => $topWilayahSubtitle,
+            ],
+            'kpis' => [
+                'total_alumni' => $totalAlumni,
+                'bekerja' => $countBekerja,
+                'belum_bekerja' => $countBelum,
+                'studi_lanjut' => $countStudi,
+                'multi_job' => $countMultiJob,
+                'rata_masa_tunggu' => $avgMasaTunggu,
+                'rata_toefl' => $avgToefl,
+                'toefl_valid_count' => $toeflValidCount,
+            ],
+            'charts' => [
+                'status' => [
+                    'labels' => array_values(array_keys($statusBuckets)),
+                    'data' => array_values(array_map('intval', array_values($statusBuckets))),
+                ],
+                'gender' => [
+                    'labels' => array_values(array_keys($genderBuckets)),
+                    'data' => array_values(array_map('intval', array_values($genderBuckets))),
+                ],
+                'linearitas' => [
+                    'labels' => array_values(array_keys($linearitasBuckets)),
+                    'data' => array_values(array_map('intval', array_values($linearitasBuckets))),
+                ],
+                'toefl_dist' => [
+                    // Keys dikirim sederhana untuk konsistensi frontend.
+                    'keys' => array_values(array_keys($toeflBuckets)),
+                    // Labels untuk tampilan (boleh pakai simbol).
+                    'labels' => ['< 400', '400–449', '450–499', '≥ 500', 'Tidak diketahui'],
+                    'data' => [
+                        (int) ($toeflBuckets['< 400'] ?? 0),
+                        (int) ($toeflBuckets['400-449'] ?? 0),
+                        (int) ($toeflBuckets['450-499'] ?? 0),
+                        (int) ($toeflBuckets['>= 500'] ?? 0),
+                        (int) ($toeflBuckets['Tidak diketahui'] ?? 0),
+                    ],
+                    'valid_count' => $toeflValidCount,
+                    'distribution' => array_map('intval', $toeflBuckets),
+                ],
+                'top_bidang' => [
+                    'labels' => array_values(array_keys($topBidang)),
+                    'data' => array_values(array_map('intval', array_values($topBidang))),
+                ],
+                'top_company' => [
+                    'labels' => array_values(array_keys($topCompanies)),
+                    'data' => array_values(array_map('intval', array_values($topCompanies))),
+                    'base' => [
+                        'bekerja' => $countBekerja,
+                    ],
+                ],
+                'top_wilayah' => [
+                    'labels' => array_values(array_keys($topWilayah)),
+                    'data' => array_values(array_map('intval', array_values($topWilayah))),
+                    'subtitle' => $topWilayahSubtitle,
+                ],
+                'masa_tunggu' => [
+                    'labels' => array_values(array_keys($masaTungguBuckets)),
+                    'data' => array_values(array_map('intval', array_values($masaTungguBuckets))),
+                ],
+                'studi_jenjang' => [
+                    'labels' => array_values(array_keys($studiJenjangCounts)),
+                    'data' => array_values(array_map('intval', array_values($studiJenjangCounts))),
+                ],
+                'top_kampus' => [
+                    'labels' => array_values(array_keys($topKampus)),
+                    'data' => array_values(array_map('intval', array_values($topKampus))),
+                ],
+                'tren_angkatan' => [
+                    'labels' => $trendLabels,
+                    'total' => $trendTotalSeries,
+                    'bekerja' => $trendBekerjaSeries,
+                    'belum_bekerja' => $trendBelumSeries,
+                ],
+                'salary_distribution' => [
+                    'labels' => array_keys($salaryBuckets),
+                    'data' => array_values(array_map('intval', array_values($salaryBuckets))),
+                    'total_valid' => $salaryValid,
+                    'total_unknown' => $salaryUnknown,
+                ],
+            ],
+            'heatmaps' => [
+                'domisili' => [
+                    'points' => array_values($domicilePoints),
+                    'meta' => [
+                        'valid_points' => count($domicilePoints),
+                        'no_coord' => $domicileNoCoord,
+                    ],
+                ],
+                'lokasi_kerja' => [
+                    'points' => array_values($workPoints),
+                    'meta' => [
+                        'valid_points' => count($workPoints),
+                        'no_coord' => $workNoCoord,
+                    ],
+                ],
+            ],
+        ]);
+        } catch (\Throwable $e) {
         return response()->json([
             'debug_error' => $e->getMessage(),
             'debug_file' => $e->getFile(),
             'debug_line' => $e->getLine(),
+            'debug_trace' => collect($e->getTrace())->take(5),
         ], 500);
     }
     }
