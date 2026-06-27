@@ -248,7 +248,7 @@ class StatistikController extends Controller
         // atau berdomisili DI wilayah itu.
         $query->where(function ($q) use ($wilayahId) {
             $q->whereHas('pekerjaan', function ($q2) use ($wilayahId) {
-                $q2->where('is_current', true)
+                $q2->whereRaw('is_current IS TRUE')
                     ->whereHas('perusahaan.lokasiAktif', function ($q3) use ($wilayahId) {
                         $q3->whereRaw(
                             'ST_Within(lokasi_perusahaan.geom::geometry, (SELECT geom FROM wilayah_kalsel WHERE id = ?))',
