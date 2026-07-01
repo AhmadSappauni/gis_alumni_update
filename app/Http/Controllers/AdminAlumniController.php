@@ -2196,15 +2196,7 @@ class AdminAlumniController extends Controller
                         }
                         if ($provinsiAlumni !== null) {
                             $alamatUpdate['provinsi'] = $provinsiAlumni;
-                        }
-
-                        // Jangan menimpa koordinat lama dengan null.
-                        if ($latAlumni !== null && $lngAlumni !== null) {
-                            $alamatUpdate['latitude'] = $latAlumni;
-                            $alamatUpdate['longitude'] = $lngAlumni;
-                        }
-
-                        $alumni->alamat()->create($alamatUpdate);
+                        }                       
                     }
 
                     /*

@@ -105,7 +105,7 @@
     gap: 10px;
     width: 100%;
     padding: 14px;
-    background: rgba(239, 68, 68, 0.14);
+    background: rgb(239, 68, 68);
     color: #fee2e2;
     border: 1px solid rgba(254, 226, 226, 0.24);
     border-radius: 16px;
@@ -117,7 +117,7 @@
 }
 
 .btn-logout-admin:hover {
-    background: rgba(239, 68, 68, 0.24);
+    background: rgb(167, 51, 51);
     border-color: rgba(254, 226, 226, 0.36);
     color: #ffffff;
 }
