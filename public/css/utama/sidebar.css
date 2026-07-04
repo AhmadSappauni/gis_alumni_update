@@ -30,6 +30,11 @@
     visibility: visible;
 }
 
+/* Pastikan dialog konfirmasi berada di atas sidebar dan overlay blur */
+.swal2-container {
+    z-index: 100001 !important;
+}
+
 /* --- PANEL SIDEBAR OFF-CANVAS --- */
 .main-sidebar {
     position: fixed;

@@ -779,6 +779,15 @@ class MapController extends Controller
     {
         $this->applyAcademicFiltersToRelation($query, 'alumni.akademik', $filters);
 
+        $wilayahId = $filters['wilayah_id'] ?? null;
+        if ($wilayahId !== null) {
+            $this->wherePointWithinWilayahIds(
+                $query,
+                'studi_lanjut.geom::geometry',
+                [$wilayahId]
+            );
+        }
+
         $this->applyKeywordQueryFilter($query, $filters, [
             'nama' => function ($q, string $pattern) {
                 $q->whereHas('alumni', function ($alumni) use ($pattern) {
