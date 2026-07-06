@@ -92,7 +92,7 @@
                     </select>
                 </div>
                 <div class="stat-field">
-                    <label>Wilayah Kerja</label>
+                    <label>Kabupaten/Kota</label>
                     <select id="stat-filter-wilayah"
                         data-initial-wilayah-id="{{ $initialFilters['wilayah_id'] ?? '' }}">
                         <option value="">Semua Wilayah Kalsel</option>

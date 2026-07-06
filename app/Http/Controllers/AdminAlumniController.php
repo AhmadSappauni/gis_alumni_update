@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -602,8 +603,11 @@ class AdminAlumniController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nim'          => 'required|unique:alumnis,nim',
-            'nama_lengkap' => 'required'
+            'nim'             => 'required|unique:alumnis,nim',
+            'nama_lengkap'    => 'required',
+            'jenis_kelamin'   => 'required|in:L,P',
+            'nama_perusahaan' => Rule::requiredIf(fn () => !$request->has('is_unemployed')),
+            'jabatan'         => Rule::requiredIf(fn () => !$request->has('is_unemployed')),
         ]);
 
         DB::transaction(function () use ($request) {
@@ -743,6 +747,12 @@ class AdminAlumniController extends Controller
 
     public function update(Request $request, $id)
     {
+        $request->validate([
+            'nim'           => ['required', Rule::unique('alumnis', 'nim')->ignore($id)],
+            'nama_lengkap'  => 'required',
+            'jenis_kelamin' => 'required|in:L,P',
+        ]);
+
         $alumni = Alumni::findOrFail($id);
 
         DB::transaction(function () use ($request, $alumni) {
@@ -762,31 +772,41 @@ class AdminAlumniController extends Controller
                 'foto_profil' => $foto
             ]);
 
+            $dataAkademik = [
+                'angkatan' => $request->angkatan,
+                'tahun_lulus' => $request->tahun_lulus,
+                'judul_skripsi' => $request->judul_skripsi,
+                'ipk' => $request->ipk,
+            ];
+
+            foreach (['tahun_yudisium', 'nilai_toefl', 'lama_studi'] as $field) {
+                if ($request->has($field)) {
+                    $dataAkademik[$field] = $request->input($field);
+                }
+            }
+
             $alumni->akademik()->updateOrCreate(
                 ['alumni_id' => $alumni->id],
-                [
-                    'angkatan' => $request->angkatan,
-                    'tahun_lulus' => $request->tahun_lulus,
-                    'tahun_yudisium' => $request->tahun_yudisium,
-                    'judul_skripsi' => $request->judul_skripsi,
-                    'nilai_toefl' => $request->nilai_toefl,
-                    'ipk' => $request->ipk,
-                    'lama_studi' => $request->lama_studi
-                ]
+                $dataAkademik
             );
+
+            $dataAlamat = [
+                'alamat_lengkap' => $request->alamat_tinggal,
+                'kota'           => $request->kota_tinggal,
+                'latitude'       => $request->latitude_tinggal,
+                'longitude'      => $request->longitude_tinggal,
+                'is_current'     => DB::raw('TRUE')
+            ];
+
+            if ($request->has('provinsi')) {
+                $dataAlamat['provinsi'] = $request->input('provinsi');
+            }
 
             $alumni->alamat()->updateOrCreate(
                 [
                     'alumni_id' => $alumni->id
                 ],
-                [
-                    'alamat_lengkap' => $request->alamat_tinggal,
-                    'kota'           => $request->kota_tinggal,
-                    'provinsi'       => $request->provinsi,
-                    'latitude'       => $request->latitude_tinggal,
-                    'longitude'      => $request->longitude_tinggal,
-                    'is_current'     => DB::raw('TRUE')
-                ]
+                $dataAlamat
             );
         });
 
