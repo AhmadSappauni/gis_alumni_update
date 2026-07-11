@@ -926,13 +926,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'lng'
     );
 
-    fillAddress(
-        DEFAULT_LAT,
-        DEFAULT_LNG,
-        'alamat_lengkap',
-        'lat',
-        'lng'
-    );
+    // Pertahankan teks alamat dari database saat peta pertama dimuat.
+    // Reverse geocoding hanya dijalankan setelah marker/koordinat diubah.
 
     initDeleteButton();
     initDeleteStudiButton();

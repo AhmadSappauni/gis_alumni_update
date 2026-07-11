@@ -402,24 +402,6 @@ class AdminAlumniController extends Controller
             }
         }
 
-        $search = trim((string) $request->query('search', ''));
-        if ($search !== '') {
-            $driver = $query->getModel()->getConnection()->getDriverName();
-            $query->where(function ($q) use ($search, $driver) {
-                if ($driver === 'pgsql') {
-                    $q->where('nama_lengkap', 'ILIKE', "%{$search}%")
-                        ->orWhere('nim', 'ILIKE', "%{$search}%");
-                    return;
-                }
-
-                $needle = mb_strtolower($search, 'UTF-8');
-                $q->whereRaw('LOWER(nama_lengkap) LIKE ?', ["%{$needle}%"])
-                    ->orWhereRaw('LOWER(nim) LIKE ?', ["%{$needle}%"]);
-            });
-        }
-
-        $totalAlumni = (clone $query)->count();
-
         $dataAlumni = $query->with([
             'akademik',
             'alamat',
@@ -431,8 +413,11 @@ class AdminAlumniController extends Controller
             }
         ])
         ->latest()
-        ->paginate($perPage)
-        ->withQueryString();
+        ->get();
+
+        // Nama/NIM dicari dan dipaginasi di browser agar pencarian tidak
+        // mengirim request baru pada setiap ketikan.
+        $totalAlumni = $dataAlumni->count();
 
         if ($request->ajax()) {
             return response()->json([
@@ -598,6 +583,118 @@ class AdminAlumniController extends Controller
             $file,
             $filename
         );
+    }
+
+    private function deleteFotoProfil(?string $fotoProfil, ?int $alumniId = null): void
+    {
+        $fotoProfil = trim((string) $fotoProfil);
+
+        if ($fotoProfil === '') {
+            return;
+        }
+
+        $context = [
+            'alumni_id' => $alumniId,
+            'foto_profil' => $fotoProfil,
+        ];
+
+        try {
+            $localUrl = rtrim((string) config('filesystems.disks.public.url'), '/') . '/';
+
+            if (Str::startsWith($fotoProfil, $localUrl)) {
+                $fotoProfil = Str::after($fotoProfil, $localUrl);
+            } elseif (Str::startsWith($fotoProfil, ['http://', 'https://'])) {
+                $this->deleteFotoProfilSupabase($fotoProfil, $context);
+                return;
+            }
+
+            $localPath = ltrim(str_replace('\\', '/', $fotoProfil), '/');
+
+            if (!Str::startsWith($localPath, 'alumni_foto/')) {
+                Log::warning('Path foto profil lokal tidak dikenali; file tidak dihapus.', $context);
+                return;
+            }
+
+            $disk = Storage::disk('public');
+
+            if (!$disk->exists($localPath)) {
+                Log::warning('Foto profil lokal tidak ditemukan saat penghapusan alumni.', $context);
+                return;
+            }
+
+            if (!$disk->delete($localPath)) {
+                Log::warning('Foto profil lokal gagal dihapus.', $context);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Terjadi kesalahan saat menghapus foto profil alumni.', $context + [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function deleteFotoProfilSupabase(string $fotoProfil, array $context): void
+    {
+        $supabaseUrl = rtrim((string) env('SUPABASE_URL'), '/');
+        $supabaseKey = (string) env('SUPABASE_KEY');
+        $supabaseBucket = trim((string) env('SUPABASE_BUCKET'), '/');
+
+        if ($supabaseUrl === '' || $supabaseKey === '' || $supabaseBucket === '') {
+            Log::warning('Konfigurasi Supabase tidak lengkap; foto profil tidak dihapus.', $context);
+            return;
+        }
+
+        $publicPrefix = $supabaseUrl
+            . '/storage/v1/object/public/'
+            . $supabaseBucket
+            . '/';
+
+        if (!Str::startsWith($fotoProfil, $publicPrefix)) {
+            Log::warning('URL foto profil bukan URL bucket Supabase yang dikonfigurasi; file tidak dihapus.', $context);
+            return;
+        }
+
+        $objectPath = Str::before(Str::after($fotoProfil, $publicPrefix), '?');
+
+        if ($objectPath === '') {
+            Log::warning('Object path foto profil Supabase kosong; file tidak dihapus.', $context);
+            return;
+        }
+
+        $response = Http::withHeaders([
+            'apikey' => $supabaseKey,
+            'Authorization' => 'Bearer ' . $supabaseKey,
+        ])->delete(
+            $supabaseUrl
+            . '/storage/v1/object/'
+            . $supabaseBucket
+            . '/' . $objectPath
+        );
+
+        if (!$response->successful()) {
+            Log::warning('Foto profil Supabase gagal dihapus.', $context + [
+                'status' => $response->status(),
+                'object_path' => $objectPath,
+            ]);
+        }
+    }
+
+    private function deleteFotoProfilForAlumniIds($ids): void
+    {
+        $ids = collect($ids)
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return;
+        }
+
+        Alumni::query()
+            ->whereIn('id', $ids)
+            ->get(['id', 'foto_profil'])
+            ->each(function (Alumni $alumni) {
+                $this->deleteFotoProfil($alumni->foto_profil, (int) $alumni->id);
+            });
     }
 
     public function store(Request $request)
@@ -817,7 +914,10 @@ class AdminAlumniController extends Controller
 
     public function destroy($id)
     {
-        Alumni::findOrFail($id)->delete();
+        $alumni = Alumni::findOrFail($id);
+
+        $this->deleteFotoProfil($alumni->foto_profil, (int) $alumni->id);
+        $alumni->delete();
 
         return back()->with('success', 'Data alumni berhasil dihapus');
     }
@@ -1019,25 +1119,41 @@ class AdminAlumniController extends Controller
             if (!$wantsJson) {
                 $query = $this->buildBulkDeleteAlumniQuery($request);
                 $count = (clone $query)->count();
+                $ids = (clone $query)->pluck('id');
+
+                $this->deleteFotoProfilForAlumniIds($ids);
                 $query->delete();
 
                 return back()->with('success', $count . ' data alumni berhasil dihapus.');
             }
 
-            $ids = $this->buildBulkDeleteAlumniQuery($request)
+            $query = $this->buildBulkDeleteAlumniQuery($request);
+            $total = $request->boolean('include_total')
+                ? (clone $query)->count()
+                : null;
+
+            $ids = $query
                 ->orderBy('id')
                 ->limit($batchSize)
                 ->pluck('id');
+
+            $this->deleteFotoProfilForAlumniIds($ids);
 
             $deleted = $ids->isEmpty()
                 ? 0
                 : Alumni::whereIn('id', $ids)->delete();
 
             if ($wantsJson) {
-                return response()->json([
+                $response = [
                     'success' => true,
                     'deleted' => $deleted,
-                ]);
+                ];
+
+                if ($total !== null) {
+                    $response['total'] = $total;
+                }
+
+                return response()->json($response);
             }
 
             return back()->with('success', $deleted . ' data alumni berhasil dihapus.');
@@ -1061,6 +1177,7 @@ class AdminAlumniController extends Controller
         }
 
         $idsToDelete = $wantsJson ? $ids->take($batchSize)->values() : $ids;
+        $this->deleteFotoProfilForAlumniIds($idsToDelete);
         $deleted = Alumni::whereIn('id', $idsToDelete)->delete();
 
         if ($wantsJson) {
@@ -2097,19 +2214,24 @@ class AdminAlumniController extends Controller
                     'source' => $sourceKampusCoordinate,
                 ]);
 
-                // Catat data yang tersimpan tapi tidak punya koordinat (tidak akan muncul di peta)
+                // Hitung item yang belum dapat dipetakan setelah transaksi baris berhasil.
+                $rowNoMap = 0;
+                $hasAlumniCoordinates = $latAlumni !== null && $lngAlumni !== null;
+                $hasCompanyCoordinates = $latPerusahaan !== null && $lngPerusahaan !== null;
+
                 if ($isBekerja) {
-                    if ($latPerusahaan === null || $lngPerusahaan === null) {
-                        $no_map++;
+                    // Marker pekerja memakai lokasi perusahaan, lalu fallback ke domisili alumni.
+                    if (!$hasCompanyCoordinates && !$hasAlumniCoordinates) {
+                        $rowNoMap++;
                     }
                 } else {
-                    if ($latAlumni === null || $lngAlumni === null) {
-                        $no_map++;
+                    if (!$hasAlumniCoordinates) {
+                        $rowNoMap++;
                     }
                 }
 
                 if ($hasStudiLanjutData && ($latKampus === null || $lngKampus === null)) {
-                    $no_map++;
+                    $rowNoMap++;
                 }
 
                 /*
@@ -2164,8 +2286,7 @@ class AdminAlumniController extends Controller
                     $jenjangStudi,
                     $tahunMasukStudi,
                     $tahunLulusStudi,
-                    $statusStudi,
-                    &$success
+                    $statusStudi
                 ) {
 
                     /*
@@ -2203,20 +2324,24 @@ class AdminAlumniController extends Controller
                     | 3. Simpan domisili alumni (jika ada)
                     |--------------------------------------------------------------
                     */
-                    if ($alamatAlumni || $kotaAlumni || $provinsiAlumni || ($latAlumni !== null && $lngAlumni !== null)) {
+                    if (
+                        $alamatAlumni !== null
+                        || $kotaAlumni !== null
+                        || $provinsiAlumni !== null
+                        || $latAlumni !== null
+                        || $lngAlumni !== null
+                    ) {
                         $alamatUpdate = [
-                            'is_current' => DB::raw('TRUE'),
+                            'alumni_id' => $alumni->id,
+                            'alamat_lengkap' => $alamatAlumni,
+                            'kota' => $kotaAlumni,
+                            'provinsi' => $provinsiAlumni,
+                            'latitude' => $latAlumni,
+                            'longitude' => $lngAlumni,
+                            'is_current' => true,
                         ];
 
-                        if ($alamatAlumni !== null) {
-                            $alamatUpdate['alamat_lengkap'] = $alamatAlumni;
-                        }
-                        if ($kotaAlumni !== null) {
-                            $alamatUpdate['kota'] = $kotaAlumni;
-                        }
-                        if ($provinsiAlumni !== null) {
-                            $alamatUpdate['provinsi'] = $provinsiAlumni;
-                        }                       
+                        AlamatAlumni::create($alamatUpdate);
                     }
 
                     /*
@@ -2310,8 +2435,10 @@ class AdminAlumniController extends Controller
                         ]);
                     }
 
-                    $success++;
                 });
+
+                $success++;
+                $no_map += $rowNoMap;
 
             } catch (\Throwable $e) {
                 report($e);

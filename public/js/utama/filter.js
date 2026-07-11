@@ -444,17 +444,9 @@ function appendMultiValueParam(params, key, values) {
 
 function buildMapMarkerApiParams() {
     const params = new URLSearchParams();
-    const rawKeyword =
-        window.__SEARCH_KEYWORD_OVERRIDE__ !== undefined && window.__SEARCH_KEYWORD_OVERRIDE__ !== null
-            ? String(window.__SEARCH_KEYWORD_OVERRIDE__)
-            : (document.getElementById('search-input')?.value ?? '');
 
-    const keyword = rawKeyword.toString().trim();
-    if (keyword.length >= 2) {
-        params.set('search', keyword);
-    }
-
-    appendMultiValueParam(params, 'search_scope', getSelectedFilterValues('search-category'));
+    // Keyword pencarian diterapkan langsung pada payload marker di browser.
+    // Request API hanya diperlukan untuk pemuatan awal dan filter non-keyword.
     appendMultiValueParam(params, 'bidang_pekerjaan', getSelectedFilterValues('filter-bidang'));
     const statusValues = getSelectedFilterValues('filter-status-kerja')
         .filter(value => canViewBelumBekerja() || value !== 'belum_bekerja');
@@ -1514,7 +1506,7 @@ function bindFilterEvents() {
         }
         closeSearchPanel({ clearResults: true });
         syncClearButton();
-        filterDanTampilkanMarker();
+        renderFetchedMapPayload();
     };
 
     if (clearBtnEl) {
@@ -1549,7 +1541,7 @@ function bindFilterEvents() {
                 window.resetHighlightWilayah();
             }
 
-            filterDanTampilkanMarker();
+            renderFetchedMapPayload();
         });
 
     document.getElementById('filter-linearitas')
@@ -1605,23 +1597,16 @@ function bindFilterEvents() {
 
     const searchInputEl = document.getElementById('search-input');
     if (searchInputEl) {
-        let liveSearchTimer = null;
         let isComposing = false;
 
         const triggerLiveSearch = function () {
             if (isComposing) return;
-            if (liveSearchTimer) {
-                clearTimeout(liveSearchTimer);
-            }
-            liveSearchTimer = setTimeout(function () {
-                handleSearchSubmit();
-            }, 200);
+            handleSearchSubmit();
         };
 
         // Tetap dukung Enter, tapi tidak wajib.
         searchInputEl.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
-                if (liveSearchTimer) clearTimeout(liveSearchTimer);
                 handleSearchSubmit();
             }
         });
@@ -1760,7 +1745,7 @@ function handleSearchSubmit() {
         }
         const btn = document.getElementById('btn-clear-search');
         if (btn) btn.hidden = true;
-        filterDanTampilkanMarker();
+        renderFetchedMapPayload();
         return;
     }
 
@@ -1772,7 +1757,7 @@ function handleSearchSubmit() {
             container.classList.remove('is-hidden');
         }
         window.__SEARCH_KEYWORD_OVERRIDE__ = '';
-        filterDanTampilkanMarker();
+        renderFetchedMapPayload();
         window.__SEARCH_KEYWORD_OVERRIDE__ = null;
         return;
     }
@@ -1789,7 +1774,7 @@ function handleSearchSubmit() {
         window.resetHighlightWilayah();
     }
 
-    filterDanTampilkanMarker();
+    renderFetchedMapPayload();
 }
 
 function populateBidangFilter() {
@@ -2984,7 +2969,6 @@ function filterDanTampilkanMarker() {
     const keywordTrimmed = rawKeyword.toString().trim().toLowerCase();
     // Minimal 2 karakter untuk benar-benar menjalankan pencarian (panel tetap bisa menampilkan helper).
     const keyword = keywordTrimmed.length >= 2 ? keywordTrimmed : '';
-    const keywordSudahDifilterServer = !!window.__RENDERING_FETCHED_MARKERS__;
 
     const scopes = getCariBerdasarkanScopes();
 
@@ -3105,7 +3089,7 @@ function filterDanTampilkanMarker() {
         // =====================================
         let cocokKeyword = true;
 
-        if (keyword !== '' && !keywordSudahDifilterServer) {
+        if (keyword !== '') {
 
             const n = nama.toLowerCase();
             const nim = (item.nim || '').toString().toLowerCase();
@@ -3431,7 +3415,7 @@ function filterDanTampilkanMarker() {
             }
 
             let cocokKeyword = true;
-            if (keyword !== '' && !keywordSudahDifilterServer) {
+            if (keyword !== '') {
                 const n = (nama || '').toLowerCase();
                 const nim = (row.nim || '').toString().toLowerCase();
 
@@ -3633,12 +3617,23 @@ function filterDanTampilkanMarker() {
         window.updateChoroplethLegend();
     }
 
+    const gunakanHitunganPencarianLokal = keyword !== '';
     perbaruiLegendaStatus(
-        getMapPayloadCount('total_alumni', alumniIdsDisplayed.size),
-        getMapPayloadCount('total_bekerja', alumniIdsBekerja.size),
-        getMapPayloadCount('total_belum_bekerja', alumniIdsBelumBekerja.size),
-        getMapPayloadCount('total_multi_job', multiJobAlumniIds.size),
-        getMapPayloadCount('total_studi_lanjut', alumniIdsStudiLanjutMatched.size)
+        gunakanHitunganPencarianLokal
+            ? alumniIdsDisplayed.size
+            : getMapPayloadCount('total_alumni', alumniIdsDisplayed.size),
+        gunakanHitunganPencarianLokal
+            ? alumniIdsBekerja.size
+            : getMapPayloadCount('total_bekerja', alumniIdsBekerja.size),
+        gunakanHitunganPencarianLokal
+            ? alumniIdsBelumBekerja.size
+            : getMapPayloadCount('total_belum_bekerja', alumniIdsBelumBekerja.size),
+        gunakanHitunganPencarianLokal
+            ? multiJobAlumniIds.size
+            : getMapPayloadCount('total_multi_job', multiJobAlumniIds.size),
+        gunakanHitunganPencarianLokal
+            ? alumniIdsStudiLanjutMatched.size
+            : getMapPayloadCount('total_studi_lanjut', alumniIdsStudiLanjutMatched.size)
     );
     updateActiveFilterUI();
     window.perbaruiTampilanPeta();

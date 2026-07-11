@@ -139,12 +139,12 @@
 
         <div class="header-right">
             <div class="view-switcher">
-                <button onclick="switchView('card')" id="btn-card" class="view-btn active" title="Tampilan Card">
+                <button onclick="switchView('card')" id="btn-card" class="view-btn" title="Tampilan Card">
                     <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                         <path d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 14a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1v-5zM14 14a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1h-4a1 1 0 01-1-1v-5z"></path>
                     </svg>
                 </button>
-                <button onclick="switchView('list')" id="btn-list" class="view-btn" title="Tampilan List">
+                <button onclick="switchView('list')" id="btn-list" class="view-btn active" title="Tampilan List">
                     <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                         <path d="M4 6h16M4 12h16M4 18h16"></path>
                     </svg>
@@ -204,13 +204,25 @@ function initBulkDeleteAlumni() {
         return;
     }
 
-    const totalAll = Number(actionBar.dataset.total || 0);
     let selectAllGlobal = false;
 
+    function selectableCheckboxes() {
+        return checkboxes.filter(cb => {
+            const row = cb.closest('tr');
+            return !row || row.dataset.clientSearchMatch !== 'false';
+        });
+    }
+
+    function currentTotal() {
+        return Number(actionBar.dataset.total || selectableCheckboxes().length);
+    }
+
     function updateBulkDeleteState() {
-        const selected = checkboxes.filter(cb => cb.checked);
+        const selectable = selectableCheckboxes();
+        const selected = selectable.filter(cb => cb.checked);
+        const totalAll = currentTotal();
         const selectedCount = selectAllGlobal ? (totalAll || selected.length) : selected.length;
-        const allChecked = selectAllGlobal || (selected.length > 0 && selected.length === checkboxes.length);
+        const allChecked = selectAllGlobal || (selected.length > 0 && selected.length === selectable.length);
 
         countLabel.textContent = `${selectedCount} dipilih`;
         deleteBtn.disabled = selectedCount === 0;
@@ -222,12 +234,12 @@ function initBulkDeleteAlumni() {
         if (selectAllGlobal) {
             selectAllTop.indeterminate = false;
         } else {
-            selectAllTop.indeterminate = selected.length > 0 && selected.length < checkboxes.length;
+            selectAllTop.indeterminate = selected.length > 0 && selected.length < selectable.length;
         }
     }
 
     function setAllChecked(checked) {
-        checkboxes.forEach(cb => {
+        selectableCheckboxes().forEach(cb => {
             cb.checked = checked;
         });
 
@@ -235,6 +247,7 @@ function initBulkDeleteAlumni() {
     }
 
     async function enableSelectAllGlobal() {
+        const totalAll = currentTotal();
         const countText = totalAll ? `${totalAll}` : 'semua';
         const result = await Swal.fire({
             title: 'Pilih semua data?',
@@ -280,12 +293,45 @@ function initBulkDeleteAlumni() {
         });
     });
 
+    window.refreshBulkDeleteAlumni = function ({ clearSelection = false } = {}) {
+        if (clearSelection) {
+            selectAllGlobal = false;
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+            });
+        }
+
+        updateBulkDeleteState();
+    };
+
     function chunkArray(items, size) {
         const chunks = [];
         for (let i = 0; i < items.length; i += size) {
             chunks.push(items.slice(i, i + size));
         }
         return chunks;
+    }
+
+    function createBulkDeleteBatchError(error, {
+        deletedTotal,
+        failedBatchSize,
+        unprocessedTotal,
+        batchNumber,
+        totalBatches
+    }) {
+        const batchError = new Error(
+            error?.message || 'Terjadi kesalahan saat menghapus data alumni.'
+        );
+
+        batchError.bulkDeleteReport = {
+            deletedTotal: Math.max(0, Number(deletedTotal) || 0),
+            failedBatchSize: Math.max(0, Number(failedBatchSize) || 0),
+            unprocessedTotal: Math.max(0, Number(unprocessedTotal) || 0),
+            batchNumber: Math.max(1, Number(batchNumber) || 1),
+            totalBatches: Math.max(1, Number(totalBatches) || 1)
+        };
+
+        return batchError;
     }
 
     function updateDeleteProgress(done, total) {
@@ -330,7 +376,7 @@ function initBulkDeleteAlumni() {
         });
     }
 
-    async function deleteBatch(payload) {
+    async function deleteBatch(payload, { returnMeta = false } = {}) {
         const response = await fetch(form.action, {
             method: 'DELETE',
             headers: {
@@ -355,7 +401,16 @@ function initBulkDeleteAlumni() {
             throw new Error(data?.message || `Gagal menghapus data alumni. Status: ${response.status}`);
         }
 
-        return Number(data.deleted || 0);
+        const deleted = Number(data.deleted || 0);
+
+        if (returnMeta) {
+            return {
+                deleted,
+                total: data.total
+            };
+        }
+
+        return deleted;
     }
 
     function currentDeleteFilters() {
@@ -375,19 +430,76 @@ function initBulkDeleteAlumni() {
         const batchSize = 10;
         let deletedTotal = 0;
         const filters = currentDeleteFilters();
+        let totalBatches = Math.max(1, Math.ceil(totalToDelete / batchSize));
+        let totalChangedSincePageLoad = false;
 
         showDeleteProgress(totalToDelete);
 
         if (isGlobalDelete) {
-            while (deletedTotal < totalToDelete) {
-                const deleted = await deleteBatch({
-                    ...filters,
-                    select_all: true,
-                    batch_size: Math.min(batchSize, totalToDelete - deletedTotal)
-                });
+            let batchNumber = 0;
 
-                if (deleted <= 0) {
-                    break;
+            while (deletedTotal < totalToDelete) {
+                let failedBatchSize = Math.min(batchSize, totalToDelete - deletedTotal);
+                batchNumber++;
+
+                let deleted;
+                try {
+                    const payload = {
+                        ...filters,
+                        select_all: true,
+                        batch_size: failedBatchSize
+                    };
+                    const isFirstBatch = batchNumber === 1;
+
+                    if (isFirstBatch) {
+                        payload.include_total = true;
+                    }
+
+                    const result = await deleteBatch(payload, {
+                        returnMeta: isFirstBatch
+                    });
+
+                    if (isFirstBatch) {
+                        deleted = result.deleted;
+
+                        if (
+                            result.total !== undefined
+                            && Number.isFinite(Number(result.total))
+                            && Number(result.total) >= 0
+                        ) {
+                            const serverTotal = Number(result.total);
+
+                            if (serverTotal !== totalToDelete) {
+                                totalChangedSincePageLoad = true;
+                                totalToDelete = serverTotal;
+                                totalBatches = Math.max(1, Math.ceil(totalToDelete / batchSize));
+                                failedBatchSize = Math.min(
+                                    failedBatchSize,
+                                    Math.max(0, totalToDelete - deletedTotal)
+                                );
+                            }
+                        }
+                    } else {
+                        deleted = result;
+                    }
+
+                    if (deleted <= 0 && deletedTotal < totalToDelete) {
+                        throw new Error('Batch tidak menghapus data alumni.');
+                    }
+                } catch (error) {
+                    const batchError = createBulkDeleteBatchError(error, {
+                        deletedTotal,
+                        failedBatchSize,
+                        unprocessedTotal: totalToDelete - deletedTotal - failedBatchSize,
+                        batchNumber,
+                        totalBatches
+                    });
+
+                    if (totalChangedSincePageLoad) {
+                        batchError.bulkDeleteReport.totalChangedSincePageLoad = true;
+                    }
+
+                    throw batchError;
                 }
 
                 deletedTotal += deleted;
@@ -397,11 +509,22 @@ function initBulkDeleteAlumni() {
             const selectedIds = selected.map(cb => cb.value);
             const batches = chunkArray(selectedIds, batchSize);
 
-            for (const ids of batches) {
-                const deleted = await deleteBatch({
-                    ids,
-                    batch_size: batchSize
-                });
+            for (const [batchIndex, ids] of batches.entries()) {
+                let deleted;
+                try {
+                    deleted = await deleteBatch({
+                        ids,
+                        batch_size: batchSize
+                    });
+                } catch (error) {
+                    throw createBulkDeleteBatchError(error, {
+                        deletedTotal,
+                        failedBatchSize: ids.length,
+                        unprocessedTotal: totalToDelete - deletedTotal - ids.length,
+                        batchNumber: batchIndex + 1,
+                        totalBatches: batches.length
+                    });
+                }
 
                 deletedTotal += deleted;
                 updateDeleteProgress(deletedTotal, totalToDelete);
@@ -409,7 +532,22 @@ function initBulkDeleteAlumni() {
         }
 
         if (deletedTotal < totalToDelete) {
-            throw new Error(`${deletedTotal} dari ${totalToDelete} data berhasil dihapus. Beberapa data mungkin sudah tidak tersedia.`);
+            const batchError = createBulkDeleteBatchError(
+                new Error('Jumlah data yang dihapus tidak sesuai dengan jumlah yang dipilih.'),
+                {
+                    deletedTotal,
+                    failedBatchSize: totalToDelete - deletedTotal,
+                    unprocessedTotal: 0,
+                    batchNumber: totalBatches,
+                    totalBatches
+                }
+            );
+
+            if (totalChangedSincePageLoad) {
+                batchError.bulkDeleteReport.totalChangedSincePageLoad = true;
+            }
+
+            throw batchError;
         }
 
         updateDeleteProgress(deletedTotal, totalToDelete);
@@ -424,13 +562,57 @@ function initBulkDeleteAlumni() {
         window.location.reload();
     }
 
+    async function handleBulkDeleteFailure(error) {
+        const report = error?.bulkDeleteReport;
+        const totalChangedNote = report?.totalChangedSincePageLoad
+            ? ' Catatan: jumlah data berubah sejak halaman terakhir dimuat.'
+            : '';
+        const message = report
+            ? `${report.deletedTotal} alumni berhasil dihapus secara permanen dan tidak dapat dibatalkan. `
+                + `${report.failedBatchSize} alumni gagal diproses pada batch ke-${report.batchNumber} dari ${report.totalBatches}. `
+                + `${report.unprocessedTotal} alumni belum sempat diproses karena proses dihentikan. `
+                + 'Silakan periksa ulang daftar data dan coba lagi jika diperlukan.'
+                + totalChangedNote
+            : (error?.message || 'Terjadi kesalahan saat menghapus data alumni.');
+
+        await Swal.fire({
+            icon: 'error',
+            title: report ? 'Bulk delete berhenti' : 'Gagal menghapus data',
+            text: message,
+            confirmButtonColor: '#d33'
+        });
+
+        if ((Number(report?.deletedTotal) || 0) <= 0) {
+            return;
+        }
+
+        if (typeof window.alumniFetchAndRender === 'function') {
+            try {
+                await window.alumniFetchAndRender(window.location.href, {
+                    throwOnError: true
+                });
+            } catch (refreshError) {
+                await Swal.fire({
+                    icon: 'warning',
+                    title: 'Tampilan data belum diperbarui',
+                    text: 'Gagal menyegarkan tampilan data secara otomatis. Sebagian data sudah terhapus dari database. Silakan refresh halaman secara manual untuk melihat data terbaru.',
+                    confirmButtonColor: '#d33'
+                });
+            }
+            return;
+        }
+
+        window.location.reload();
+    }
+
     deleteBtn.addEventListener('click', function () {
-        const selected = checkboxes.filter(cb => cb.checked);
+        const selected = selectableCheckboxes().filter(cb => cb.checked);
 
         if (!selectAllGlobal && !selected.length) {
             return;
         }
 
+        const totalAll = currentTotal();
         const deleteCount = selectAllGlobal ? (totalAll || selected.length) : selected.length;
 
         Swal.fire({
@@ -448,14 +630,8 @@ function initBulkDeleteAlumni() {
                 return;
             }
 
-            deleteSelectedInBatches(selected, deleteCount, selectAllGlobal).catch((error) => {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Gagal menghapus data',
-                    text: error?.message || 'Terjadi kesalahan saat menghapus data alumni.',
-                    confirmButtonColor: '#d33'
-                });
-            });
+            deleteSelectedInBatches(selected, deleteCount, selectAllGlobal)
+                .catch(handleBulkDeleteFailure);
         });
     });
 

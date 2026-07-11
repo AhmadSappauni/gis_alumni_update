@@ -23,7 +23,7 @@
             $emptyMessage = 'Ups! Alumni yang kamu cari tidak ditemukan.';
         }
     @endphp
-    <div id="card-view-wrapper">
+    <div id="card-view-wrapper" style="display: none;">
         <div id="card-view" class="cards-grid">
             @foreach ($dataAlumni as $alumni)
             @php
@@ -31,12 +31,15 @@
                 $kelengkapan = $alumni->data_completeness;
             @endphp
                 <div class="data-card glass-panel"
+                    data-alumni-id="{{ $alumni->id }}"
+                    data-alumni-name="{{ $alumni->nama_lengkap }}"
+                    data-alumni-nim="{{ $alumni->nim }}"
                     data-tahun="{{ $alumni->akademik?->tahun_lulus ?? '' }}"
                     data-linearitas="{{ $pekerjaanAktif?->perusahaan?->linearitas ?? '' }}"
                     data-bidang="{{ $pekerjaanAktif?->bidang_pekerjaan ?? '' }}">
                     <div class="card-profile-img">
                         @if ($alumni->foto_profil)
-                            <img src="{{ asset('storage/' . $alumni->foto_profil) }}"
+                            <img src="{{ asset('storage/' . $alumni->foto_profil) }}" loading="lazy"
                                 alt="Foto {{ $alumni->nama_lengkap }}">
                         @else
                             <div class="img-placeholder">
@@ -230,9 +233,9 @@
             @php
                 $perPageActive = (int) request()->query('per_page', 40);
                 $perPageOptions = [40, 60, 80, 100];
-                $from = (int) ($dataAlumni->firstItem() ?? 0);
-                $to = (int) ($dataAlumni->lastItem() ?? 0);
-                $total = (int) ($dataAlumni->total() ?? 0);
+                $total = (int) ($totalAlumni ?? $dataAlumni->count());
+                $from = $total > 0 ? 1 : 0;
+                $to = min($perPageActive, $total);
             @endphp
             <div class="pagination-meta">
                 <span class="pagination-showing">Showing {{ $from }} to {{ $to }} of {{ $total }} rows</span>
@@ -245,9 +248,7 @@
                     <span class="per-page-text">rows per page</span>
                 </div>
             </div>
-            <div class="pagination-links pagination-links--compact">
-                {{ $dataAlumni->onEachSide(1)->links('vendor.pagination.admin-compact') }}
-            </div>
+            <div class="pagination-links pagination-links--compact" data-client-pagination></div>
         </div>
         <div id="card-empty" class="no-results" style="display: {{ ($isQueryActive && !$hasResults) ? 'block' : 'none' }};">
             <span class="no-results-icon">🔍</span>
@@ -255,7 +256,7 @@
         </div>
     </div>
 
-        <div id="list-view" class="glass-panel" style="display: none; padding: 0; overflow: visible; margin-top: 10px;">
+        <div id="list-view" class="glass-panel" style="display: block; padding: 0; overflow: visible; margin-top: 10px;">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:15px; padding:15px 20px; border-bottom:1px solid rgba(0,0,0,0.05); background:rgba(255,255,255,0.35);">
 
             <label id="bulk-select-label" style="display:flex; align-items:center; gap:10px; font-size:13px; font-weight:700; color:#334155; cursor:pointer;">
@@ -294,6 +295,9 @@
                         $kelengkapan = $alumni->data_completeness;
                     @endphp
                         <tr
+                            data-alumni-id="{{ $alumni->id }}"
+                            data-alumni-name="{{ $alumni->nama_lengkap }}"
+                            data-alumni-nim="{{ $alumni->nim }}"
                             data-tahun="{{ $alumni->akademik?->tahun_lulus ?? '' }}"
                             data-linearitas="{{ $pekerjaanAktif?->perusahaan?->linearitas ?? '' }}"
                             data-bidang="{{ $pekerjaanAktif?->bidang_pekerjaan ?? '' }}">
@@ -303,7 +307,7 @@
                             <td>
                                 <div style="display: flex; align-items: center; gap: 10px;">
                                     @if ($alumni->foto_profil)
-                                        <img src="{{ asset('storage/' . $alumni->foto_profil) }}"
+                                        <img src="{{ asset('storage/' . $alumni->foto_profil) }}" loading="lazy"
                                             style="width:32px; height:32px; min-width:32px; min-height:32px; flex-shrink:0; border-radius:8px; object-fit:cover;">
                                     @else
                                         <div class="avatar-small">{{ substr($alumni->nama_lengkap, 0, 1) }}</div>
@@ -404,9 +408,9 @@
             @php
                 $perPageActive = (int) request()->query('per_page', 40);
                 $perPageOptions = [40, 60, 80, 100];
-                $from = (int) ($dataAlumni->firstItem() ?? 0);
-                $to = (int) ($dataAlumni->lastItem() ?? 0);
-                $total = (int) ($dataAlumni->total() ?? 0);
+                $total = (int) ($totalAlumni ?? $dataAlumni->count());
+                $from = $total > 0 ? 1 : 0;
+                $to = min($perPageActive, $total);
             @endphp
             <div class="pagination-meta">
                 <span class="pagination-showing">Showing {{ $from }} to {{ $to }} of {{ $total }} rows</span>
@@ -419,9 +423,7 @@
                     <span class="per-page-text">rows per page</span>
                 </div>
             </div>
-            <div class="pagination-links pagination-links--compact">
-                {{ $dataAlumni->onEachSide(1)->links('vendor.pagination.admin-compact') }}
-            </div>
+            <div class="pagination-links pagination-links--compact" data-client-pagination></div>
         </div>
     </div>
     <form id="bulk-delete-form" action="{{ route('admin.alumni.bulk-destroy') }}" method="POST" style="display:none;">

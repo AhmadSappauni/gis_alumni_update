@@ -1,3 +1,4 @@
+@once
 <style>
 .profil-modal-overlay{
     display:none;
@@ -242,6 +243,7 @@
     }
 }
 </style>
+@endonce
 <div id="modal-profil-{{ $alumni->id }}" class="profil-modal-overlay">
 
     <div class="profil-modal-card">
@@ -257,6 +259,7 @@
 
             @if($alumni->foto_profil)
                 <img src="{{ asset('storage/' . $alumni->foto_profil) }}"
+                     loading="lazy"
                      class="profil-avatar"
                      alt="Foto {{ $alumni->nama_lengkap }}"
                      onerror="this.onerror=null;this.src='{{ asset('img/default-user.svg') }}';">
@@ -441,16 +444,3 @@
     </div>
 
 </div>
-
-
-
-
-<script>
-    function openProfilModal(id) {
-        document.getElementById('modal-profil-' + id).style.display = 'flex';
-    }
-
-    function closeProfilModal(id) {
-        document.getElementById('modal-profil-' + id).style.display = 'none';
-    }
-</script>

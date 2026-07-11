@@ -43,7 +43,7 @@ class AdminAlumniUpdateTest extends TestCase
             $table->text('judul_skripsi')->nullable();
             $table->decimal('ipk', 3, 2)->nullable();
             $table->integer('nilai_toefl')->nullable();
-            $table->string('lama_studi')->nullable();
+            $table->integer('lama_studi')->nullable();
             $table->timestamps();
         });
 
@@ -69,6 +69,76 @@ class AdminAlumniUpdateTest extends TestCase
         $admin->exists = true;
 
         $this->actingAs($admin);
+    }
+
+    public function test_edit_form_prefills_the_additional_academic_and_address_fields(): void
+    {
+        $alumni = $this->createAlumni('22000000');
+        $alumni->load(['akademik', 'alamat']);
+        $alumni->setRelation('pekerjaan', collect());
+        $alumni->setRelation('studiLanjut', collect());
+
+        $this->withViewErrors([]);
+        $response = $this->view('admin.edit', compact('alumni'));
+
+        $response
+            ->assertSee('name="nilai_toefl" class="custom-input-admin" value="525"', false)
+            ->assertSee('name="tahun_yudisium" class="custom-input-admin" value="2026"', false)
+            ->assertSee('name="lama_studi" class="custom-input-admin" value="48"', false)
+            ->assertSee('name="provinsi" class="custom-input-admin" value="Kalimantan Selatan"', false);
+    }
+
+    public function test_submitted_additional_fields_are_saved_without_regressing_other_profile_fields(): void
+    {
+        $alumni = $this->createAlumni('22000006');
+
+        $response = $this->put(route('admin.alumni.update', $alumni->id), [
+            'nim' => $alumni->nim,
+            'nama_lengkap' => 'Nama Baru Lengkap',
+            'jenis_kelamin' => 'P',
+            'email' => 'baru@example.test',
+            'no_hp' => '089876543210',
+            'angkatan' => 2022,
+            'tahun_lulus' => 2027,
+            'tahun_yudisium' => 2027,
+            'judul_skripsi' => 'Judul skripsi baru',
+            'ipk' => 3.95,
+            'nilai_toefl' => 600,
+            'lama_studi' => 54,
+            'alamat_tinggal' => 'Alamat domisili baru',
+            'kota_tinggal' => 'Martapura',
+            'provinsi' => 'Kalimantan Selatan Baru',
+            'latitude_tinggal' => -3.4100,
+            'longitude_tinggal' => 114.8500,
+        ]);
+
+        $response
+            ->assertRedirect(route('admin.alumni.index'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('alumnis', [
+            'id' => $alumni->id,
+            'nim' => '22000006',
+            'nama_lengkap' => 'Nama Baru Lengkap',
+            'jenis_kelamin' => 'P',
+            'email' => 'baru@example.test',
+            'no_hp' => '089876543210',
+        ]);
+        $this->assertDatabaseHas('alumni_akademik', [
+            'alumni_id' => $alumni->id,
+            'angkatan' => 2022,
+            'tahun_lulus' => 2027,
+            'tahun_yudisium' => 2027,
+            'judul_skripsi' => 'Judul skripsi baru',
+            'nilai_toefl' => 600,
+            'lama_studi' => 54,
+        ]);
+        $this->assertDatabaseHas('alamat_alumni', [
+            'alumni_id' => $alumni->id,
+            'alamat_lengkap' => 'Alamat domisili baru',
+            'kota' => 'Martapura',
+            'provinsi' => 'Kalimantan Selatan Baru',
+        ]);
     }
 
     public function test_omitted_additional_fields_keep_their_existing_values(): void
@@ -97,7 +167,7 @@ class AdminAlumniUpdateTest extends TestCase
             'alumni_id' => $alumni->id,
             'tahun_yudisium' => 2026,
             'nilai_toefl' => 525,
-            'lama_studi' => '4 tahun',
+            'lama_studi' => 48,
         ]);
         $this->assertDatabaseHas('alamat_alumni', [
             'alumni_id' => $alumni->id,
@@ -183,7 +253,7 @@ class AdminAlumniUpdateTest extends TestCase
             'judul_skripsi' => 'Judul lama',
             'ipk' => 3.75,
             'nilai_toefl' => 525,
-            'lama_studi' => '4 tahun',
+            'lama_studi' => 48,
         ]);
 
         AlamatAlumni::create([

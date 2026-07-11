@@ -118,8 +118,14 @@
                             <label class="label-admin">IPK</label>
                             <input type="number" name="ipk" class="custom-input-admin" value="{{ old('ipk', $alumni->akademik?->ipk) }}" min="0" max="4" step="0.01" placeholder="Contoh: 3.75">
                         </div>
+                        <div>
+                            <label class="label-admin">Nilai TOEFL</label>
+                            <input type="number" name="nilai_toefl" class="custom-input-admin" value="{{ old('nilai_toefl', $alumni->akademik?->nilai_toefl) }}" min="0" max="677" step="1" placeholder="Contoh: 475">
+                        </div>
                         <div><label class="label-admin">Angkatan</label><input type="number" name="angkatan" class="custom-input-admin" value="{{ old('angkatan', $alumni->akademik?->angkatan) }}"></div>
                         <div><label class="label-admin">Tahun Lulus</label><input type="number" name="tahun_lulus" class="custom-input-admin" value="{{ old('tahun_lulus', $alumni->akademik?->tahun_lulus) }}" required></div>
+                        <div><label class="label-admin">Tahun Yudisium</label><input type="number" name="tahun_yudisium" class="custom-input-admin" value="{{ old('tahun_yudisium', $alumni->akademik?->tahun_yudisium) }}"></div>
+                        <div><label class="label-admin">Lama Studi (bulan)</label><input type="number" name="lama_studi" class="custom-input-admin" value="{{ old('lama_studi', $alumni->akademik?->lama_studi) }}" min="0" step="1" placeholder="Contoh: 48"></div>
                     </div>
                     <div style="margin-top: 20px;">
                         <label class="label-admin">Judul Skripsi</label>
@@ -169,6 +175,10 @@
                             <div>
                                 <label class="label-admin">Kota / Kabupaten</label>
                                 <input type="text" name="kota_tinggal" id="kota" class="custom-input-admin" value="{{ old('kota_tinggal', $alumni->alamat?->kota) }}" placeholder="Ketik nama kota..." required>
+                            </div>
+                            <div>
+                                <label class="label-admin">Provinsi</label>
+                                <input type="text" name="provinsi" class="custom-input-admin" value="{{ old('provinsi', $alumni->alamat?->provinsi) }}" placeholder="Contoh: Kalimantan Selatan">
                             </div>
                             <div>
                                 <label class="label-admin">Alamat Lengkap</label>

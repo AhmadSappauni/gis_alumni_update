@@ -47,19 +47,16 @@ class DataAlumniDetailSheet extends DefaultValueBinder implements
 
         $workingJobs = $jobs->filter(function ($job) {
             $status = strtolower(trim((string) ($job->status_kerja ?? '')));
-            return $status === 'bekerja' || $status === 'wirausaha';
+            return (bool) $job->is_current
+                && ($status === 'bekerja' || $status === 'wirausaha');
         });
 
-        $pool = $workingJobs->isNotEmpty() ? $workingJobs : $jobs;
+        if ($workingJobs->isEmpty()) return null;
 
-        return $pool->sort(function ($a, $b) {
+        return $workingJobs->sort(function ($a, $b) {
             $rankA = strtolower(trim((string) $a->status_karir)) === 'utama' ? 0 : 1;
             $rankB = strtolower(trim((string) $b->status_karir)) === 'utama' ? 0 : 1;
             if ($rankA !== $rankB) return $rankA <=> $rankB;
-
-            $currentA = $a->is_current ? 0 : 1;
-            $currentB = $b->is_current ? 0 : 1;
-            if ($currentA !== $currentB) return $currentA <=> $currentB;
 
             $idA = (int) ($a->id ?? 0);
             $idB = (int) ($b->id ?? 0);
@@ -72,22 +69,6 @@ class DataAlumniDetailSheet extends DefaultValueBinder implements
         if (!$job) return null;
         // Gunakan lokasiAktif saja — konsisten dengan StatistikController::getLokasiPerusahaan().
         return $job->perusahaan?->lokasiAktif;
-    }
-
-    protected function deriveStatus($alumni): string
-    {
-        $jobs = $alumni->pekerjaan ?? collect();
-        $hasStudi = ($alumni->studiLanjut && $alumni->studiLanjut->isNotEmpty());
-
-        $workingAktif = $jobs->filter(function ($job) {
-            $status = strtolower(trim((string) ($job->status_kerja ?? '')));
-            if (!($status === 'bekerja' || $status === 'wirausaha')) return false;
-            $karir = strtolower(trim((string) ($job->status_karir ?? '')));
-            return $karir === 'utama' || (bool) $job->is_current;
-        });
-
-        $isBekerja = $workingAktif->isNotEmpty();
-        return $hasStudi ? 'Studi Lanjut' : ($isBekerja ? 'Bekerja' : 'Belum Bekerja');
     }
 
     public function headings(): array
@@ -127,8 +108,8 @@ class DataAlumniDetailSheet extends DefaultValueBinder implements
             $tahunLulus = $alumni->akademik?->tahun_lulus;
             $toefl = $alumni->akademik?->nilai_toefl;
 
-            $statusAlumni = $this->deriveStatus($alumni);
-            $statusKerja = $job?->status_kerja ?: '-';
+            $statusAlumni = $job ? 'Bekerja' : 'Belum Bekerja';
+            $statusKerja = $job?->status_kerja ?: 'Belum Bekerja';
             $bidang = $job?->bidang_pekerjaan ?: '-';
             $instansi = $job?->perusahaan?->nama_perusahaan ?: '-';
             $wilayah = trim((string) ($lokasi?->kota ?? '')) ?: (trim((string) ($lokasi?->provinsi ?? '')) ?: '-');

@@ -53,7 +53,7 @@ Route::get('/wilayah-kalsel', [WilayahController::class, 'index'])->name('wilaya
 */
 
 Route::get('/postgis', [PostgisDemoController::class, 'index'])->name('postgis-demo.index');
-Route::get('/postgis-demo-rahasia/data', [PostgisDemoController::class, 'data'])->name('postgis-demo.data');
+Route::get('/postgis-demo/data', [PostgisDemoController::class, 'data'])->name('postgis-demo.data');
 
 
 /*
