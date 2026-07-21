@@ -47,11 +47,13 @@ class User extends Authenticatable
         ];
     }
 
+    // SIDANG-KEAMANAN: Pemeriksaan peran ini menjadi dasar middleware dan pembatasan fitur internal.
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
     }
 
+    // SIDANG-KEAMANAN: Data marker sensitif hanya dapat dilihat pengguna admin.
     public function canViewSensitiveAlumniData(): bool
     {
         return in_array($this->role, ['admin', 'user'], true);

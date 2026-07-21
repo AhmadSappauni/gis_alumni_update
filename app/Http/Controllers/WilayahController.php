@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 
 class WilayahController extends Controller
 {
+    /** SIDANG-MAP: GET /wilayah-kalsel mengubah polygon PostGIS menjadi GeoJSON untuk filter peta. */
     public function index(): JsonResponse
     {
         $rows = DB::table('wilayah_kalsel')

@@ -38,6 +38,10 @@ class MapController extends Controller
         return strtolower(trim((string) $value));
     }
 
+    /**
+     * Membentuk payload marker dari tabel pekerjaan, lokasi perusahaan, alamat alumni, dan studi lanjut.
+     * Filter request diterapkan sebelum koleksi dikirim sebagai JSON oleh endpoint /map/data.
+     */
     private function buildMapPayload(?Request $request = null): array
     {
         $filters = $this->getMapFilters($request);
@@ -59,6 +63,7 @@ class MapController extends Controller
         | Titik marker = lokasi perusahaan
         */
 
+        //  Relasi marker dimuat sekaligus oleh workingJobsQuery untuk menghindari query berulang saat iterasi.
         $pekerja = $includeBekerja
             ? $this->workingJobsQuery($filters, true)->get()
             : collect();
@@ -75,6 +80,7 @@ class MapController extends Controller
         $pekerjaPerAlumni = $this->primaryCurrentJobs($pekerja);
 
         foreach ($pekerjaPerAlumni as $job) {
+            // SIDANG-FALLBACK: Lokasi perusahaan diprioritaskan; resolveWorkingMarkerLocation dapat memakai alamat alumni jika koordinat perusahaan kosong.
             $markerLocation = $this->resolveWorkingMarkerLocation($job);
 
             if (!$markerLocation) {
@@ -365,6 +371,7 @@ class MapController extends Controller
         return $mapPayload;
     }
 
+    /** Menampilkan GET /peta dengan payload awal kosong dan URL endpoint data peta. */
     public function index()
     {
         $mapPayload = $this->emptyMapPayload();
@@ -378,6 +385,7 @@ class MapController extends Controller
         ]);
     }
 
+    /** SIDANG-MAP: Melayani GET /map/data; input filter request diproses menjadi payload JSON untuk Leaflet. */
     public function data(Request $request): JsonResponse
     {
         return response()->json($this->buildMapPayload($request));
@@ -397,6 +405,7 @@ class MapController extends Controller
         ];
     }
 
+    // SIDANG-KEAMANAN: Marker alumni belum bekerja hanya tersedia bagi pengguna yang diizinkan melihat data sensitif.
     private function canViewBelumBekerja(?Request $request = null): bool
     {
         $user = $request?->user() ?? auth()->user();
@@ -456,6 +465,7 @@ class MapController extends Controller
         ];
     }
 
+    // DB: Query mengambil pekerjaan aktif beserta relasi alumni, akademik, perusahaan, dan lokasi untuk marker bekerja.
     private function workingJobsQuery(array $filters, bool $applyMarkerFilters)
     {
         $query = RiwayatPekerjaan::query()
@@ -868,6 +878,7 @@ class MapController extends Controller
         });
     }
 
+    // SIDANG-POSTGIS: ST_Within membatasi titik marker yang berada di dalam polygon wilayah terpilih.
     private function wherePointWithinWilayahIds($query, string $pointExpression, array $wilayahIds): void
     {
         $wilayahIds = array_values(array_unique(array_map('intval', $wilayahIds)));

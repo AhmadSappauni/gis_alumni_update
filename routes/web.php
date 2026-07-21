@@ -17,6 +17,8 @@ use App\Http\Controllers\AuthController;
 |--------------------------------------------------------------------------
 */
 
+// SIDANG-MAP: Halaman peta mengambil payload marker melalui endpoint JSON /map/data.
+
 Route::get('/peta', [MapController::class, 'index'])->name('peta');
 Route::get('/map/data', [MapController::class, 'data'])->name('map.data');
 
@@ -88,6 +90,8 @@ Route::post('/logout', [AuthController::class, 'logout'])
 */
 
 Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
+
+    // SIDANG-KEAMANAN: Seluruh pengelolaan alumni dan statistik internal mensyaratkan pengguna terautentikasi dengan peran admin.
 
     Route::redirect('/', '/admin/statistik')
         ->name('admin.index');

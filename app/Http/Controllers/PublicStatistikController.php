@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 
 class PublicStatistikController extends StatistikController
 {
+    /** SIDANG-ALUR: Menampilkan GET /statistik dengan opsi filter statistik publik. */
     public function index(Request $request)
     {
         $options = $this->getDashboardOptions();
@@ -29,4 +30,3 @@ class PublicStatistikController extends StatistikController
         ]);
     }
 }
-

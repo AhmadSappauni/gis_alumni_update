@@ -9,8 +9,10 @@ class Alumni extends Model
 {
     use HasFactory;
 
+    // SIDANG-DB: Model menggunakan tabel alumnis sebagai data identitas utama alumni.
     protected $table = 'alumnis';
 
+    // SIDANG-KEAMANAN: Hanya atribut identitas berikut yang dapat diisi secara massal.
     protected $fillable = [
         'nim',
         'nama_lengkap',
@@ -20,22 +22,26 @@ class Alumni extends Model
         'foto_profil'
     ];
 
+    // SIDANG-RELASI: Eloquent mengambil satu data akademik milik alumni; kardinalitas database mengikuti constraint migration.
     public function akademik()
     {
         return $this->hasOne(AlumniAkademik::class, 'alumni_id');
     }
 
+    // SIDANG-RELASI: Relasi menyaring satu alamat alumni yang ditandai sebagai alamat aktif.
     public function alamat()
     {
         return $this->hasOne(AlamatAlumni::class, 'alumni_id')
                     ->whereRaw('is_current IS TRUE');
     }
 
+    // SIDANG-RELASI: Satu alumni dapat memiliki banyak riwayat pekerjaan.
     public function pekerjaan()
     {
         return $this->hasMany(RiwayatPekerjaan::class, 'alumni_id');
     }
 
+    // SIDANG-RELASI: Satu alumni dapat memiliki banyak riwayat studi lanjut.
     public function studiLanjut()
     {
         return $this->hasMany(StudiLanjut::class, 'alumni_id');

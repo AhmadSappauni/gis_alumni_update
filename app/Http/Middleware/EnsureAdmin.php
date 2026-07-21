@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 
 class EnsureAdmin
 {
+    // SIDANG-KEAMANAN: Middleware menolak route admin bagi tamu dan pengguna tanpa peran admin.
     public function handle(Request $request, Closure $next)
     {
         if (!$request->user()) {

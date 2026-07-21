@@ -7,6 +7,7 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // SIDANG-POSTGIS: Tabel wilayah menyimpan polygon kabupaten/kota SRID 4326 sebagai batas filter WebGIS.
         DB::statement("
             CREATE TABLE wilayah_kalsel (
                 id SERIAL PRIMARY KEY,
@@ -19,6 +20,7 @@ return new class extends Migration
             )
         ");
 
+        // SIDANG-PERFORMA: Index GIST mempercepat ST_Within antara titik alumni/perusahaan dan polygon wilayah.
         DB::statement('CREATE INDEX idx_wilayah_kalsel_geom ON wilayah_kalsel USING GIST(geom)');
         DB::statement('CREATE INDEX idx_wilayah_kalsel_nama ON wilayah_kalsel(nama)');
         DB::statement('CREATE INDEX idx_wilayah_kalsel_level ON wilayah_kalsel(level)');

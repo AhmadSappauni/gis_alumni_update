@@ -26,6 +26,7 @@ class StatistikAlumniExport implements WithMultipleSheets
     ) {
     }
 
+    // SIDANG-EXPORT: Satu ekspor statistik dibagi menjadi tujuh sheet ringkasan, analisis, kualitas, dan detail alumni.
     public function sheets(): array
     {
         return [
@@ -46,4 +47,3 @@ class StatistikAlumniExport implements WithMultipleSheets
         ];
     }
 }
-

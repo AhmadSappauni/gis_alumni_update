@@ -158,6 +158,7 @@ function resetImportUI() {
 }
 
 // FUNGSI UTAMA: Preview Excel
+// SIDANG-IMPORT: File dikirim ke endpoint preview agar header dan baris diperiksa server sebelum proses penyimpanan.
 function previewFile(file) {
     if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
         alert("File harus format Excel (.xlsx atau .xls)");
@@ -312,6 +313,7 @@ async function postImportBatch(batchRows) {
     let formData = new FormData();
     formData.append("rows", JSON.stringify(batchRows));
 
+    // SIDANG-IMPORT: Baris pratinjau dikirim bertahap ke endpoint penyimpanan dan progres ditampilkan kepada admin.
     const res = await fetch("/admin/alumni/import-store", {
         method: "POST",
         headers: {

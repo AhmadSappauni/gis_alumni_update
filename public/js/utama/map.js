@@ -1220,6 +1220,7 @@ document.addEventListener('wilayah-panel-hover', function (e) {
 });
 
 // 2. Load GeoJSON Kalsel versi ringan untuk render visual.
+// SIDANG-MAP: Polygon GeoJSON dimuat sebagai layer Leaflet untuk tampilan dan interaksi wilayah Kalimantan Selatan.
 fetch('/data/data_kalsel_simplified.geojson')
     .then(response => response.json())
     .then(geojsonData => {

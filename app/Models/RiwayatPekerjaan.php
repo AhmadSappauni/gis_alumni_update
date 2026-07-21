@@ -31,11 +31,13 @@ class RiwayatPekerjaan extends Model
         'is_current' => 'boolean'
     ];
 
+    // SIDANG-RELASI: Setiap riwayat pekerjaan dimiliki satu alumni melalui alumni_id.
     public function alumni()
     {
         return $this->belongsTo(Alumni::class, 'alumni_id');
     }
 
+    // SIDANG-RELASI: Setiap riwayat pekerjaan dapat mengacu pada satu perusahaan.
     public function perusahaan()
     {
         return $this->belongsTo(Perusahaan::class, 'perusahaan_id');

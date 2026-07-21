@@ -31,6 +31,7 @@ class StudiLanjut extends Model
         'longitude' => 'float',
     ];
 
+    // SIDANG-RELASI: Setiap studi lanjut dimiliki satu alumni melalui alumni_id.
     public function alumni()
     {
         return $this->belongsTo(Alumni::class, 'alumni_id');

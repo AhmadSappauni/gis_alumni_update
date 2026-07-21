@@ -374,6 +374,7 @@ function initMarkerGroups() {
     }
 
     if (!window.mainAlumniClusterGroup) {
+        // SIDANG-MAP: Marker alumni dikelompokkan agar peta tetap terbaca dan ringan ketika titik berdekatan.
         window.mainAlumniClusterGroup = L.markerClusterGroup({
             chunkedLoading: true,
             spiderfyOnMaxZoom: true,
@@ -636,6 +637,7 @@ function fetchMapMarkersAndRender(options) {
         options?.initializeCustomSelect ? 'Memuat data alumni...' : 'Memperbarui marker...'
     );
 
+    // SIDANG-MAP: Filter dikirim ke endpoint JSON; hasilnya diteruskan ke pembentukan marker dan ringkasan Leaflet.
     return fetch(url.toString(), {
         headers: {
             'Accept': 'application/json',

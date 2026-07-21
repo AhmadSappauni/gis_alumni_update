@@ -7,16 +7,16 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // STEP 1: Pastikan extension PostGIS aktif di database ini
+        // SIDANG-POSTGIS: Ekstensi PostGIS menyediakan tipe geography dan fungsi spasial yang dipakai WebGIS.
         DB::statement('CREATE EXTENSION IF NOT EXISTS postgis');
 
-        // STEP 2: Tambah kolom geom ke lokasi_perusahaan
+        // SIDANG-POSTGIS: geom bertipe titik SRID 4326 menyimpan lokasi perusahaan untuk operasi spasial PostgreSQL.
         DB::statement('
             ALTER TABLE lokasi_perusahaan 
             ADD COLUMN IF NOT EXISTS geom geography(POINT, 4326)
         ');
 
-        // STEP 3: Populate kolom geom dari data lat/lng yang sudah ada
+        // SIDANG-POSTGIS: Koordinat lama disalin ke geom; longitude menjadi sumbu X dan latitude sumbu Y.
         // PENTING: ST_MakePoint pakai urutan (longitude, latitude) — bukan kebalikan!
         DB::statement('
             UPDATE lokasi_perusahaan 
@@ -26,13 +26,13 @@ return new class extends Migration
               AND geom IS NULL
         ');
 
-        // STEP 4: Buat spatial index GIST (ini yang bikin query PostGIS jadi cepat)
+        // SIDANG-PERFORMA: Index GIST mempercepat pencarian dan pengujian relasi spasial pada geom perusahaan.
         DB::statement('
             CREATE INDEX IF NOT EXISTS idx_lokasi_perusahaan_geom 
             ON lokasi_perusahaan USING GIST(geom)
         ');
 
-        // Lakukan hal yang sama untuk alamat_alumni
+        // SIDANG-POSTGIS: Alamat alumni juga memiliki geom untuk filter domisili berbasis polygon.
         DB::statement('
             ALTER TABLE alamat_alumni 
             ADD COLUMN IF NOT EXISTS geom geography(POINT, 4326)

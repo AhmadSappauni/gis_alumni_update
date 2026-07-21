@@ -25,6 +25,7 @@ class AlamatAlumni extends Model
         'is_current' => 'boolean',
     ];
 
+    // SIDANG-RELASI: Setiap baris alamat mengacu pada satu alumni melalui alumni_id.
     public function alumni()
     {
         return $this->belongsTo(Alumni::class, 'alumni_id');

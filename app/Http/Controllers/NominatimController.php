@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Validator;
 
 class NominatimController extends Controller
 {
+    /** SIDANG-MAP: GET /nominatim/reverse memvalidasi koordinat lalu melakukan reverse geocoding untuk alat admin. */
     public function reverse(Request $request): JsonResponse
     {
         $validator = Validator::make($request->query(), [
@@ -65,4 +66,3 @@ class NominatimController extends Controller
         return response()->json($res->json());
     }
 }
-

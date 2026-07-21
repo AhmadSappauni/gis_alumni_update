@@ -28,6 +28,7 @@ class LokasiPerusahaan extends Model
     |--------------------------------------------------------------------------
     */
 
+    // SIDANG-RELASI: Setiap lokasi mengacu pada satu perusahaan melalui perusahaan_id.
     public function perusahaan()
     {
         return $this->belongsTo(Perusahaan::class, 'perusahaan_id');

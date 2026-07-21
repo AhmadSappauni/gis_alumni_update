@@ -22,6 +22,7 @@ class AlumniAkademik extends Model
         'lama_studi'
     ];
 
+    // SIDANG-RELASI: Setiap data akademik dimiliki satu alumni melalui alumni_id.
     public function alumni()
     {
         return $this->belongsTo(Alumni::class, 'alumni_id');

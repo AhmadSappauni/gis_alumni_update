@@ -702,6 +702,7 @@ async function fetchStatistik(params) {
     const endpoint = window.__STATISTIK_ENDPOINT__ || '';
     const url = endpoint + (buildQuery(params) ? `?${buildQuery(params)}` : '');
 
+    // SIDANG-ALUR: Dataset agregasi diambil dari endpoint statistik lalu dipetakan ke kartu, grafik, dan heatmap.
     const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
     if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);

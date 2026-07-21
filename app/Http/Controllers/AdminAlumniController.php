@@ -227,6 +227,7 @@ class AdminAlumniController extends Controller
         }
     }
 
+   /** SIDANG-ALUR: Menampilkan GET /admin/alumni dengan filter, relasi, dan ringkasan kelengkapan data alumni. */
    public function index(Request $request)
     {
         $allowedPerPage = [40, 60, 80, 100];
@@ -697,6 +698,7 @@ class AdminAlumniController extends Controller
             });
     }
 
+    /** SIDANG-ALUR: Memproses POST /admin/alumni/store untuk memvalidasi dan menyimpan identitas, akademik, alamat, serta data karier. */
     public function store(Request $request)
     {
         $request->validate([
@@ -707,6 +709,7 @@ class AdminAlumniController extends Controller
             'jabatan'         => Rule::requiredIf(fn () => !$request->has('is_unemployed')),
         ]);
 
+        // SIDANG-TRANSAKSI: Seluruh tabel pembentuk data alumni disimpan sebagai satu kesatuan dan dibatalkan jika salah satu proses gagal.
         DB::transaction(function () use ($request) {
 
             /*
@@ -842,6 +845,7 @@ class AdminAlumniController extends Controller
             ->with('success', 'Data alumni berhasil ditambahkan');
     }
 
+    /** SIDANG-ALUR: Memproses PUT /admin/alumni/{id} untuk memperbarui data alumni dan relasi terkait. */
     public function update(Request $request, $id)
     {
         $request->validate([
@@ -852,6 +856,7 @@ class AdminAlumniController extends Controller
 
         $alumni = Alumni::findOrFail($id);
 
+        // SIDANG-TRANSAKSI: Perubahan identitas dan relasinya dijaga konsisten dalam satu transaksi.
         DB::transaction(function () use ($request, $alumni) {
 
             $foto = $alumni->foto_profil;
@@ -912,6 +917,7 @@ class AdminAlumniController extends Controller
             ->with('success', 'Data alumni berhasil diupdate');
     }
 
+    /** SIDANG-ALUR: Memproses DELETE /admin/alumni/{id} dan menghapus alumni yang dipilih. */
     public function destroy($id)
     {
         $alumni = Alumni::findOrFail($id);
@@ -1110,6 +1116,7 @@ class AdminAlumniController extends Controller
         return $query;
     }
 
+    /** SIDANG-ALUR: Memproses DELETE /admin/alumni untuk menghapus pilihan atau seluruh hasil filter. */
     public function bulkDestroy(Request $request)
     {
         $wantsJson = $request->expectsJson() || $request->ajax();
@@ -1191,6 +1198,7 @@ class AdminAlumniController extends Controller
     }
 
     //Pekerjaan 
+    /** SIDANG-ALUR: Menambah riwayat pekerjaan melalui POST /admin/alumni/{id}/pekerjaan. */
     public function storePekerjaan(Request $request, $id)
     {
         $this->validatePekerjaanRequest($request);
@@ -1270,6 +1278,7 @@ class AdminAlumniController extends Controller
         return back()->with('success', 'Pekerjaan berhasil ditambahkan');
     }
 
+    /** SIDANG-ALUR: Menghapus riwayat pekerjaan melalui DELETE /admin/pekerjaan/{id} dan menyesuaikan pekerjaan aktif. */
     public function destroyPekerjaan($id)
     {
         DB::transaction(function () use ($id) {
@@ -1362,6 +1371,7 @@ class AdminAlumniController extends Controller
         return back()->with('success', 'Status pekerjaan diubah');
     }
 
+    /** SIDANG-ALUR: Memvalidasi dan memperbarui pekerjaan melalui PUT /admin/pekerjaan/{id}. */
     public function updatePekerjaan(Request $request, $id)
     {
         $this->validatePekerjaanRequest($request);
@@ -1497,6 +1507,7 @@ class AdminAlumniController extends Controller
     |--------------------------------------------------------------------------
     */
 
+    /** SIDANG-ALUR: Menambah studi lanjut alumni dari input kampus, program, status, dan lokasi. */
     public function storeStudiLanjut(Request $request, $alumni)
     {
         $alumniModel = Alumni::findOrFail($alumni);
@@ -1512,6 +1523,7 @@ class AdminAlumniController extends Controller
             ->with('active_tab', 'tab-studi');
     }
 
+    /** SIDANG-ALUR: Memperbarui studi lanjut yang terikat pada alumni dari parameter route. */
     public function updateStudiLanjut(Request $request, $alumni, $studiLanjut)
     {
         $alumniModel = Alumni::findOrFail($alumni);
@@ -1529,6 +1541,7 @@ class AdminAlumniController extends Controller
             ->with('active_tab', 'tab-studi');
     }
 
+    /** SIDANG-ALUR: Menghapus studi lanjut yang terikat pada alumni melalui route admin. */
     public function destroyStudiLanjut($alumni, $studiLanjut)
     {
         $alumniModel = Alumni::findOrFail($alumni);
@@ -1633,6 +1646,7 @@ class AdminAlumniController extends Controller
 
 
 
+    /** SIDANG-IMPORT: Memvalidasi unggahan Excel/CSV, menormalisasi baris, lalu mengembalikan pratinjau tanpa menyimpan data. */
     public function importPreview(Request $request)
     {
         $request->validate([
@@ -1647,6 +1661,7 @@ class AdminAlumniController extends Controller
         ]);
     }
 
+    /** SIDANG-IMPORT: Memproses baris pratinjau terpilih menjadi insert atau update alumni beserta relasinya. */
     public function importStore(Request $request)
     {
         // Import bisa memakan waktu lama karena geocoding per baris
@@ -2338,7 +2353,7 @@ class AdminAlumniController extends Controller
                             'provinsi' => $provinsiAlumni,
                             'latitude' => $latAlumni,
                             'longitude' => $lngAlumni,
-                            'is_current' => true,
+                            'is_current' => DB::raw('TRUE'),
                         ];
 
                         AlamatAlumni::create($alamatUpdate);

@@ -7,6 +7,7 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // SIDANG-POSTGIS: Trigger menjaga geom tetap sinkron setiap latitude atau longitude disisipkan maupun diperbarui.
         DB::unprepared("
             CREATE OR REPLACE FUNCTION update_geom_from_latlng() 
             RETURNS TRIGGER AS \$\$

@@ -9,6 +9,7 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class AlumniImportTemplateExport implements FromArray, ShouldAutoSize, WithStyles
 {
+    // SIDANG-IMPORT: Definisi kolom menjadi acuan header template dan pemetaan tujuan tabel pada proses import.
     public static function columns(): array
     {
         return [

@@ -417,6 +417,7 @@ class StatistikController extends Controller
         return $counts;
     }
 
+    /** SIDANG-ALUR: Menampilkan GET /admin/statistik beserta opsi filter dashboard internal. */
     public function index(Request $request)
     {
         $options = $this->getDashboardOptions();
@@ -484,6 +485,7 @@ class StatistikController extends Controller
         ];
     }
 
+    /** SIDANG-DB: Melayani GET /admin/statistik/data dengan agregasi alumni setelah filter request diterapkan. */
     public function data(Request $request)
     {
         try {
@@ -1101,6 +1103,7 @@ class StatistikController extends Controller
         return array_values(array_slice(array_filter($insights), 0, 6));
     }
 
+    /** SIDANG-EXPORT: Membentuk PDF statistik sesuai filter melalui GET /admin/statistik/export/pdf. */
     public function exportPdf(Request $request)
     {
         $dataMode = strtolower(trim((string) $request->query('data_mode', 'valid')));
@@ -1171,6 +1174,7 @@ class StatistikController extends Controller
         ]);
     }
 
+    /** SIDANG-EXPORT: Membentuk workbook multi-sheet sesuai filter melalui GET /admin/statistik/export/excel. */
     public function exportExcel(Request $request)
     {
         $dataMode = strtolower(trim((string) $request->query('data_mode', 'valid')));
