@@ -345,6 +345,7 @@ var markerLayer = L.layerGroup().addTo(map);
 window.layerWilayahKalsel = null;
 window.highlightWilayah = null;
 window.tooltipWilayahAktif = null;
+window.filterWilayahLabel = null;
 window.statusPolygonAktif = true;
 window.statusHoverPolygonAktif = false;
 window.statusPolygonWilayah = {};
@@ -869,6 +870,41 @@ function getLayerWilayahByKey(key) {
     return target;
 }
 
+function hapusLabelFilterWilayah() {
+    if (window.filterWilayahLabel && map.hasLayer(window.filterWilayahLabel)) {
+        map.removeLayer(window.filterWilayahLabel);
+    }
+
+    window.filterWilayahLabel = null;
+}
+
+function perbaruiLabelFilterWilayah(layer) {
+    hapusLabelFilterWilayah();
+
+    if (!layer || !window.statusPolygonAktif || !window.filterWilayahKey) {
+        return;
+    }
+
+    const namaWilayah = getNamaWilayah(layer.feature);
+    const label = L.marker(layer.getBounds().getCenter(), {
+        interactive: false,
+        keyboard: false,
+        pane: 'overlayPane',
+        icon: L.divIcon({
+            className: 'wilayah-filter-label-icon',
+            iconSize: null,
+            iconAnchor: [0, 0]
+        })
+    }).addTo(map);
+
+    const labelElement = label.getElement();
+    if (labelElement) {
+        labelElement.textContent = namaWilayah;
+    }
+
+    window.filterWilayahLabel = label;
+}
+
 window.terapkanFilterWilayahPeta = function (namaWilayah, options) {
     const key = getKeyWilayah(namaWilayah);
     const shouldFly = options?.flyTo === true;
@@ -893,6 +929,7 @@ window.terapkanFilterWilayahPeta = function (namaWilayah, options) {
 
     if (!key) {
         window.pendingFilterWilayahFlyTo = false;
+        hapusLabelFilterWilayah();
     } else if (shouldFly) {
         window.pendingFilterWilayahFlyTo = true;
     } else if (previousKey !== key) {
@@ -924,11 +961,13 @@ window.terapkanFilterWilayahPeta = function (namaWilayah, options) {
         window.perbaruiTampilanPolygon();
     }
 
+    const targetLayer = key ? getLayerWilayahByKey(key) : null;
+    perbaruiLabelFilterWilayah(targetLayer);
+
     if (!key || !shouldFly) {
         return;
     }
 
-    const targetLayer = getLayerWilayahByKey(key);
     if (!targetLayer) {
         return;
     }
@@ -966,6 +1005,7 @@ window.perbaruiTampilanPolygon = function () {
         }
     } else {
         window.resetHighlightWilayah();
+        hapusLabelFilterWilayah();
 
         if (map.hasLayer(window.layerWilayahKalsel)) {
             map.removeLayer(window.layerWilayahKalsel);

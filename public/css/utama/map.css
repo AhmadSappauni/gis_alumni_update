@@ -287,10 +287,18 @@ body {
 }
 
 .status-legend-title {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px;
     font-size: 14px;
     font-weight: 800;
     color: #334155;
     margin-bottom: 10px;
+}
+
+.status-legend-region-context {
+    color: #005a9c;
 }
 
 .status-legend-summary {
@@ -564,6 +572,25 @@ body {
 
 #map .leaflet-tooltip.alumni-tooltip.leaflet-tooltip-right:before {
     border-right-color: rgba(0, 0, 0, 0.85);
+}
+
+#map .wilayah-filter-label-icon {
+    width: max-content !important;
+    max-width: 140px;
+    transform: translate(-50%, -50%);
+    padding: 3px 8px;
+    border: 1px solid rgba(0, 74, 135, 0.22);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.86);
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.16);
+    color: #004a87;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.2;
+    text-align: center;
+    white-space: normal;
+    pointer-events: none;
 }
 
 @media (max-width: 768px) {

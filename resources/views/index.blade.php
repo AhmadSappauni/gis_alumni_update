@@ -25,6 +25,10 @@
     @endphp
 
     @include('utama.filter-panel')
+    <div class="map-title-card">
+        <span class="map-title-card-heading">Peta Persebaran Alumni</span>
+        <span class="map-title-card-subtitle">Pendidikan Komputer FKIP ULM</span>
+    </div>
     <div id="map"></div>
 
     <div class="kompas-ui is-hidden" aria-hidden="true">
@@ -33,7 +37,10 @@
     </div>
 
     <div class="status-legend" role="status" aria-live="polite">
-        <div class="status-legend-title">Keterangan :</div>
+        <div class="status-legend-title">
+            <span>Keterangan :</span>
+            <span id="legend-region-context" class="status-legend-region-context" hidden></span>
+        </div>
         <div class="status-legend-summary" aria-label="Jumlah alumni">
             <img
                 class="status-legend-logo"

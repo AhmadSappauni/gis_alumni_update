@@ -1153,6 +1153,7 @@ function updateActiveFilterUI() {
     const total = document.getElementById('active-filter-total');
     const list = document.getElementById('active-filter-list');
     const legendSummary = document.getElementById('legend-active-filter-summary');
+    const legendRegionContext = document.getElementById('legend-region-context');
 
     if (filterButton) {
         filterButton.classList.toggle('has-active-filters', count > 0);
@@ -1207,6 +1208,13 @@ function updateActiveFilterUI() {
             legendSummary.textContent = `Filter aktif: ${previewLabels}${remaining}`;
             legendSummary.setAttribute('title', detail);
         }
+    }
+
+    if (legendRegionContext) {
+        const wilayahFilter = items.find(item => item.key === 'wilayah');
+
+        legendRegionContext.hidden = !wilayahFilter;
+        legendRegionContext.textContent = wilayahFilter ? `Alumni di ${wilayahFilter.value}` : '';
     }
 }
 
