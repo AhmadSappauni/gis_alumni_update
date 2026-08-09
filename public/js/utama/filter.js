@@ -2491,11 +2491,11 @@ function buildCoordinateStackPopup(entries) {
         const name = escapeHtml(entry.nama || '-');
         const subtitle = escapeHtml(entry.subtitle || '-');
         const statusLabel = escapeHtml(entry.statusLabel || 'Alumni');
-        const tahunLulus = escapeHtml(entry.tahunLulus || '-');
+        const angkatan = escapeHtml(entry.angkatan || '-');
         const detailParts = [];
 
-        if (tahunLulus && tahunLulus !== '-') {
-            detailParts.push(`Lulusan ${tahunLulus}`);
+        if (angkatan && angkatan !== '-') {
+            detailParts.push(`Angkatan ${angkatan}`);
         }
 
         if (entry.multiJobCount > 0) {
@@ -3269,7 +3269,7 @@ function filterDanTampilkanMarker() {
                     <h3 class="popup-name clickable-profile" data-alumni-id="${alumniId}">${nama}</h3>
 
                     <span class="popup-year">
-                        Lulusan Tahun ${tahunLulus}
+                        Angkatan ${angkatan || '-'}
                     </span>
 
                     <div class="popup-info">
@@ -3301,6 +3301,7 @@ function filterDanTampilkanMarker() {
             longitude,
             nama,
             tahunLulus,
+            angkatan,
             statusKey,
             statusLabel: statusKerja === 'Belum Bekerja' ? 'Belum Bekerja' : 'Bekerja',
             subtitle: statusKerja === 'Belum Bekerja'
@@ -3525,7 +3526,7 @@ function filterDanTampilkanMarker() {
                         <h3 class="popup-name clickable-profile" data-alumni-id="${alumniId}">${nama}</h3>
 
                         <span class="popup-year">
-                            Lulusan Tahun ${tahunLulus}
+                            Angkatan ${angkatan || '-'}
                         </span>
 
                         <div class="popup-info">
@@ -3577,6 +3578,7 @@ function filterDanTampilkanMarker() {
                 longitude,
                 nama,
                 tahunLulus,
+                angkatan,
                 statusKey: 'studi_lanjut',
                 statusLabel: 'Studi Lanjut',
                 subtitle: `${kampus} - ${jenjang}`,

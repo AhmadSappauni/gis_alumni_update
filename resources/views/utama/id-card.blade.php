@@ -8,8 +8,10 @@
                     alt="Avatar Alumni">
             </div>
             <h2 id="modal-nama">Nama Lengkap Alumni</h2>
-            <div id="modal-nim" class="modal-nim">NIM: -</div>
-            <span id="modal-tahun" class="badge-tahun">Lulusan Tahun 202X</span>
+            @if(auth()->user()?->isAdmin())
+                <div id="modal-nim" class="modal-nim">NIM: -</div>
+            @endif
+            <span id="modal-tahun" class="badge-tahun">Angkatan Tahun 202X</span>
         </div>
 
         <div class="profil-modal-body">
@@ -21,6 +23,7 @@
                 </div>
             </div>
 
+            @if(auth()->user()?->isAdmin())
             <div class="info-group">
                 <span class="info-icon">📍</span>
                 <div class="info-text">
@@ -28,6 +31,7 @@
                     <p id="modal-alamat">-</p>
                 </div>
             </div>
+            @endif
 
             <div class="info-group">
                 <span class="info-icon">💼</span>
@@ -45,6 +49,7 @@
                 </div>
             </div>
 
+            @if(auth()->user()?->isAdmin())
             <div class="info-group">
                 <span class="info-icon">🎓</span>
                 <div class="info-text">
@@ -52,7 +57,9 @@
                     <div id="modal-linearitas" class="status-badge status-linier">Linier</div>
                 </div>
             </div>
+            @endif
 
+            @if(auth()->user()?->isAdmin())
             <div id="modal-extra-info" class="profile-extra-info" hidden>
                 <div id="modal-skripsi-card" class="profile-extra-card profile-extra-card--skripsi" hidden>
                     <span class="profile-extra-icon" aria-hidden="true">
@@ -80,6 +87,7 @@
                     </div>
                 </a>
             </div>
+            @endif
         </div>
 
         <div class="profil-modal-footer">

@@ -116,8 +116,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
         // --- PROSES 1: INJEKSI DATA KE HTML ---
         document.getElementById('modal-nama').textContent = namaAlumni;
-        document.getElementById('modal-nim').textContent = `NIM: ${nim || '-'}`;
-        document.getElementById('modal-tahun').textContent = "Lulusan Tahun " + (data.tahun_lulus || '-');
+
+        const nimEl = document.getElementById('modal-nim');
+        if (nimEl) {
+            nimEl.textContent = `NIM: ${nim || '-'}`;
+        }
+
+        document.getElementById('modal-tahun').textContent = "Angkatan Tahun " + (data.angkatan || '-');
 
         const lokasiLabelEl = document.getElementById('modal-lokasi-label');
         const alamatLabelEl = document.getElementById('modal-alamat-label');
@@ -141,7 +146,10 @@ document.addEventListener("DOMContentLoaded", function() {
             linearitas = '-';
         }
 
-        document.getElementById('modal-alamat').textContent = alamatTampil || '-';
+        const alamatEl = document.getElementById('modal-alamat');
+        if (alamatEl) {
+            alamatEl.textContent = alamatTampil || '-';
+        }
         document.getElementById('modal-jabatan').textContent = jabatan || '-';
         document.getElementById('modal-bidang-pekerjaan').textContent = bidangPekerjaan || '-';
 
@@ -169,7 +177,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
         // --- PROSES 2: MENGATUR LENCANA LINEARITAS ---
         let badgeLinearitas = document.getElementById('modal-linearitas');
-        badgeLinearitas.textContent = linearitas || '-';
+        if (badgeLinearitas) {
+            badgeLinearitas.textContent = linearitas || '-';
 
         // Hapus class lama jika ada, lalu tambahkan class yang sesuai
         badgeLinearitas.className = "status-badge"; // Reset class dasar
@@ -198,6 +207,7 @@ document.addEventListener("DOMContentLoaded", function() {
             badgeLinearitas.classList.add("status-tidak");
             badgeLinearitas.style.background = "#fee2e2";
             badgeLinearitas.style.color = "#b91c1c";
+            }
         }
 
         // --- PROSES 3: TAMPILKAN MODALNYA ---

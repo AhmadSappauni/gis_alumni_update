@@ -560,6 +560,15 @@ class StatistikController extends Controller
             'Tidak diketahui' => 0,
         ];
 
+        $ipkValidValues = [];
+        $ipkBuckets = [
+            '< 2,50' => 0,
+            '2,50–2,99' => 0,
+            '3,00–3,49' => 0,
+            '3,50–4,00' => 0,
+        ];
+        $ipkUnknown = 0;
+
         $salaryBuckets = [
             '< Rp1 juta' => 0,
             'Rp1–3 juta' => 0,
@@ -706,6 +715,23 @@ class StatistikController extends Controller
                 else $toeflBuckets['>= 500'] += 1;
             }
 
+            // IPK (dari akademik): hanya nilai numerik dalam rentang 0,00–4,00.
+            $ipk = $this->parseNumeric($alumni->akademik?->ipk);
+            if ($ipk === null || $ipk < 0 || $ipk > 4) {
+                $ipkUnknown += 1;
+            } else {
+                $ipkValidValues[] = $ipk;
+                if ($ipk < 2.5) {
+                    $ipkBuckets['< 2,50'] += 1;
+                } elseif ($ipk < 3) {
+                    $ipkBuckets['2,50–2,99'] += 1;
+                } elseif ($ipk < 3.5) {
+                    $ipkBuckets['3,00–3,49'] += 1;
+                } else {
+                    $ipkBuckets['3,50–4,00'] += 1;
+                }
+            }
+
             // Heatmap domisili (alamat current) - Kalsel only
             $alamat = $alumni->alamat;
             $latDom = $alamat?->latitude;
@@ -840,6 +866,11 @@ class StatistikController extends Controller
             }
         }
 
+        $ipkValidCount = count($ipkValidValues);
+        $avgIpk = $ipkValidCount > 0
+            ? array_sum($ipkValidValues) / $ipkValidCount
+            : null;
+
         $domicilePoints = array_map(function ($key, $weight) {
             [$lat, $lng] = array_map('floatval', explode(',', $key));
             return ['lat' => $lat, 'lng' => $lng, 'weight' => (int) $weight];
@@ -900,6 +931,13 @@ class StatistikController extends Controller
                     ],
                     'valid_count' => $toeflValidCount,
                     'distribution' => array_map('intval', $toeflBuckets),
+                ],
+                'ipk_distribution' => [
+                    'labels' => array_keys($ipkBuckets),
+                    'data' => array_values(array_map('intval', $ipkBuckets)),
+                    'total_valid' => $ipkValidCount,
+                    'total_unknown' => $ipkUnknown,
+                    'average' => $avgIpk,
                 ],
                 'top_bidang' => [
                     'labels' => array_values(array_keys($topBidang)),

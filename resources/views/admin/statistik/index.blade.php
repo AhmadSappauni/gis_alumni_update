@@ -250,6 +250,22 @@
                 <div class="kpi-sub" id="kpi-toefl-sub">Data TOEFL belum tersedia</div>
                 <div class="kpi-meta" id="kpi-toefl-meta" style="display:none;">Data tersedia: 0 alumni</div>
             </div>
+
+            <div class="kpi-card glass-panel kpi-accent-purple">
+                <div class="kpi-top">
+                    <div class="kpi-icon" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M2 10 12 5l10 5-10 5L2 10Z"></path>
+                            <path d="M6 12.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-3.5"></path>
+                        </svg>
+                    </div>
+                    <div class="kpi-label">Rata-rata IPK</div>
+                </div>
+                <div class="kpi-value" id="kpi-ipk">-</div>
+                <div class="kpi-sub" id="kpi-ipk-sub">Data IPK belum tersedia</div>
+                <div class="kpi-meta" id="kpi-ipk-meta" style="display:none;">Data tersedia: 0 alumni</div>
+            </div>
         </div>
     </section>
 
@@ -287,7 +303,7 @@
         <div class="chart-section stat-profile-section">
             <div class="chart-section-head">
                 <div class="chart-section-title">Profil Alumni</div>
-                <div class="chart-section-sub">Komposisi jenis kelamin dan distribusi TOEFL</div>
+                <div class="chart-section-sub">Komposisi jenis kelamin serta distribusi TOEFL dan IPK</div>
             </div>
             <div class="chart-grid chart-grid--3">
                 <div class="chart-card glass-panel gender-chart-card">
@@ -326,6 +342,20 @@
                             <div class="chart-empty" data-empty-for="chart-salary-dist" hidden>Data gaji belum tersedia.</div>
                         </div>
                         <div class="chart-footnote" id="salary-dist-footnote" style="display:none;"></div>
+                    </div>
+                </div>
+
+                <div class="chart-card glass-panel ipk-dist-chart-card">
+                    <div class="chart-head">
+                        <div class="chart-title">Distribusi IPK Alumni</div>
+                        <div class="chart-subtitle">Pengelompokan alumni berdasarkan nilai IPK</div>
+                    </div>
+                    <div class="chart-body">
+                        <div class="chart-fixed">
+                            <canvas id="chart-ipk-dist"></canvas>
+                            <div class="chart-empty" data-empty-for="chart-ipk-dist" hidden>Data IPK belum tersedia.</div>
+                        </div>
+                        <div class="chart-footnote" id="ipk-dist-footnote" style="display:none;"></div>
                     </div>
                 </div>
             </div>

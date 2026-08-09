@@ -473,6 +473,7 @@ function updateBarChart(key, canvasId, labels, data, horizontal) {
         studi_jenjang: 'rgba(124, 58, 237, 0.80)',
         toefl_dist: 'rgba(2, 132, 199, 0.86)',
         salary_distribution: 'rgba(16, 185, 129, 0.82)',
+        ipk_distribution: 'rgba(99, 102, 241, 0.82)',
         top_company: 'rgba(0, 74, 135, 0.85)'
     };
 
@@ -736,6 +737,22 @@ function applyData(payload) {
         if (metaEl) metaEl.style.display = 'none';
     }
 
+    const ipkDistribution = payload?.charts?.ipk_distribution || {};
+    const ipkValid = Number(ipkDistribution.total_valid ?? 0) || 0;
+    const avgIpk = Number(ipkDistribution.average);
+    if (ipkValid > 0 && Number.isFinite(avgIpk)) {
+        setKpi('kpi-ipk', formatDecimal(avgIpk, 2));
+        setText('kpi-ipk-sub', 'Berdasarkan alumni dengan data IPK');
+        setText('kpi-ipk-meta', `Data tersedia: ${formatNumber(ipkValid)} alumni`);
+        const metaEl = qs('kpi-ipk-meta');
+        if (metaEl) metaEl.style.display = '';
+    } else {
+        setKpi('kpi-ipk', '-');
+        setText('kpi-ipk-sub', 'Data IPK belum tersedia');
+        const metaEl = qs('kpi-ipk-meta');
+        if (metaEl) metaEl.style.display = 'none';
+    }
+
     const total = Number(k.total_alumni ?? 0) || 0;
     const bekerja = Number(k.bekerja ?? 0) || 0;
     const pctBekerja = total > 0 ? Math.round((bekerja / total) * 100) : null;
@@ -808,6 +825,29 @@ function applyData(payload) {
             const total = valid + unknown;
             if (total > 0) {
                 foot.textContent = `Data gaji valid: ${formatNumber(valid)} alumni • Tidak diketahui: ${formatNumber(unknown)} alumni`;
+                foot.style.display = '';
+            } else {
+                foot.style.display = 'none';
+            }
+        }
+    }
+
+    if (qs('chart-ipk-dist')) {
+        const defaultLabels = ['< 2,50', '2,50–2,99', '3,00–3,49', '3,50–4,00'];
+        const ipk = c.ipk_distribution || {};
+        const labels = Array.isArray(ipk.labels) && ipk.labels.length ? ipk.labels : defaultLabels;
+        const data = Array.isArray(ipk.data) ? ipk.data : [];
+        safeRenderChart('Distribusi IPK Alumni', () => updateBarChart('ipk_distribution', 'chart-ipk-dist', labels, data, false));
+
+        const foot = qs('ipk-dist-footnote');
+        if (foot) {
+            const valid = Number(ipk.total_valid ?? 0) || 0;
+            const unknown = Number(ipk.total_unknown ?? 0) || 0;
+            const total = valid + unknown;
+            const average = Number(ipk.average);
+
+            if (total > 0) {
+                foot.textContent = `Data IPK valid: ${formatNumber(valid)} alumni • Tidak diketahui: ${formatNumber(unknown)} alumni${valid > 0 && Number.isFinite(average) ? ` • Rata-rata IPK: ${formatDecimal(average, 2)}` : ''}`;
                 foot.style.display = '';
             } else {
                 foot.style.display = 'none';

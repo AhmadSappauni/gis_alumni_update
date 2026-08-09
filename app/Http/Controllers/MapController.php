@@ -388,7 +388,43 @@ class MapController extends Controller
     /** SIDANG-MAP: Melayani GET /map/data; input filter request diproses menjadi payload JSON untuk Leaflet. */
     public function data(Request $request): JsonResponse
     {
-        return response()->json($this->buildMapPayload($request));
+        $payload = $this->buildMapPayload($request);
+
+        if (!$request->user()?->isAdmin()) {
+            $payload = $this->withoutSensitiveAlumniDetails($payload);
+        }
+
+        return response()->json($payload);
+    }
+
+    /** Menghapus detail pribadi dari respons peta untuk guest dan user non-admin. */
+    private function withoutSensitiveAlumniDetails(array $payload): array
+    {
+        $payload['markers'] = collect($payload['markers'] ?? [])
+            ->map(function (array $marker) {
+                unset(
+                    $marker['nim'],
+                    $marker['alamat'],
+                    $marker['linearitas'],
+                    $marker['judul_skripsi'],
+                    $marker['link_linkedin']
+                );
+
+                return $marker;
+            })
+            ->values()
+            ->all();
+
+        $payload['studi_lanjut_markers'] = collect($payload['studi_lanjut_markers'] ?? [])
+            ->map(function (array $marker) {
+                unset($marker['nim']);
+
+                return $marker;
+            })
+            ->values()
+            ->all();
+
+        return $payload;
     }
 
     private function emptyMapPayload(): array
